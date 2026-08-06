@@ -11,6 +11,7 @@ from pathlib import Path
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -1084,6 +1085,38 @@ async def masssetup_command(
         f"Alle funktionieren sofort - Klick = Rolle toggle!",
         ephemeral=True
     )
+
+MAX_ROLES_FOR_MITGLIED = 7
+PROTECTED_ROLE_NAMES = ["976", "owner", "head admin", "admin", "moderator", "bot", "muted", "timeout", "booster"]
+
+@bot.event
+async def on_member_update(before, after):
+    if before.roles == after.roles:
+        return
+    
+    mitglied_role = discord.utils.get(after.roles, name="Mitglied")
+    if not mitglied_role:
+        return
+    
+    protected_roles = []
+    normal_roles = []
+    
+    for role in after.roles:
+        if role == after.guild.default_role:
+            continue
+        if role.name.lower() in [r.lower() for r in PROTECTED_ROLE_NAMES]:
+            protected_roles.append(role)
+        elif role.name.startswith(("★", "*", "⭐", "Level")):
+            protected_roles.append(role)
+        else:
+            normal_roles.append(role)
+    
+    if len(normal_roles) > MAX_ROLES_FOR_MITGLIED:
+        to_remove = normal_roles[MAX_ROLES_FOR_MITGLIED:]
+        try:
+            await after.remove_roles(*to_remove, reason="Max 7 Rollen für Mitglieder")
+        except discord.Forbidden:
+            pass
 
 @bot.event
 async def on_raw_reaction_add(payload):
