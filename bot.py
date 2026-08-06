@@ -208,7 +208,7 @@ async def download_tiktok_video(url, mode="clyppy"):
                 'Referer': 'https://www.tiktok.com/',
                 'Accept-Language': 'en-US,en;q=0.9',
             },
-            'format': 'best',
+            'format': 'best[vcodec*=h264]/bestvideo[vcodec*=h264]+bestaudio/best',
             'merge_output_format': 'mp4',
         }
         
