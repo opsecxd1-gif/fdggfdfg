@@ -1309,11 +1309,8 @@ class VoiceChannelView(discord.ui.View):
             await interaction.response.send_message("Niemand else im Channel!", ephemeral=True)
             return
         
-        member_list = "\n".join([f"• {m.mention} (ID: {m.id})" for m in members_in_channel])
-        await interaction.response.send_message(
-            f"User im Channel:\n{member_list}\n\nRechtsklick → Verbindung trennen",
-            ephemeral=True
-        )
+        view = KickSelectView(self.owner_id, self.channel_id, members_in_channel)
+        await interaction.response.send_message("Wähle wen du kicken möchtest:", view=view, ephemeral=True)
 
     @discord.ui.button(label="Ban", style=discord.ButtonStyle.danger, emoji="🚫", custom_id="vc_ban")
     async def ban_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1321,10 +1318,18 @@ class VoiceChannelView(discord.ui.View):
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
             return
         
-        await interaction.response.send_message(
-            "Nutze `/vc_ban <user_id>` um jemanden zu bannen.",
-            ephemeral=True
-        )
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        members_in_channel = [m for m in channel.members if m.id != self.owner_id]
+        if not members_in_channel:
+            await interaction.response.send_message("Niemand else im Channel!", ephemeral=True)
+            return
+        
+        view = BanSelectView(self.owner_id, self.channel_id, members_in_channel)
+        await interaction.response.send_message("Wen bannen:", view=view, ephemeral=True)
 
     @discord.ui.button(label="Invite", style=discord.ButtonStyle.success, emoji="🔗", custom_id="vc_invite")
     async def invite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1343,10 +1348,13 @@ class VoiceChannelView(discord.ui.View):
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
             return
         
-        await interaction.response.send_message(
-            "Nutze `/vc_permit <user_id>` um jemandem Zugriff zu geben.",
-            ephemeral=True
-        )
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        view = PermitSelectView(self.owner_id, self.channel_id)
+        await interaction.response.send_message("Wem Zugriff geben:", view=view, ephemeral=True)
 
     @discord.ui.button(label="Change Owner", style=discord.ButtonStyle.primary, emoji="👑", custom_id="vc_changeowner")
     async def change_owner_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1354,10 +1362,18 @@ class VoiceChannelView(discord.ui.View):
             await interaction.response.send_message("Nur der aktuelle Besitzer kann das!", ephemeral=True)
             return
         
-        await interaction.response.send_message(
-            "Nutze `/vc_changeowner <user_id>` um den Besitz zu übertragen.",
-            ephemeral=True
-        )
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        members_in_channel = [m for m in channel.members if m.id != self.owner_id]
+        if not members_in_channel:
+            await interaction.response.send_message("Niemand else im Channel!", ephemeral=True)
+            return
+        
+        view = OwnerSelectView(self.owner_id, self.channel_id, members_in_channel)
+        await interaction.response.send_message("Wähle den neuen Besitzer:", view=view, ephemeral=True)
 
 class RenameModal(discord.ui.Modal, title="Channel umbenennen"):
     new_name = discord.ui.TextInput(label="Neuer Name", placeholder="Mein Chat", max_length=50)
@@ -1377,6 +1393,188 @@ class RenameModal(discord.ui.Modal, title="Channel umbenennen"):
             await interaction.response.send_message(f"Channel umbenannt in **{self.new_name.value}**!", ephemeral=True)
         except discord.Forbidden:
             await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+class OwnerSelect(discord.ui.Select):
+    def __init__(self, owner_id: int, channel_id: int, members: list):
+        self.owner_id = owner_id
+        self.channel_id = channel_id
+        
+        options = [
+            discord.SelectOption(
+                label=m.display_name,
+                value=str(m.id),
+                emoji="👑"
+            ) for m in members[:25]
+        ]
+        
+        super().__init__(placeholder="Wähle den neuen Besitzer...", options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        target_id = int(self.values[0])
+        channel = interaction.guild.get_channel(self.channel_id)
+        
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        target_member = interaction.guild.get_member(target_id)
+        if not target_member:
+            await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+            return
+        
+        if target_member not in channel.members:
+            await interaction.response.send_message("Der User ist nicht im Channel!", ephemeral=True)
+            return
+        
+        voice_channel_owners[self.channel_id] = target_id
+        
+        overwrites = channel.overwrites_for(target_member)
+        overwrites.update(
+            view_channel=True,
+            connect=True,
+            speak=True,
+            move_members=True,
+            manage_channels=True,
+            manage_permissions=True,
+            priority_speaker=True
+        )
+        await channel.set_permissions(target_member, overwrite=overwrites)
+        
+        old_overwrites = channel.overwrites_for(interaction.user)
+        old_overwrites.update(
+            move_members=False,
+            manage_channels=False,
+            manage_permissions=False,
+            priority_speaker=False
+        )
+        await channel.set_permissions(interaction.user, overwrite=old_overwrites)
+        
+        embed, view = await create_voice_control_embed(target_member, channel)
+        await channel.send(embed=embed, view=view)
+        
+        await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
+
+class OwnerSelectView(discord.ui.View):
+    def __init__(self, owner_id: int, channel_id: int, members: list):
+        super().__init__(timeout=60)
+        self.add_item(OwnerSelect(owner_id, channel_id, members))
+
+class KickSelect(discord.ui.Select):
+    def __init__(self, owner_id: int, channel_id: int, members: list):
+        self.owner_id = owner_id
+        self.channel_id = channel_id
+        
+        options = [
+            discord.SelectOption(
+                label=m.display_name,
+                value=str(m.id),
+                emoji="👢"
+            ) for m in members[:25]
+        ]
+        
+        super().__init__(placeholder="Wähle wen du kicken möchtest...", options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann kicken!", ephemeral=True)
+            return
+        
+        target_id = int(self.values[0])
+        channel = interaction.guild.get_channel(self.channel_id)
+        
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        target_member = interaction.guild.get_member(target_id)
+        if not target_member:
+            await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+            return
+        
+        try:
+            await target_member.move_to(None, reason=f"Gekickt von {interaction.user.display_name}")
+            await interaction.response.send_message(f"{target_member.display_name} wurde gekickt!", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+class KickSelectView(discord.ui.View):
+    def __init__(self, owner_id: int, channel_id: int, members: list):
+        super().__init__(timeout=60)
+        self.add_item(KickSelect(owner_id, channel_id, members))
+
+class BanSelect(discord.ui.Select):
+    def __init__(self, owner_id: int, channel_id: int, members: list):
+        self.owner_id = owner_id
+        self.channel_id = channel_id
+        
+        options = [
+            discord.SelectOption(
+                label=m.display_name,
+                value=str(m.id),
+                emoji="🚫"
+            ) for m in members[:25]
+        ]
+        
+        super().__init__(placeholder="Wen bannen...", options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann bannen!", ephemeral=True)
+            return
+        
+        target_id = int(self.values[0])
+        channel = interaction.guild.get_channel(self.channel_id)
+        
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        target_member = interaction.guild.get_member(target_id)
+        if not target_member:
+            await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+            return
+        
+        try:
+            overwrites = channel.overwrites_for(target_member)
+            overwrites.connect = False
+            await channel.set_permissions(target_member, overwrite=overwrites)
+            await target_member.move_to(None, reason=f"Gebannt von {interaction.user.display_name}")
+            await interaction.response.send_message(f"{target_member.display_name} wurde gebannt!", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+class BanSelectView(discord.ui.View):
+    def __init__(self, owner_id: int, channel_id: int, members: list):
+        super().__init__(timeout=60)
+        self.add_item(BanSelect(owner_id, channel_id, members))
+
+class PermitSelect(discord.ui.Select):
+    def __init__(self, owner_id: int, channel_id: int):
+        self.owner_id = owner_id
+        self.channel_id = channel_id
+        
+        super().__init__(placeholder="User ID eingeben...", min_values=1, max_values=1, options=[
+            discord.SelectOption(label="ID eingeben", value="manual", description="Schreib die User ID in Chat")
+        ])
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(
+            "Schreib die User ID die du permiten möchtest (nur Zahlen):",
+            ephemeral=True
+        )
+
+class PermitSelectView(discord.ui.View):
+    def __init__(self, owner_id: int, channel_id: int):
+        super().__init__(timeout=60)
+        self.add_item(PermitSelect(owner_id, channel_id))
 
 async def create_voice_control_embed(member, channel):
     embed = discord.Embed(
