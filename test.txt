@@ -1,0 +1,69 @@
+wenn du einer ai komplett erklären müsstest und einen extrem starken krassen prompt machen müsstest für einen discord bot der so eine liste von gifs automatisch sortiert ( entfernt doppelten text siehe html script ) und dann immer automatisch 4 gifs hintereinander dann reinschickt siehe autohotkey script wie würdest du den prompt gestalten? lies dir bitte
+noch das hier durch discord_gifs - Kopie.ahk WTF - Kopie.html
+
+
+System Prompt / Instruction:
+Du bist ein extrem kompetenter Full-Stack Discord Bot Entwickler mit tiefem Verständnis für Discord.py (oder discord.js), Rate-Limits, Anti-Spam-Mechanismen und langlaufende Aufgaben.
+Aufgabe:
+Erstelle einen vollständigen, produktionsreifen Discord Bot, der folgende zwei Hauptfunktionen perfekt kombiniert:
+1. Intelligenter GIF/Media-Import & Deduplizierung (wie das HTML-Tool)
+
+Der Bot soll eine Liste von Links (GIFs, WebP, PNG, JPG, MP4 etc.) importieren können.
+Unterstützte Eingaben:
+Direkter Paste eines kompletten Discord-Chat-Exports (JSON oder Text)
+Eine JSON-Array mit Links
+Mehrere Nachrichten mit Links
+
+Verwende einen sehr robusten Regex, der alle gängigen Discord-Media-Links erkennt (https://...gif, ...webp, ...mp4 etc.), inklusive solcher mit Query-Parametern (?ex=, ?width=, ?height= etc.).
+Deduplizierung: Entferne exakte Duplikate + entferne Query-Parameter bei Discord-CDN-Links (behalte nur den sauberen Pfad bis zum Dateinamen).
+Speichere die bereinigte, einzigartige Liste persistent (z.B. in einer SQLite-Datenbank oder JSON-Datei pro Server/User).
+
+2. Automatischer "4-GIF-Sender" (wie das AutoHotkey-Skript)
+
+Befehl: /start_gifspam oder !start (mit optionalem Parameter amount oder until_end)
+Der Bot nimmt die aktuelle Liste und sendet immer genau 4 Links pro Nachricht.
+Jede Nachricht enthält die 4 Links untereinander (jeder Link in einer eigenen Zeile).
+Nach jeder gesendeten Nachricht wartet der Bot eine konfigurierbare Zeit (Default: 1.8–2.5 Sekunden), um Rate-Limits sicher zu umgehen.
+Der Bot merkt sich den aktuellen Fortschritt (Index) pro Server/User.
+Wenn das Ende der Liste erreicht ist:
+Nachricht: "✅ Alle GIFs durch! Starte wieder von vorne."
+Setzt Index zurück auf 0.
+
+Zusätzliche Befehle:
+/stop_gifspam → stoppt den aktuellen Spam
+/status → zeigt an, wie viele GIFs schon gesendet wurden / wie viele noch übrig
+/list oder /show → zeigt die ersten 10 und letzten 10 Links der aktuellen Liste + Gesamtanzahl
+/clearlist → Liste löschen (mit Bestätigung)
+/addlinks → Links direkt per Nachricht oder Attachment hinzufügen (mit Deduplizierung)
+
+
+Technische Anforderungen (sehr wichtig):
+
+Verwende Discord.py (Python) oder discord.js v14 (Node.js) – bevorzuge was du besser kannst, aber Python ist meist stabiler für lange Laufzeiten.
+Implementiere ein robustes Queue-System + Task-Loop, damit der Bot nicht blockiert.
+Sehr gute Fehlerbehandlung und Logging.
+Respektiere Discord Rate Limits (besonders messages pro Kanal).
+Möglichkeit, die Verzögerung pro Nachricht anzupassen (/delay 2.2).
+Persistenz: Jeder Server/User hat eigene Liste + Fortschritt.
+Optional: Mehrere "Playlists" pro Server (z.B. "favoriten", "memes", "nsfw" etc.).
+
+Zusätzliche Premium-Features (nice-to-have, aber stark gewünscht):
+
+Automatisches Entfernen von toten Links (optionaler Check).
+Thumbnail-Vorschau beim Import.
+Statistik: Welche Links am häufigsten gesendet wurden.
+Export der aktuellen Liste als .txt.
+Unterstützung für "Shuffle Mode".
+
+Gib mir am Ende:
+
+Den kompletten Code (sauber strukturiert, mit Kommentaren)
+requirements.txt / package.json
+Anleitung zum Starten + Token-Setup
+Wichtige Hinweise zu Rate-Limits und wie man Bans vermeidet
+
+Mach den Bot so professionell und benutzerfreundlich wie möglich. Er soll sich anfühlen wie ein echtes Power-User Tool.
+
+Zusätzlicher Tipp:
+Du kannst diesen Prompt noch weiter verstärken, indem du direkt danach sagst:
+"Verwende moderne Best Practices 2026. Nutze Tasks/Async, Dataclassen bzw. Structs, und mache den Code so wartbar wie möglich."

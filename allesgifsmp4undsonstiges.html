@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Media Extractor</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 15px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
+        h1 { color: #00ff9d; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #888; font-size: 13px; margin-bottom: 15px; }
+        textarea {
+            width: 100%;
+            height: 300px;
+            background: #16213e;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+            align-items: center;
+        }
+        button {
+            background: #00ff9d;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #00cc7a; }
+        button.secondary { background: #333; color: #ddd; }
+        button.secondary:hover { background: #444; }
+        button.danger { background: #ff4444; color: #fff; }
+        button.danger:hover { background: #cc0000; }
+        .filters {
+            background: #16213e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        .filters h3 { margin: 0 0 8px 0; color: #00ff9d; font-size: 14px; }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .filter-row label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #1a1a2e;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            border: 1px solid #333;
+            transition: all 0.15s;
+        }
+        .filter-row label:hover { border-color: #00ff9d; }
+        .filter-row input[type="checkbox"] { accent-color: #00ff9d; }
+        .filter-row label.checked { border-color: #00ff9d; background: #0a3d2a; }
+        .source-filter { margin-top: 6px; }
+        .stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .stat {
+            background: #16213e;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            border: 1px solid #333;
+        }
+        .stat .num { color: #00ff9d; font-weight: bold; font-size: 16px; }
+        #results {
+            background: #16213e;
+            padding: 12px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            line-height: 1.6;
+        }
+        .url-line { display: block; }
+        .url-line.discord { color: #7289da; }
+        .url-line.giphy { color: #a8e6a1; }
+        .url-line.tenor { color: #ffcc4d; }
+        .url-line.other { color: #bbb; }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .preview-grid img, .preview-grid video {
+            width: 100%;
+            border-radius: 6px;
+            background: #000;
+            max-height: 200px;
+            object-fit: cover;
+        }
+        .mode-toggle {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .mode-toggle button { font-size: 12px; padding: 5px 12px; }
+        .mode-toggle button.active { background: #00ff9d; color: #000; }
+        .mode-toggle button:not(.active) { background: #222; color: #888; }
+    </style>
+</head>
+<body>
+    <h1>Discord Media Extractor</h1>
+    <p class="subtitle">Paste Discord chat exports (.txt), HTML, JSON oder Plain-Text mit Links</p>
+
+    <textarea id="input" placeholder="Paste hier deinen Discord-Chat-Export, HTML oder Links..."></textarea>
+
+    <div class="filters">
+        <h3>Medien-Typ filtern (Mehrfachauswahl)</h3>
+        <div class="filter-row" id="typeFilters">
+            <label class="checked"><input type="checkbox" value="all" checked onchange="toggleFilter(this)"> Alles</label>
+            <label><input type="checkbox" value="gif" onchange="toggleFilter(this)"> GIFs</label>
+            <label><input type="checkbox" value="mp4" onchange="toggleFilter(this)"> MP4 / Videos</label>
+            <label><input type="checkbox" value="images" onchange="toggleFilter(this)"> Bilder (PNG/JPG/WEBP)</label>
+            <label><input type="checkbox" value="apng" onchange="toggleFilter(this)"> APNG</label>
+            <label><input type="checkbox" value="webm" onchange="toggleFilter(this)"> WebM</label>
+            <label><input type="checkbox" value="svg" onchange="toggleFilter(this)"> SVG</label>
+        </div>
+        <h3>Quelle filtern</h3>
+        <div class="filter-row source-filter" id="sourceFilters">
+            <label class="checked"><input type="checkbox" value="all" checked onchange="toggleFilter(this)"> Alle Quellen</label>
+            <label><input type="checkbox" value="discord" onchange="toggleFilter(this)"> Discord CDN</label>
+            <label><input type="checkbox" value="giphy" onchange="toggleFilter(this)"> Giphy</label>
+            <label><input type="checkbox" value="tenor" onchange="toggleFilter(this)"> Tenor</label>
+            <label><input type="checkbox" value="other" onchange="toggleFilter(this)"> Andere</label>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="extract()">Extrahieren & Filtern</button>
+        <button class="secondary" onclick="copyResults()">Kopieren</button>
+        <button class="danger" onclick="clearAll()">Alles löschen</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="mode-toggle">
+        <button class="active" onclick="setView('list', this)">Liste</button>
+        <button onclick="setView('preview', this)">Vorschau</button>
+    </div>
+
+    <div id="results"></div>
+    <div id="preview" class="preview-grid" style="display:none;"></div>
+
+    <script>
+        const EXT_MAP = {
+            gif: ['gif'],
+            apng: ['apng'],
+            mp4: ['mp4', 'mov', 'avi', 'mkv', 'm4v', 'flv', 'wmv'],
+            webm: ['webm'],
+            images: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'tif', 'avif', 'ico'],
+            svg: ['svg']
+        };
+
+        const SOURCE_PATTERNS = {
+            discord: /cdn\.discordapp\.(com|net)|images-ext-\d+\.discordapp\.net/i,
+            giphy: /giphy\.com|gph\.to/i,
+            tenor: /tenor\.com|media\.tenor\.com/i
+        };
+
+        let currentResults = [];
+        let currentView = 'list';
+
+        function getActiveTypeFilters() {
+            const checkboxes = document.querySelectorAll('#typeFilters input[type="checkbox"]');
+            const active = [];
+            checkboxes.forEach(cb => { if (cb.checked) active.push(cb.value); });
+            return active;
+        }
+
+        function getActiveSourceFilters() {
+            const checkboxes = document.querySelectorAll('#sourceFilters input[type="checkbox"]');
+            const active = [];
+            checkboxes.forEach(cb => { if (cb.checked) active.push(cb.value); });
+            return active;
+        }
+
+        function toggleFilter(checkbox) {
+            const row = checkbox.closest('.filter-row');
+            const isAll = checkbox.value === 'all';
+
+            if (isAll && checkbox.checked) {
+                row.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                    cb.closest('label').classList.remove('checked');
+                });
+                checkbox.checked = true;
+                checkbox.closest('label').classList.add('checked');
+            } else if (!isAll) {
+                const allCb = row.querySelector('input[value="all"]');
+                allCb.checked = false;
+                allCb.closest('label').classList.remove('checked');
+            }
+
+            checkbox.closest('label').classList.toggle('checked', checkbox.checked);
+
+            const anyChecked = Array.from(row.querySelectorAll('input[type="checkbox"]'))
+                .some(cb => cb.checked);
+            if (!anyChecked) {
+                const allCb = row.querySelector('input[value="all"]');
+                allCb.checked = true;
+                allCb.closest('label').classList.add('checked');
+            }
+
+            if (currentResults.length > 0) extract();
+        }
+
+        function cleanUrl(url) {
+            let clean = url;
+            if (clean.includes('?ex=')) clean = clean.split('?')[0];
+            if (clean.includes('&ex=')) clean = clean.split('&')[0];
+            clean = clean.replace(/[)\]}>]+$/, '');
+            return clean;
+        }
+
+        function getUrlExtension(url) {
+            const path = url.split('?')[0];
+            const match = path.match(/\.([a-z0-9]+)$/i);
+            return match ? match[1].toLowerCase() : '';
+        }
+
+        function getSource(url) {
+            for (const [name, pattern] of Object.entries(SOURCE_PATTERNS)) {
+                if (pattern.test(url)) return name;
+            }
+            return 'other';
+        }
+
+        function matchesTypeFilter(ext) {
+            const filters = getActiveTypeFilters();
+            if (filters.includes('all')) return true;
+            return filters.some(f => {
+                const exts = EXT_MAP[f];
+                return exts && exts.includes(ext);
+            });
+        }
+
+        function matchesSourceFilter(url) {
+            const filters = getActiveSourceFilters();
+            if (filters.includes('all')) return true;
+            const source = getSource(url);
+            return filters.includes(source);
+        }
+
+        function isDiscordExport(text) {
+            return /\{Attachments\}|\{Embed\}|\[?\d{2}\.\d{2}\.\d{4}/.test(text);
+        }
+
+        function extractFromDiscordExport(text) {
+            const lines = text.split('\n');
+            const urls = [];
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('{') && !trimmed.startsWith('{Attach') && !trimmed.startsWith('{Embed')) continue;
+                const urlMatches = trimmed.match(/https?:\/\/[^\s<>"']+/gi) || [];
+                urls.push(...urlMatches);
+            }
+            return urls;
+        }
+
+        function extractFromPlainText(text) {
+            const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+            return text.match(urlRegex) || [];
+        }
+
+        function extractFromHtml(html) {
+            const urls = [];
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            doc.querySelectorAll('img, video, source').forEach(el => {
+                ['src', 'data-src', 'data-original', 'poster'].forEach(attr => {
+                    const val = el.getAttribute(attr);
+                    if (val && val.match(/^https?:\/\//i)) urls.push(val);
+                });
+                if (el.hasAttribute('srcset')) {
+                    el.getAttribute('srcset').split(',').forEach(entry => {
+                        const url = entry.trim().split(/\s+/)[0];
+                        if (url && url.match(/^https?:\/\//i)) urls.push(url);
+                    });
+                }
+            });
+
+            doc.querySelectorAll('a[href]').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && href.match(/^https?:\/\//i)) urls.push(href);
+            });
+
+            const textUrls = html.match(/https?:\/\/[^\s<>"']+/gi) || [];
+            return urls.concat(textUrls);
+        }
+
+        function isHtml(text) {
+            return /<\s*(img|video|source|html|body|div|a)\b/i.test(text);
+        }
+
+        function extract() {
+            const input = document.getElementById('input').value;
+            if (!input.trim()) return;
+
+            let rawUrls = [];
+            if (isHtml(input)) {
+                rawUrls = extractFromHtml(input);
+            } else if (isDiscordExport(input)) {
+                rawUrls = extractFromDiscordExport(input);
+            } else {
+                rawUrls = extractFromPlainText(input);
+            }
+
+            const seen = new Set();
+            const filtered = [];
+
+            for (const raw of rawUrls) {
+                const clean = cleanUrl(raw);
+                const ext = getUrlExtension(clean);
+
+                if (!ext) continue;
+                if (seen.has(clean)) continue;
+                if (!matchesTypeFilter(ext)) continue;
+                if (!matchesSourceFilter(clean)) continue;
+
+                seen.add(clean);
+                filtered.push(clean);
+            }
+
+            filtered.sort((a, b) => {
+                const srcA = getSource(a);
+                const srcB = getSource(b);
+                if (srcA !== srcB) return srcA.localeCompare(srcB);
+                return a.localeCompare(b);
+            });
+
+            currentResults = filtered;
+            renderResults();
+        }
+
+        function renderResults() {
+            const resultsDiv = document.getElementById('results');
+            const previewDiv = document.getElementById('preview');
+            const statsDiv = document.getElementById('stats');
+
+            const bySource = {};
+            const byType = {};
+            for (const url of currentResults) {
+                const src = getSource(url);
+                bySource[src] = (bySource[src] || 0) + 1;
+                const ext = getUrlExtension(url);
+                byType[ext] = (byType[ext] || 0) + 1;
+            }
+
+            statsDiv.innerHTML = `
+                <div class="stat"><span class="num">${currentResults.length}</span> Links gesamt</div>
+                <div class="stat"><span class="num">${bySource.discord || 0}</span> Discord</div>
+                <div class="stat"><span class="num">${bySource.giphy || 0}</span> Giphy</div>
+                <div class="stat"><span class="num">${bySource.tenor || 0}</span> Tenor</div>
+                <div class="stat"><span class="num">${bySource.other || 0}</span> Andere</div>
+            `;
+
+            if (currentView === 'list') {
+                resultsDiv.style.display = 'block';
+                previewDiv.style.display = 'none';
+                resultsDiv.innerHTML = currentResults.length === 0
+                    ? '<span style="color:#888">Keine Medien gefunden. Versuch andere Filter.</span>'
+                    : currentResults.map(url => {
+                        const src = getSource(url);
+                        return `<span class="url-line ${src}">${url}</span>`;
+                    }).join('');
+            } else {
+                resultsDiv.style.display = 'none';
+                previewDiv.style.display = 'grid';
+                previewDiv.innerHTML = currentResults.length === 0
+                    ? '<span style="color:#888">Keine Medien gefunden.</span>'
+                    : currentResults.map(url => {
+                        const ext = getUrlExtension(url);
+                        if (['mp4', 'webm', 'mov'].includes(ext)) {
+                            return `<video src="${url}" controls muted preload="metadata"></video>`;
+                        }
+                        return `<img src="${url}" loading="lazy" onerror="this.style.display='none'">`;
+                    }).join('');
+            }
+        }
+
+        function setView(view, btn) {
+            currentView = view;
+            document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderResults();
+        }
+
+        function copyResults() {
+            if (currentResults.length === 0) return alert('Nichts zum Kopieren!');
+            navigator.clipboard.writeText(currentResults.join('\n')).then(() => {
+                alert(currentResults.length + ' Links kopiert!');
+            });
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('preview').innerHTML = '';
+            document.getElementById('stats').innerHTML = '';
+            currentResults = [];
+        }
+
+        document.getElementById('input').addEventListener('paste', () => {
+            setTimeout(extract, 200);
+        });
+    </script>
+</body>
+</html>

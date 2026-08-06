@@ -1,0 +1,13 @@
+.env
+data/
+__pycache__/
+*.pyc
+*.log
+run_stdout.log
+run_stderr.log
+logs.txt
+backup/
+fertig/
+*.PNG
+*.png
+list_roles.py

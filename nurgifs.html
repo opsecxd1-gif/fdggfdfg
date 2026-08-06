@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord GIF Extractor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #ddd;
+        }
+        h1 { color: #00ff9d; }
+        textarea {
+            width: 100%;
+            height: 400px;
+            background: #2d2d2d;
+            color: #ddd;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        button {
+            background: #00ff9d;
+            color: black;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button.secondary {
+            background: #444;
+            color: #ddd;
+        }
+        button.secondary:hover { background: #555; }
+        button:hover { background: #00cc7a; }
+        #results {
+            margin-top: 20px;
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .count { color: #00ff9d; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Discord GIF / Media Extractor</h1>
+    <p>Füge hier deinen Discord-Chat-Export ODER eine JSON-Liste mit Links ein:</p>
+    <textarea id="input" placeholder="Paste den gesamten Log oder eine JSON-Liste hier..."></textarea>
+    
+    <div>
+        <button onclick="extractLinks()">Links extrahieren & deduplizieren</button>
+        <button onclick="convertJsonToPlain()" class="secondary">JSON-Liste → reine Zeilen umwandeln</button>
+        <button onclick="copyResults()">Ergebnis kopieren</button>
+        <button onclick="clearAll()">Alles löschen</button>
+    </div>
+    <p><span id="count" class="count">0</span> einzigartige Links gefunden</p>
+    <div id="results"></div>
+    <script>
+        function extractLinks() {
+            const input = document.getElementById('input').value;
+            const resultsDiv = document.getElementById('results');
+            const countSpan = document.getElementById('count');
+            
+            const urlRegex = /https?:\/\/[^\s"']+\.(gif|webp|png|jpg|jpeg|mp4|webm|mov)(?:\?[^\s"']*)?/gi;
+            
+            const matches = input.match(urlRegex) || [];
+            const uniqueLinks = new Set();
+            
+            matches.forEach(link => {
+                let cleanLink = link;
+                if (link.includes('?ex=')) {
+                    cleanLink = link.split('?')[0];
+                }
+                uniqueLinks.add(cleanLink);
+            });
+            
+            const sortedLinks = Array.from(uniqueLinks).sort();
+            let output = sortedLinks.join('\n');
+            
+            resultsDiv.textContent = output || 'Keine Links gefunden.';
+            countSpan.textContent = sortedLinks.length;
+        }
+
+        function convertJsonToPlain() {
+            const input = document.getElementById('input').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const countSpan = document.getElementById('count');
+
+            let links = [];
+
+            try {
+                // Versuch 1: sauberes JSON-Array parsen
+                const parsed = JSON.parse(input);
+                if (Array.isArray(parsed)) {
+                    links = parsed.filter(item => typeof item === 'string');
+                } else {
+                    throw new Error('Kein Array');
+                }
+            } catch (e) {
+                // Versuch 2: Fallback, falls kein valides JSON (z.B. Trailing Commas o.ä.)
+                // Extrahiert einfach alles zwischen Anführungszeichen, das wie eine URL aussieht
+                const fallbackRegex = /"(\s*https?:\/\/[^"]+)"/gi;
+                let match;
+                while ((match = fallbackRegex.exec(input)) !== null) {
+                    links.push(match[1].trim());
+                }
+            }
+
+            if (links.length === 0) {
+                resultsDiv.textContent = 'Keine Links im JSON-Format gefunden.';
+                countSpan.textContent = '0';
+                return;
+            }
+
+            const output = links.join('\n');
+            resultsDiv.textContent = output;
+            countSpan.textContent = links.length;
+        }
+
+        function copyResults() {
+            const text = document.getElementById('results').textContent;
+            if (!text || text.startsWith('Keine Links')) return alert('Nichts zum Kopieren!');
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Links wurden in die Zwischenablage kopiert!');
+            });
+        }
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('results').textContent = '';
+            document.getElementById('count').textContent = '0';
+        }
+        document.getElementById('input').addEventListener('paste', () => {
+            setTimeout(extractLinks, 150);
+        });
+    </script>
+</body>
+</html>
