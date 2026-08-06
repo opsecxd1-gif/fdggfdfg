@@ -1215,7 +1215,6 @@ async def on_ready():
 VOICE_SETUP_FILE = DATA_DIR / "voice_setup.json"
 voice_channel_owners = {}
 voice_channel_settings = {}
-lobby_channels = {}
 
 def load_voice_setup():
     if VOICE_SETUP_FILE.exists():
@@ -1233,7 +1232,7 @@ class VoiceChannelView(discord.ui.View):
         self.owner_id = owner_id
         self.channel_id = channel_id
 
-    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="🚫", custom_id="vc_private")
+    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="vc_private")
     async def private_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -1244,15 +1243,21 @@ class VoiceChannelView(discord.ui.View):
             await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
             return
         
+        settings = voice_channel_settings.get(self.channel_id, {})
+        is_private = settings.get("private", False)
+        
         overwrites = channel.overwrites_for(interaction.guild.default_role)
-        overwrites.connect = False
+        overwrites.connect = is_private
         await channel.set_permissions(interaction.guild.default_role, overwrite=overwrites)
         
-        settings = voice_channel_settings.get(self.channel_id, {})
-        settings["private"] = True
+        settings["private"] = not is_private
         voice_channel_settings[self.channel_id] = settings
         
-        await interaction.response.send_message("Channel ist jetzt privat!", ephemeral=True)
+        button.label = "Public" if not is_private else "Private"
+        button.emoji = "🌍" if not is_private else "🔒"
+        
+        status = "privat" if not is_private else "öffentlich"
+        await interaction.response.send_message(f"Channel ist jetzt {status}!", ephemeral=True)
 
     @discord.ui.button(label="Hide", style=discord.ButtonStyle.secondary, emoji="👁️", custom_id="vc_hide")
     async def hide_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1265,15 +1270,28 @@ class VoiceChannelView(discord.ui.View):
             await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
             return
         
+        settings = voice_channel_settings.get(self.channel_id, {})
+        is_hidden = settings.get("hidden", False)
+        
         overwrites = channel.overwrites_for(interaction.guild.default_role)
-        overwrites.view_channel = False
+        overwrites.view_channel = is_hidden
         await channel.set_permissions(interaction.guild.default_role, overwrite=overwrites)
         
-        settings = voice_channel_settings.get(self.channel_id, {})
-        settings["hidden"] = True
+        settings["hidden"] = not is_hidden
         voice_channel_settings[self.channel_id] = settings
         
-        await interaction.response.send_message("Channel ist jetzt versteckt!", ephemeral=True)
+        button.label = "Show" if not is_hidden else "Hide"
+        
+        status = "versteckt" if not is_hidden else "sichtbar"
+        await interaction.response.send_message(f"Channel ist jetzt {status}!", ephemeral=True)
+
+    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary, emoji="✏️", custom_id="vc_rename")
+    async def rename_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        await interaction.response.send_modal(RenameModal(self.channel_id))
 
     @discord.ui.button(label="Kick", style=discord.ButtonStyle.danger, emoji="👢", custom_id="vc_kick")
     async def kick_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1293,7 +1311,7 @@ class VoiceChannelView(discord.ui.View):
         
         member_list = "\n".join([f"• {m.mention} (ID: {m.id})" for m in members_in_channel])
         await interaction.response.send_message(
-            f"User im Channel:\n{member_list}\n\nRechtsklick auf den User → Verbindung trennen",
+            f"User im Channel:\n{member_list}\n\nRechtsklick → Verbindung trennen",
             ephemeral=True
         )
 
@@ -1304,7 +1322,7 @@ class VoiceChannelView(discord.ui.View):
             return
         
         await interaction.response.send_message(
-            "Nutze `/vc_ban <user_id>` um jemanden aus deinem Channel zu bannen.",
+            "Nutze `/vc_ban <user_id>` um jemanden zu bannen.",
             ephemeral=True
         )
 
@@ -1315,7 +1333,7 @@ class VoiceChannelView(discord.ui.View):
             return
         
         await interaction.response.send_message(
-            "Teile den Invite-Link:\nhttps://discord.gg/DEIN_SERVER",
+            "Teile den Server-Invite mit Leuten die joinen sollen!",
             ephemeral=True
         )
 
@@ -1341,24 +1359,33 @@ class VoiceChannelView(discord.ui.View):
             ephemeral=True
         )
 
-async def create_voice_control_embed(member, channel):
-    settings = voice_channel_settings.get(channel.id, {})
-    is_private = settings.get("private", False)
-    is_hidden = settings.get("hidden", False)
+class RenameModal(discord.ui.Modal, title="Channel umbenennen"):
+    new_name = discord.ui.TextInput(label="Neuer Name", placeholder="Mein Chat", max_length=50)
     
+    def __init__(self, channel_id: int):
+        super().__init__()
+        self.channel_id = channel_id
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        try:
+            await channel.edit(name=self.new_name.value)
+            await interaction.response.send_message(f"Channel umbenannt in **{self.new_name.value}**!", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+async def create_voice_control_embed(member, channel):
     embed = discord.Embed(
         title=f"{member.display_name}'s Private Chat",
         description=(
-            f"Willkommen {member.mention} in deinem privaten Chat!\n"
-            f"Nur User die mit dir im Channel sind sehen das.\n"
+            f"Willkommen {member.mention}!\n"
             f"Der Channel wird gelöscht wenn alle gehen."
         ),
         color=discord.Color.blue()
-    )
-    embed.add_field(
-        name="Dein Channel ist:",
-        value=f"{'🔒 Privat' if is_private else '🌍 Öffentlich'}\n{'👁️ Versteckt' if is_hidden else '👁️ Sichtbar'}",
-        inline=False
     )
     embed.set_footer(text="Nutze die Buttons um deinen Channel zu verwalten.")
     
@@ -1372,7 +1399,7 @@ async def voicesetup(interaction: discord.Interaction):
     
     category = await guild.create_category("Private Chats")
     
-    overwrites = {
+    lobby_overwrites = {
         guild.default_role: discord.PermissionOverwrite(
             view_channel=True,
             connect=True,
@@ -1383,15 +1410,14 @@ async def voicesetup(interaction: discord.Interaction):
             connect=True,
             speak=True,
             manage_channels=True,
-            move_members=True,
-            manage_permissions=True
+            move_members=True
         )
     }
     
     lobby = await guild.create_voice_channel(
         "➕ Join to Create",
         category=category,
-        overwrites=overwrites
+        overwrites=lobby_overwrites
     )
     
     setup_data = load_voice_setup()
@@ -1400,8 +1426,6 @@ async def voicesetup(interaction: discord.Interaction):
         "lobby_id": lobby.id
     }
     save_voice_setup(setup_data)
-    
-    lobby_channels[lobby.id] = category.id
     
     embed = discord.Embed(
         title="Voice Channel System",
@@ -1455,8 +1479,7 @@ async def on_voice_state_update(member, before, after):
                 connect=True,
                 speak=True,
                 manage_channels=True,
-                move_members=True,
-                manage_permissions=True
+                move_members=True
             )
         }
         
@@ -1482,11 +1505,42 @@ async def on_voice_state_update(member, before, after):
     
     if before.channel and before.channel.id in voice_channel_owners:
         channel = before.channel
+        
         if len(channel.members) == 0:
             voice_channel_owners.pop(channel.id, None)
             voice_channel_settings.pop(channel.id, None)
             try:
-                await channel.delete(reason="Channel leer - automatisch gelöscht")
+                await channel.delete(reason="Channel leer")
+            except:
+                pass
+        elif voice_channel_owners.get(channel.id) == member.id:
+            new_owner = channel.members[0]
+            voice_channel_owners[channel.id] = new_owner.id
+            
+            try:
+                old_overwrites = channel.overwrites_for(member)
+                old_overwrites.update(move_members=False, manage_channels=False, manage_permissions=False, priority_speaker=False)
+                await channel.set_permissions(member, overwrite=old_overwrites)
+            except:
+                pass
+            
+            try:
+                new_overwrites = channel.overwrites_for(new_owner)
+                new_overwrites.update(
+                    view_channel=True,
+                    connect=True,
+                    speak=True,
+                    move_members=True,
+                    manage_channels=True,
+                    manage_permissions=True,
+                    priority_speaker=True
+                )
+                await channel.set_permissions(new_owner, overwrite=new_overwrites)
+            except:
+                pass
+            
+            try:
+                await channel.send(f"Der Besitzer hat den Channel verlassen. {new_owner.mention} ist jetzt der neue Besitzer!")
             except:
                 pass
 
