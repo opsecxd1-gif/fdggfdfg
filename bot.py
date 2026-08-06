@@ -10,6 +10,7 @@ from pathlib import Path
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -1206,6 +1207,363 @@ async def on_ready():
         print(f"{len(synced)} Commands synchronisiert")
     except Exception as e:
         print(f"Sync fehlgeschlagen: {e}")
+
+# =====================================
+# VOICE CHANNEL MANAGEMENT SYSTEM
+# =====================================
+
+VOICE_SETUP_FILE = DATA_DIR / "voice_setup.json"
+voice_channel_owners = {}
+voice_channel_settings = {}
+
+def load_voice_setup():
+    if VOICE_SETUP_FILE.exists():
+        with open(VOICE_SETUP_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_voice_setup(data):
+    with open(VOICE_SETUP_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+class VoiceChannelView(discord.ui.View):
+    def __init__(self, owner_id: int, channel_id: int):
+        super().__init__(timeout=None)
+        self.owner_id = owner_id
+        self.channel_id = channel_id
+
+    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="🚫", custom_id="vc_private")
+    async def private_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        overwrites = channel.overwrites_for(interaction.guild.default_role)
+        overwrites.connect = False
+        await channel.set_permissions(interaction.guild.default_role, overwrite=overwrites)
+        
+        settings = voice_channel_settings.get(self.channel_id, {})
+        settings["private"] = True
+        voice_channel_settings[self.channel_id] = settings
+        
+        await interaction.response.send_message("Channel ist jetzt privat!", ephemeral=True)
+
+    @discord.ui.button(label="Hide", style=discord.ButtonStyle.secondary, emoji="👁️", custom_id="vc_hide")
+    async def hide_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+            return
+        
+        overwrites = channel.overwrites_for(interaction.guild.default_role)
+        overwrites.view_channel = False
+        await channel.set_permissions(interaction.guild.default_role, overwrite=overwrites)
+        
+        settings = voice_channel_settings.get(self.channel_id, {})
+        settings["hidden"] = True
+        voice_channel_settings[self.channel_id] = settings
+        
+        await interaction.response.send_message("Channel ist jetzt versteckt!", ephemeral=True)
+
+    @discord.ui.button(label="Kick", style=discord.ButtonStyle.danger, emoji="👢", custom_id="vc_kick")
+    async def kick_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann Leute kicken!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(
+            "Klicke auf den User den du kicken möchtest, dann nutze den Befehl:",
+            ephemeral=True
+        )
+        
+        channel = interaction.guild.get_channel(self.channel_id)
+        if not channel:
+            return
+        
+        members_in_channel = [m for m in channel.members if m.id != self.owner_id]
+        if not members_in_channel:
+            await interaction.followup.send("Niemand else im Channel!", ephemeral=True)
+            return
+        
+        member_list = "\n".join([f"• {m.mention} (ID: {m.id})" for m in members_in_channel])
+        await interaction.followup.send(
+            f"User im Channel:\n{member_list}\n\nNutze: `/vc_kick <user_id>`",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Ban", style=discord.ButtonStyle.danger, emoji="🚫", custom_id="vc_ban")
+    async def ban_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(
+            "Ban-Feature: Nutze `/vc_ban <user_id>` um jemanden aus deinem Channel zu bannen.",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Invite", style=discord.ButtonStyle.success, emoji="🔗", custom_id="vc_invite")
+    async def invite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(
+            "Sende eine Einladung mit dem Link:\nhttps://discord.gg/DEIN_SERVER_CODE",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Permit", style=discord.ButtonStyle.success, emoji="✅", custom_id="vc_permit")
+    async def permit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(
+            "Permit-Feature: Nutze `/vc_permit <user_id>` um jemandem Zugriff zu geben.",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Change Owner", style=discord.ButtonStyle.primary, emoji="👑", custom_id="vc_changeowner")
+    async def change_owner_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Nur der aktuelle Besitzer kann das!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message(
+            "Change Owner: Nutze `/vc_changeowner <user_id>` um den Besitz zu übertragen.",
+            ephemeral=True
+        )
+
+async def create_voice_control_embed(member, channel):
+    settings = voice_channel_settings.get(channel.id, {})
+    is_private = settings.get("private", False)
+    is_hidden = settings.get("hidden", False)
+    
+    embed = discord.Embed(
+        title=f"{member.display_name}'s Private Chat",
+        description=f"Willkommen {member.mention} in deinem privaten Chat!\nNur User in deinem Channel sehen das.",
+        color=discord.Color.blue()
+    )
+    embed.add_field(
+        name="Dein Channel ist:",
+        value=f"{'🔒 Privat' if is_private else '🌍 Öffentlich'}\n{'👁️ Versteckt' if is_hidden else '👁️ Sichtbar'}",
+        inline=False
+    )
+    embed.set_footer(text="Nutze die Buttons um deinen Channel zu verwalten.")
+    
+    view = VoiceChannelView(member.id, channel.id)
+    return embed, view
+
+@bot.tree.command(name="voicesetup", description="Voice Channel Management System einrichten")
+@is_admin_or_owner()
+async def voicesetup(interaction: discord.Interaction, category: discord.CategoryChannel = None):
+    if not category:
+        category = await interaction.guild.create_category("Voice Channels")
+    
+    setup_data = load_voice_setup()
+    setup_data[str(interaction.guild.id)] = {
+        "category_id": category.id,
+        "setup_channel": interaction.channel.id
+    }
+    save_voice_setup(setup_data)
+    
+    embed = discord.Embed(
+        title="Voice Channel System",
+        description="Betritt einen Voice Channel um ein privates Setup zu erhalten!",
+        color=discord.Color.green()
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member.bot:
+        return
+    
+    setup_data = load_voice_setup()
+    guild_setup = setup_data.get(str(member.guild.id))
+    
+    if not guild_setup:
+        return
+    
+    if after.channel and not before.channel:
+        category = member.guild.get_channel(guild_setup.get("category_id"))
+        if category and after.channel.category_id == category.id:
+            embed, view = await create_voice_control_embed(member, after.channel)
+            
+            control_channel = member.guild.get_channel(guild_setup.get("setup_channel"))
+            if control_channel:
+                await control_channel.send(embed=embed, view=view)
+            
+            voice_channel_owners[after.channel.id] = member.id
+    
+    if before.channel and not after.channel:
+        if before.channel.id in voice_channel_owners:
+            channel = before.channel
+            if len(channel.members) == 0:
+                voice_channel_owners.pop(channel.id, None)
+                voice_channel_settings.pop(channel.id, None)
+                try:
+                    await channel.delete(reason="Channel leer - automatisch gelöscht")
+                except:
+                    pass
+
+@bot.tree.command(name="vc_kick", description="User aus deinem Voice Channel kicken")
+async def vc_kick(interaction: discord.Interaction, user_id: str):
+    try:
+        target_id = int(user_id)
+    except:
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        return
+    
+    owner_id = None
+    target_channel = None
+    
+    for channel_id, owner in voice_channel_owners.items():
+        if owner == interaction.user.id:
+            channel = interaction.guild.get_channel(channel_id)
+            if channel:
+                for member in channel.members:
+                    if member.id == target_id:
+                        owner_id = owner
+                        target_channel = channel
+                        break
+    
+    if not owner_id or owner_id != interaction.user.id:
+        await interaction.response.send_message("Du bist kein Channel-Besitzer oder der User ist nicht in deinem Channel!", ephemeral=True)
+        return
+    
+    target_member = interaction.guild.get_member(target_id)
+    if not target_member:
+        await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+        return
+    
+    try:
+        await target_member.move_to(None, reason=f"Gekickt von {interaction.user.display_name}")
+        await interaction.response.send_message(f"{target_member.display_name} wurde gekickt!", ephemeral=True)
+    except discord.Forbidden:
+        await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+@bot.tree.command(name="vc_ban", description="User aus deinem Voice Channel bannen")
+async def vc_ban(interaction: discord.Interaction, user_id: str):
+    try:
+        target_id = int(user_id)
+    except:
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        return
+    
+    owner_id = None
+    target_channel = None
+    
+    for channel_id, owner in voice_channel_owners.items():
+        if owner == interaction.user.id:
+            channel = interaction.guild.get_channel(channel_id)
+            if channel:
+                for member in channel.members:
+                    if member.id == target_id:
+                        owner_id = owner
+                        target_channel = channel
+                        break
+    
+    if not owner_id or owner_id != interaction.user.id:
+        await interaction.response.send_message("Du bist kein Channel-Besitzer oder der User ist nicht in deinem Channel!", ephemeral=True)
+        return
+    
+    target_member = interaction.guild.get_member(target_id)
+    if not target_member:
+        await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+        return
+    
+    try:
+        overwrites = target_channel.overwrites_for(target_member)
+        overwrites.connect = False
+        await target_channel.set_permissions(target_member, overwrite=overwrites)
+        await target_member.move_to(None, reason=f"Gebannt von {interaction.user.display_name}")
+        await interaction.response.send_message(f"{target_member.display_name} wurde gebannt!", ephemeral=True)
+    except discord.Forbidden:
+        await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+@bot.tree.command(name="vc_permit", description="User Zugriff auf deinen Channel geben")
+async def vc_permit(interaction: discord.Interaction, user_id: str):
+    try:
+        target_id = int(user_id)
+    except:
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        return
+    
+    target_channel = None
+    for channel_id, owner in voice_channel_owners.items():
+        if owner == interaction.user.id:
+            channel = interaction.guild.get_channel(channel_id)
+            if channel:
+                target_channel = channel
+                break
+    
+    if not target_channel:
+        await interaction.response.send_message("Du hast keinen Channel!", ephemeral=True)
+        return
+    
+    target_member = interaction.guild.get_member(target_id)
+    if not target_member:
+        await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+        return
+    
+    try:
+        overwrites = target_channel.overwrites_for(target_member)
+        overwrites.connect = True
+        overwrites.view_channel = True
+        await target_channel.set_permissions(target_member, overwrite=overwrites)
+        await interaction.response.send_message(f"{target_member.display_name} hat jetzt Zugriff!", ephemeral=True)
+    except discord.Forbidden:
+        await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+@bot.tree.command(name="vc_changeowner", description="Channel Besitz übertragen")
+async def vc_changeowner(interaction: discord.Interaction, user_id: str):
+    try:
+        target_id = int(user_id)
+    except:
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        return
+    
+    old_owner_channel = None
+    for channel_id, owner in voice_channel_owners.items():
+        if owner == interaction.user.id:
+            old_owner_channel = channel_id
+            break
+    
+    if not old_owner_channel:
+        await interaction.response.send_message("Du hast keinen Channel!", ephemeral=True)
+        return
+    
+    target_member = interaction.guild.get_member(target_id)
+    if not target_member:
+        await interaction.response.send_message("User nicht gefunden!", ephemeral=True)
+        return
+    
+    channel = interaction.guild.get_channel(old_owner_channel)
+    if not channel:
+        await interaction.response.send_message("Channel nicht gefunden!", ephemeral=True)
+        return
+    
+    if target_member not in channel.members:
+        await interaction.response.send_message("Der User ist nicht im Channel!", ephemeral=True)
+        return
+    
+    voice_channel_owners[old_owner_channel] = target_id
+    
+    embed, view = await create_voice_control_embed(target_member, channel)
+    await channel.send(embed=embed, view=view)
+    
+    await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
 
 if __name__ == "__main__":
     TOKEN = os.getenv("DISCORD_TOKEN")
