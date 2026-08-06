@@ -210,9 +210,9 @@ async def download_tiktok_video(url, mode="clyppy"):
         }
         
         if mode == "clyppy":
-            base_opts['format'] = 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio/best'
+            base_opts['format'] = 'bestvideo[ext=mp4][vcodec*=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best'
         elif mode == "dlbot":
-            base_opts['format'] = 'best[ext=mp4]/bestvideo+bestaudio/best'
+            base_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
             base_opts['merge_output_format'] = 'mp4'
         elif mode == "tikcord":
             base_opts['format'] = 'bestvideo+bestaudio/best'
@@ -242,7 +242,37 @@ async def download_tiktok_video(url, mode="clyppy"):
             file_size = os.path.getsize(filename)
             print(f"[TikTok] Downloaded: {filename} ({file_size} bytes)")
             
-            return filename, info.get('title', 'TikTok Video')
+            final_path = str(TIKTOK_DOWNLOAD_DIR / 'tiktok_final.mp4')
+            
+            convert_cmd = [
+                'ffmpeg', '-y', '-i', filename,
+                '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+                '-c:a', 'aac', '-b:a', '128k',
+                '-movflags', '+faststart',
+                '-pix_fmt', 'yuv420p',
+                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                final_path
+            ]
+            
+            print(f"[TikTok] Converting to h264...")
+            proc = await asyncio.create_subprocess_exec(
+                *convert_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            
+            if proc.returncode == 0 and os.path.exists(final_path):
+                final_size = os.path.getsize(final_path)
+                print(f"[TikTok] Converted: {final_path} ({final_size} bytes)")
+                
+                if filename != final_path and os.path.exists(filename):
+                    os.remove(filename)
+                return final_path, info.get('title', 'TikTok Video')
+            else:
+                print(f"[TikTok] FFmpeg failed, using original file")
+                print(f"[TikTok] FFmpeg stderr: {stderr.decode()[:500]}")
+                return filename, info.get('title', 'TikTok Video')
     except Exception as e:
         print(f"[TikTok] Download Fehler: {e}")
         return None, None
