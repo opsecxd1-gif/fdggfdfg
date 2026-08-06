@@ -194,46 +194,64 @@ def is_tiktok_url(url):
 
 async def download_tiktok_video(url, mode="clyppy"):
     try:
-        if mode == "clyppy":
-            ydl_opts = {
-                'format': 'best[ext=mp4]/best',
-                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': False,
-            }
-        elif mode == "dlbot":
-            ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
-                'quiet': True,
-                'no_warnings': True,
-                'merge_output_format': 'mp4',
-            }
-        elif mode == "tikcord":
-            ydl_opts = {
-                'format': 'best',
-                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
-                'quiet': True,
-                'no_warnings': True,
-            }
-        else:
-            ydl_opts = {
-                'format': 'best[ext=mp4]/best',
-                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
-                'quiet': True,
-                'no_warnings': True,
-            }
+        base_opts = {
+            'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': False,
+            'concurrent_fragment_downloads': 4,
+            'fragment_retries': 10,
+            'retries': 10,
+            'socket_timeout': 30,
+            'postprocessors': [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4',
+            }],
+            'merge_output_format': 'mp4',
+        }
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        if mode == "clyppy":
+            base_opts['format'] = 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]+bestaudio/best[ext=mp4]/best'
+        elif mode == "dlbot":
+            base_opts['format'] = 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[vcodec^=avc1]+bestaudio/best[ext=mp4]/best'
+        elif mode == "tikcord":
+            base_opts['format'] = 'bestvideo[vcodec^=avc1]+bestaudio/bestvideo+bestaudio/best'
+        else:
+            base_opts['format'] = 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[acodec^=mp4a]/best[ext=mp4]/best'
+        
+        with yt_dlp.YoutubeDL(base_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
+            
             if not os.path.exists(filename):
                 base = os.path.splitext(filename)[0]
-                for ext in ['.mp4', '.webm', '.mkv']:
+                for ext in ['.mp4', '.webm', '.mkv', '.mp4']:
                     if os.path.exists(base + ext):
                         filename = base + ext
                         break
+            
+            if os.path.exists(filename):
+                final_path = str(TIKTOK_DOWNLOAD_DIR / 'tiktok_final.mp4')
+                convert_cmd = [
+                    'ffmpeg', '-y', '-i', filename,
+                    '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+                    '-c:a', 'aac', '-b:a', '128k',
+                    '-movflags', '+faststart',
+                    '-pix_fmt', 'yuv420p',
+                    final_path
+                ]
+                proc = await asyncio.create_subprocess_exec(
+                    *convert_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await proc.communicate()
+                
+                if proc.returncode == 0 and os.path.exists(final_path):
+                    if os.path.exists(filename) and filename != final_path:
+                        os.remove(filename)
+                    return final_path, info.get('title', 'TikTok Video')
+            
             return filename, info.get('title', 'TikTok Video')
     except Exception as e:
         print(f"TikTok Download Fehler: {e}")
@@ -1486,6 +1504,11 @@ async def on_message(message):
     if not tiktok_urls:
         return
     
+    try:
+        await message.edit(suppress=True)
+    except:
+        pass
+    
     mode = guild_mode.get("mode", "clyppy")
     
     async with message.channel.typing():
@@ -1502,29 +1525,27 @@ async def on_message(message):
                         await message.add_reaction("❌")
                         await message.reply(
                             f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). "
-                            f"Discord Limit: 8MB. Versuche es mit einem anderen Service.",
+                            f"Discord Limit: 8MB.",
                             mention_author=False
                         )
+                        if os.path.exists(filename):
+                            os.remove(filename)
                         continue
                     
                     await message.remove_reaction("⏳", bot.user)
                     await message.add_reaction("✅")
                     
-                    discord_file = discord.File(filename, filename="tiktok_video.mp4")
+                    discord_file = discord.File(filename, filename="tiktok.mp4")
                     await message.reply(
                         file=discord_file,
-                        content=f"🎬 **TikTok Video heruntergeladen!**\n{url}",
                         mention_author=False
                     )
                     
-                    os.remove(filename)
+                    if os.path.exists(filename):
+                        os.remove(filename)
                 else:
                     await message.remove_reaction("⏳", bot.user)
                     await message.add_reaction("❌")
-                    await message.reply(
-                        f"❌ Download fehlgeschlagen. Versuche es später erneut.",
-                        mention_author=False
-                    )
             except Exception as e:
                 print(f"TikTok Download Fehler: {e}")
                 try:
