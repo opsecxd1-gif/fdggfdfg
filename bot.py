@@ -27,6 +27,8 @@ REACTION_ROLES_FILE = DATA_DIR / "reaction_roles.json"
 
 EXCLUDED_ROLE_NAMES = ["owner", "head admin", "admin", "moderator", "bot", "muted", "timeout"]
 
+REQUIRED_ROLE_NAME = "976"
+
 WEBHOOK_NAME = "Reaction Roles"
 WEBHOOK_URL = "https://discord.com/api/webhooks/1532848727512056039/GRP8vAkYAWpj8UIC_TJclU8a185KFuW5_nreFOdkeY_je6kWhLm-X4C37GPh6DhWJsBK"
 
@@ -60,9 +62,10 @@ def is_admin_or_owner():
     async def predicate(interaction: discord.Interaction):
         if interaction.guild.owner_id == interaction.user.id:
             return True
-        if interaction.user.guild_permissions.administrator:
+        required_role = discord.utils.get(interaction.user.roles, name=REQUIRED_ROLE_NAME)
+        if required_role:
             return True
-        await interaction.response.send_message("Keine Berechtigung! Nur Admins/Owner können den Bot nutzen.", ephemeral=True)
+        await interaction.response.send_message("Keine Berechtigung! Nur User mit der 976 Rolle können den Bot nutzen.", ephemeral=True)
         return False
     return app_commands.check(predicate)
 

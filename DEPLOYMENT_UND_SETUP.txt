@@ -1,0 +1,98 @@
+=====================================
+DISCORD BOT - DEPLOYMENT & SETUP
+=====================================
+
+1. BOT AUF RAILWAY 24/7 HOSTEN
+=====================================
+
+GitHub Repo: https://github.com/opsecxd1-gif/fdggfdfg
+Railway Link: https://railway.com/project/1d5455df-1c2b-473e-8a38-92c748b51d73
+
+Environment Variable:
+  Name:  DISCORD_TOKEN
+  Wert:  Steht in der .env Datei (nicht auf GitHub sichtbar)
+
+2. WIE MAN ÄNDERUNGEN ONLINE BRINGT
+=====================================
+
+Änderungen werden NICHT automatisch hochgeladen!
+Nach jedem Code-Änderung im Terminal:
+
+  cd I:\discordgifbot
+  git add .
+  git commit -m "Beschreibung"
+  git push
+
+Railway deployed dann automatisch neu (30-60 Sekunden).
+
+3. BOT-COMMANDS (nur mit 976-Rolle)
+=====================================
+
+Alle Commands funktionieren NUR für User mit der "976" Rolle.
+Andere User können KEINE Commands ausführen.
+
+Commands:
+  /add         - GIF/Media-Links hinzufügen
+  /load        - .txt Datei mit Links hochladen
+  /start       - GIF-Senden starten
+  /cont        - GIF-Senden fortsetzen
+  /stop        - GIF-Senden stoppen
+  /next        - Nächste GIFs senden
+  /status      - Aktuellen Stand anzeigen
+  /clear       - Liste löschen
+  /embedvideos - Video-Embed Toggle
+  /size        - Anzahl pro Nachricht setzen
+  /list        - Erste/letzte 5 Links zeigen
+  /pos         - Position manuell setzen
+  /import      - Bis zu 10 .txt Dateien (neue Channels)
+  /import2     - Bis zu 10 .txt Dateien (diesen Channel)
+  /filtermode  - Erweiterter Media-Filter
+  /nofiltermode - Kein Filter
+  /clearchannels - Alle Bot-Channels löschen
+  /permsync    - Permissions synchronisieren
+  /hoistall    - Alle Rollen "getrennt anzeigen"
+  /reactionrole - Reaction-Roles verwalten (add/remove/list/clear)
+  /reactionsetup - Webhook+Embed+Button für eine Rolle
+  /masssetup   - ALLE User-Rollen als Buttons (mehrere Seiten)
+
+4. ROLLEN-FILTER (masssetup)
+=====================================
+
+Eingeschlossene User-Rollen (Beispiele):
+  Marlboro, Sugar Mommy, e-girl, Hello Kitty, Star,
+  Bunny, Sonic, Kitten, Barbie, Queen, King, Alien,
+  Demon, Spiderman, Spongebob, Enger, etc.
+
+Ausgeschlossen (automatisch):
+  - Bot-Rollen (Carl-bot, YAGPDB, etc.)
+  - Admin/Team-Rollen (Admin, Moderator, Head Admin, etc.)
+  - Booster-Rollen
+  - Level-Rollen (Supreme, Champion, etc.)
+  - Star-Rollen (★, *, star)
+
+5. WICHTIGE DATIEN
+=====================================
+
+  bot.py              - Hauptbot mit allen Commands
+  requirements.txt    - Python-Abhängigkeiten
+  .env                - Token (NICHT auf GitHub!)
+  .gitignore          - Ausgeschlossene Dateien
+  data/               - Gespeicherte Links & Reaction-Roles
+
+6. PROBLEME & FIXES
+=====================================
+
+Problem: "DISCORD_TOKEN nicht gesetzt"
+  → In Railway Variables Tab den Token eintragen
+
+Problem: Buttons funktionieren nicht
+  → Eigener Webhook "Reaction Roles" wird erstellt
+  → Carl-bot Webhook NICHT benutzen (gehört denen)
+
+Problem: Git Push fehler wegen Tokens
+  → Token aus sync.py und list_roles.py entfernt
+  → .env Datei wird nicht hochgeladen (.gitignore)
+
+=====================================
+Stand: 06.08.2026
+=====================================
