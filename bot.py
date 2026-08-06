@@ -196,29 +196,21 @@ async def download_tiktok_video(url, mode="clyppy"):
     try:
         base_opts = {
             'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
-            'quiet': True,
-            'no_warnings': True,
+            'quiet': False,
+            'no_warnings': False,
             'extract_flat': False,
             'concurrent_fragment_downloads': 4,
             'fragment_retries': 10,
             'retries': 10,
-            'socket_timeout': 30,
+            'socket_timeout': 60,
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'Referer': 'https://www.tiktok.com/',
+                'Accept-Language': 'en-US,en;q=0.9',
             },
+            'format': 'best',
+            'merge_output_format': 'mp4',
         }
-        
-        if mode == "clyppy":
-            base_opts['format'] = 'bestvideo[ext=mp4][vcodec*=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-        elif mode == "dlbot":
-            base_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-            base_opts['merge_output_format'] = 'mp4'
-        elif mode == "tikcord":
-            base_opts['format'] = 'bestvideo+bestaudio/best'
-            base_opts['merge_output_format'] = 'mp4'
-        else:
-            base_opts['format'] = 'best[ext=mp4]/best'
         
         print(f"[TikTok] Starting download: {url} (mode: {mode})")
         
@@ -230,7 +222,7 @@ async def download_tiktok_video(url, mode="clyppy"):
             
             if not os.path.exists(filename):
                 base = os.path.splitext(filename)[0]
-                for ext in ['.mp4', '.webm', '.mkv', '.mov']:
+                for ext in ['.mp4', '.webm', '.mkv', '.mov', '.mp4']:
                     if os.path.exists(base + ext):
                         filename = base + ext
                         break
@@ -242,15 +234,28 @@ async def download_tiktok_video(url, mode="clyppy"):
             file_size = os.path.getsize(filename)
             print(f"[TikTok] Downloaded: {filename} ({file_size} bytes)")
             
+            if file_size < 1000:
+                print(f"[TikTok] File too small, likely corrupt")
+                os.remove(filename)
+                return None, None
+            
             final_path = str(TIKTOK_DOWNLOAD_DIR / 'tiktok_final.mp4')
             
+            import shutil
+            ffmpeg_path = shutil.which('ffmpeg')
+            
+            if not ffmpeg_path:
+                print(f"[TikTok] FFmpeg NOT FOUND at all!")
+                return filename, info.get('title', 'TikTok Video')
+            
+            print(f"[TikTok] FFmpeg found at: {ffmpeg_path}")
+            
             convert_cmd = [
-                'ffmpeg', '-y', '-i', filename,
-                '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
-                '-c:a', 'aac', '-b:a', '128k',
+                ffmpeg_path, '-y', '-i', filename,
+                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+                '-c:a', 'aac', '-b:a', '96k',
                 '-movflags', '+faststart',
                 '-pix_fmt', 'yuv420p',
-                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
                 final_path
             ]
             
@@ -264,17 +269,22 @@ async def download_tiktok_video(url, mode="clyppy"):
             
             if proc.returncode == 0 and os.path.exists(final_path):
                 final_size = os.path.getsize(final_path)
-                print(f"[TikTok] Converted: {final_path} ({final_size} bytes)")
+                print(f"[TikTok] Converted OK: {final_path} ({final_size} bytes)")
                 
                 if filename != final_path and os.path.exists(filename):
                     os.remove(filename)
                 return final_path, info.get('title', 'TikTok Video')
             else:
-                print(f"[TikTok] FFmpeg failed, using original file")
-                print(f"[TikTok] FFmpeg stderr: {stderr.decode()[:500]}")
+                stderr_text = stderr.decode()[-1000:] if stderr else "no stderr"
+                print(f"[TikTok] FFmpeg FAILED (code {proc.returncode})")
+                print(f"[TikTok] FFmpeg stderr: {stderr_text}")
+                
+                print(f"[TikTok] Sending original file anyway")
                 return filename, info.get('title', 'TikTok Video')
     except Exception as e:
-        print(f"[TikTok] Download Fehler: {e}")
+        import traceback
+        print(f"[TikTok] Download EXCEPTION: {e}")
+        print(f"[TikTok] Traceback: {traceback.format_exc()}")
         return None, None
 
 @bot.tree.command(name="add", description="Füge GIF/Media-Links hinzu")
@@ -1511,81 +1521,67 @@ async def on_message(message):
     tiktok_mode_data = load_tiktok_mode()
     guild_id_str = str(message.guild.id) if message.guild else None
     
-    if not guild_id_str or guild_id_str not in tiktok_mode_data:
-        await bot.process_commands(message)
-        return
+    has_tiktok = False
+    if guild_id_str and guild_id_str in tiktok_mode_data:
+        guild_mode = tiktok_mode_data[guild_id_str]
+        if guild_mode.get("enabled", False):
+            urls = re.findall(r'https?://[^\s<>"\']+', message.content)
+            tiktok_urls = [url for url in urls if is_tiktok_url(url)]
+            if tiktok_urls:
+                has_tiktok = True
     
-    guild_mode = tiktok_mode_data[guild_id_str]
-    if not guild_mode.get("enabled", False):
-        await bot.process_commands(message)
-        return
-    
-    urls = re.findall(r'https?://[^\s<>"\']+', message.content)
-    tiktok_urls = [url for url in urls if is_tiktok_url(url)]
-    
-    if not tiktok_urls:
-        await bot.process_commands(message)
-        return
-    
-    print(f"[TikTok] Detected {len(tiktok_urls)} TikTok URL(s) in message from {message.author}")
-    
-    try:
-        await message.edit(suppress=True)
-    except:
-        pass
-    
-    mode = guild_mode.get("mode", "clyppy")
-    
-    async with message.channel.typing():
-        for url in tiktok_urls[:3]:
-            try:
-                await message.add_reaction("⏳")
-                
-                filename, title = await download_tiktok_video(url, mode)
-                
-                if filename and os.path.exists(filename):
-                    file_size = os.path.getsize(filename)
-                    print(f"[TikTok] File size: {file_size} bytes")
+    if has_tiktok:
+        print(f"[TikTok] Detected TikTok URL from {message.author}: {tiktok_urls[0]}")
+        
+        try:
+            await message.edit(suppress=True)
+        except:
+            pass
+        
+        mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
+        
+        async with message.channel.typing():
+            for url in tiktok_urls[:3]:
+                try:
+                    await message.add_reaction("⏳")
                     
-                    if file_size > 8 * 1024 * 1024:
+                    filename, title = await download_tiktok_video(url, mode)
+                    
+                    if filename and os.path.exists(filename):
+                        file_size = os.path.getsize(filename)
+                        print(f"[TikTok] Sending file: {file_size} bytes")
+                        
+                        if file_size > 8 * 1024 * 1024:
+                            await message.remove_reaction("⏳", bot.user)
+                            await message.add_reaction("❌")
+                            await message.reply(
+                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 8MB.",
+                                mention_author=False
+                            )
+                            os.remove(filename)
+                            continue
+                        
                         await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("❌")
+                        await message.add_reaction("✅")
+                        
+                        discord_file = discord.File(filename, filename="tiktok.mp4")
                         await message.reply(
-                            f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). "
-                            f"Discord Limit: 8MB.",
+                            file=discord_file,
                             mention_author=False
                         )
+                        
                         os.remove(filename)
-                        continue
-                    
-                    if file_size < 1000:
+                    else:
                         await message.remove_reaction("⏳", bot.user)
                         await message.add_reaction("❌")
-                        print(f"[TikTok] File too small, likely corrupt: {file_size} bytes")
-                        os.remove(filename)
-                        continue
-                    
-                    await message.remove_reaction("⏳", bot.user)
-                    await message.add_reaction("✅")
-                    
-                    discord_file = discord.File(filename, filename="tiktok.mp4")
-                    await message.reply(
-                        file=discord_file,
-                        mention_author=False
-                    )
-                    
-                    os.remove(filename)
-                else:
-                    await message.remove_reaction("⏳", bot.user)
-                    await message.add_reaction("❌")
-                    print(f"[TikTok] Download failed for: {url}")
-            except Exception as e:
-                print(f"[TikTok] Exception: {e}")
-                try:
-                    await message.remove_reaction("⏳", bot.user)
-                    await message.add_reaction("❌")
-                except:
-                    pass
+                        print(f"[TikTok] Download returned None for: {url}")
+                except Exception as e:
+                    print(f"[TikTok] Exception in loop: {e}")
+                    try:
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("❌")
+                    except:
+                        pass
     
     await bot.process_commands(message)
 
