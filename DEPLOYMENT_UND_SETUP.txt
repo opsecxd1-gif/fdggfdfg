@@ -54,6 +54,9 @@ Commands:
   /reactionrole - Reaction-Roles verwalten (add/remove/list/clear)
   /reactionsetup - Webhook+Embed+Button für eine Rolle
   /masssetup   - ALLE User-Rollen als Buttons (mehrere Seiten)
+  /tiktokmode  - TikTok Auto-Download Service wählen
+  /tiktoktoggle - TikTok Auto-Download ein/ausschalten
+  /tiktokstatus - TikTok Auto-Download Status anzeigen
 
 4. ROLLEN-FILTER (masssetup)
 =====================================

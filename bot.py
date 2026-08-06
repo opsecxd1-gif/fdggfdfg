@@ -6,6 +6,8 @@ import json
 import re
 import os
 import asyncio
+import tempfile
+import yt_dlp
 from pathlib import Path
 
 intents = discord.Intents.default()
@@ -26,6 +28,10 @@ filter_mode = {}
 nofilter_mode_default = True
 nofilter_mode = {}
 REACTION_ROLES_FILE = DATA_DIR / "reaction_roles.json"
+TIKTOK_MODE_FILE = DATA_DIR / "tiktok_mode.json"
+tiktok_mode = {}
+TIKTOK_DOWNLOAD_DIR = Path("tiktok_downloads")
+TIKTOK_DOWNLOAD_DIR.mkdir(exist_ok=True)
 
 EXCLUDED_ROLE_NAMES = ["owner", "head admin", "admin", "moderator", "bot", "muted", "timeout"]
 
@@ -164,6 +170,74 @@ def clean_url(url):
     if "giphy.com" in clean:
         clean = clean.split("?")[0]
     return clean
+
+def load_tiktok_mode():
+    if TIKTOK_MODE_FILE.exists():
+        with open(TIKTOK_MODE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_tiktok_mode(data):
+    with open(TIKTOK_MODE_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def is_tiktok_url(url):
+    tiktok_patterns = [
+        r'https?://(?:www\.)?tiktok\.com/@[\w.-]+/video/\d+',
+        r'https?://(?:vm|vt)\.tiktok\.com/[\w]+',
+        r'https?://(?:www\.)?tiktok\.com/t/[\w]+',
+    ]
+    for pattern in tiktok_patterns:
+        if re.match(pattern, url, re.IGNORECASE):
+            return True
+    return False
+
+async def download_tiktok_video(url, mode="clyppy"):
+    try:
+        if mode == "clyppy":
+            ydl_opts = {
+                'format': 'best[ext=mp4]/best',
+                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': False,
+            }
+        elif mode == "dlbot":
+            ydl_opts = {
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
+                'quiet': True,
+                'no_warnings': True,
+                'merge_output_format': 'mp4',
+            }
+        elif mode == "tikcord":
+            ydl_opts = {
+                'format': 'best',
+                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
+                'quiet': True,
+                'no_warnings': True,
+            }
+        else:
+            ydl_opts = {
+                'format': 'best[ext=mp4]/best',
+                'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
+                'quiet': True,
+                'no_warnings': True,
+            }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            if not os.path.exists(filename):
+                base = os.path.splitext(filename)[0]
+                for ext in ['.mp4', '.webm', '.mkv']:
+                    if os.path.exists(base + ext):
+                        filename = base + ext
+                        break
+            return filename, info.get('title', 'TikTok Video')
+    except Exception as e:
+        print(f"TikTok Download Fehler: {e}")
+        return None, None
 
 @bot.tree.command(name="add", description="Füge GIF/Media-Links hinzu")
 @is_admin_or_owner()
@@ -562,6 +636,153 @@ async def nofiltermode_command(interaction: discord.Interaction):
         desc = f"{icon} **NoFilter-Modus:** {state}\n\nStandard-Filter aktiv."
     
     await interaction.response.send_message(desc)
+
+class TiktokModeSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(
+                label="Clyppy",
+                value="clyppy",
+                description="Empfohlen - Schnell & zuverlässig",
+                emoji="⭐"
+            ),
+            discord.SelectOption(
+                label="dlbot",
+                value="dlbot",
+                description="Hohe Qualität, MP4 Merge",
+                emoji="📥"
+            ),
+            discord.SelectOption(
+                label="TikCord",
+                value="tikcord",
+                description="Alle Formate, flexibel",
+                emoji="🎵"
+            ),
+            discord.SelectOption(
+                label="QuickVids",
+                value="quickvids",
+                description="Schnell & simpel",
+                emoji="⚡"
+            ),
+        ]
+        super().__init__(placeholder="Wähle einen TikTok Downloader...", options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        mode = self.values[0]
+        tiktok_mode_data = load_tiktok_mode()
+        tiktok_mode_data[str(interaction.guild_id)] = {
+            "enabled": True,
+            "mode": mode
+        }
+        save_tiktok_mode(tiktok_mode_data)
+        tiktok_mode[interaction.guild_id] = {"enabled": True, "mode": mode}
+        
+        mode_names = {
+            "clyppy": "Clyppy (⭐ Empfohlen)",
+            "dlbot": "dlbot (📥 Hohe Qualität)",
+            "tikcord": "TikCord (🎵 Flexibel)",
+            "quickvids": "QuickVids (⚡ Schnell)"
+        }
+        
+        await interaction.response.send_message(
+            f"✅ **TikTok Auto-Download aktiviert!**\n\n"
+            f"**Service:** {mode_names.get(mode, mode)}\n"
+            f"**Status:** AN\n\n"
+            f"Ab jetzt werden automatisch alle TikTok Links heruntergeladen und als Video gesendet!",
+            ephemeral=True
+        )
+
+class TiktokModeView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
+        self.add_item(TiktokModeSelect())
+
+@bot.tree.command(name="tiktokmode", description="TikTok Auto-Download: Wähle einen Service für automatische Downloads")
+@is_admin_or_owner()
+async def tiktokmode_command(interaction: discord.Interaction):
+    view = TiktokModeView()
+    await interaction.response.send_message(
+        "**TikTok Auto-Download Konfiguration**\n\n"
+        "Wähle einen Service aus:\n\n"
+        "⭐ **Clyppy** - Empfohlen, schnell & zuverlässig\n"
+        "📥 **dlbot** - Hohe Qualität mit MP4 Merge\n"
+        "🎵 **TikCord** - Alle Formate, flexibel\n"
+        "⚡ **QuickVids** - Schnell & simpel\n\n"
+        "Sobald aktiviert, werden alle TikTok Links automatisch erkannt und heruntergeladen!",
+        view=view,
+        ephemeral=True
+    )
+
+@bot.tree.command(name="tiktoktoggle", description="TikTok Auto-Download ein/ausschalten")
+@is_admin_or_owner()
+async def tiktoktoggle_command(interaction: discord.Interaction):
+    tiktok_mode_data = load_tiktok_mode()
+    guild_id_str = str(interaction.guild_id)
+    
+    if guild_id_str in tiktok_mode_data:
+        current = tiktok_mode_data[guild_id_str].get("enabled", False)
+        tiktok_mode_data[guild_id_str]["enabled"] = not current
+        save_tiktok_mode(tiktok_mode_data)
+        tiktok_mode[interaction.guild_id] = tiktok_mode_data[guild_id_str]
+        
+        state = "AN" if not current else "AUS"
+        icon = "✅" if not current else "❌"
+        
+        if not current:
+            mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
+            mode_names = {
+                "clyppy": "Clyppy",
+                "dlbot": "dlbot",
+                "tikcord": "TikCord",
+                "quickvids": "QuickVids"
+            }
+            desc = (
+                f"{icon} **TikTok Auto-Download:** {state}\n\n"
+                f"**Service:** {mode_names.get(mode, mode)}\n"
+                f"Alle TikTok Links werden jetzt automatisch heruntergeladen!"
+            )
+        else:
+            desc = f"{icon} **TikTok Auto-Download:** {state}\n\nTikTok Links werden nicht mehr automatisch heruntergeladen."
+    else:
+        await interaction.response.send_message(
+            "Noch nicht konfiguriert! Benutze zuerst `/tiktokmode` um einen Service auszuwählen.",
+            ephemeral=True
+        )
+        return
+    
+    await interaction.response.send_message(desc)
+
+@bot.tree.command(name="tiktokstatus", description="Zeigt den aktuellen TikTok Auto-Download Status")
+@is_admin_or_owner()
+async def tiktokstatus_command(interaction: discord.Interaction):
+    tiktok_mode_data = load_tiktok_mode()
+    guild_id_str = str(interaction.guild_id)
+    
+    if guild_id_str in tiktok_mode_data:
+        data = tiktok_mode_data[guild_id_str]
+        enabled = data.get("enabled", False)
+        mode = data.get("mode", "clyppy")
+        
+        mode_names = {
+            "clyppy": "Clyppy (⭐ Empfohlen)",
+            "dlbot": "dlbot (📥 Hohe Qualität)",
+            "tikcord": "TikCord (🎵 Flexibel)",
+            "quickvids": "QuickVids (⚡ Schnell)"
+        }
+        
+        status = "✅ AN" if enabled else "❌ AUS"
+        
+        await interaction.response.send_message(
+            f"**TikTok Auto-Download Status**\n\n"
+            f"**Status:** {status}\n"
+            f"**Service:** {mode_names.get(mode, mode)}\n\n"
+            f"{'Alle TikTok Links werden automatisch heruntergeladen!' if enabled else 'TikTok Links werden nicht automatisch verarbeitet.'}"
+        )
+    else:
+        await interaction.response.send_message(
+            "Noch nicht konfiguriert! Benutze `/tiktokmode` um einen Service auszuwählen.",
+            ephemeral=True
+        )
 
 @bot.tree.command(name="clearchannels", description="Löscht alle vom Bot erstellten Channels")
 @is_admin_or_owner()
@@ -1240,6 +1461,77 @@ async def on_ready():
         print(f"{len(synced)} Commands synchronisiert")
     except Exception as e:
         print(f"Sync fehlgeschlagen: {e}")
+    
+    global tiktok_mode
+    tiktok_mode = load_tiktok_mode()
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    
+    tiktok_mode_data = load_tiktok_mode()
+    guild_id_str = str(message.guild.id) if message.guild else None
+    
+    if not guild_id_str or guild_id_str not in tiktok_mode_data:
+        return
+    
+    guild_mode = tiktok_mode_data[guild_id_str]
+    if not guild_mode.get("enabled", False):
+        return
+    
+    urls = re.findall(r'https?://[^\s<>"\']+', message.content)
+    tiktok_urls = [url for url in urls if is_tiktok_url(url)]
+    
+    if not tiktok_urls:
+        return
+    
+    mode = guild_mode.get("mode", "clyppy")
+    
+    async with message.channel.typing():
+        for url in tiktok_urls[:3]:
+            try:
+                await message.add_reaction("⏳")
+                
+                filename, title = await download_tiktok_video(url, mode)
+                
+                if filename and os.path.exists(filename):
+                    file_size = os.path.getsize(filename)
+                    if file_size > 8 * 1024 * 1024:
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("❌")
+                        await message.reply(
+                            f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). "
+                            f"Discord Limit: 8MB. Versuche es mit einem anderen Service.",
+                            mention_author=False
+                        )
+                        continue
+                    
+                    await message.remove_reaction("⏳", bot.user)
+                    await message.add_reaction("✅")
+                    
+                    discord_file = discord.File(filename, filename="tiktok_video.mp4")
+                    await message.reply(
+                        file=discord_file,
+                        content=f"🎬 **TikTok Video heruntergeladen!**\n{url}",
+                        mention_author=False
+                    )
+                    
+                    os.remove(filename)
+                else:
+                    await message.remove_reaction("⏳", bot.user)
+                    await message.add_reaction("❌")
+                    await message.reply(
+                        f"❌ Download fehlgeschlagen. Versuche es später erneut.",
+                        mention_author=False
+                    )
+            except Exception as e:
+                print(f"TikTok Download Fehler: {e}")
+                try:
+                    await message.remove_reaction("⏳", bot.user)
+                    await message.add_reaction("❌")
+                except:
+                    pass
 
 # =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
