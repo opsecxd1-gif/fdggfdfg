@@ -59,6 +59,14 @@ Commands:
   /tiktokstatus - TikTok Auto-Download Status anzeigen
   /setavatar    - Bot-Profilbild ändern (Bild reinziehen)
   /setbanner    - Bot-Bannerbild ändern (Bild reinziehen)
+  /level       - Zeigt dein aktuelles Level und XP an
+  /leaderboard - Zeigt das Leaderboard an
+  /setlevelchannel - Setzt den Channel für Level-Up Nachrichten
+  /setleaderboard - Setzt den Channel für das Live-Leaderboard
+  /levelimage  - Setzt ein Bild für einen Levelaufstieg
+  /noxpchannel - Toggle: Kein XP in diesem Channel
+  /resetlevels - Setzt alle Level-Daten zurück
+  /setlevel    - Setzt das Level eines Users manuell
 
 4. ROLLEN-FILTER (masssetup)
 =====================================

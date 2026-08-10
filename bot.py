@@ -7,6 +7,7 @@ import re
 import os
 import asyncio
 import tempfile
+import time
 import yt_dlp
 from pathlib import Path
 
@@ -1541,87 +1542,15 @@ async def on_interaction(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    print(f"Bot eingeloggt als {bot.user}")
-    try:
-        synced = await bot.tree.sync()
-        print(f"{len(synced)} Commands synchronisiert")
-    except Exception as e:
-        print(f"Sync fehlgeschlagen: {e}")
-    
-    global tiktok_mode
-    tiktok_mode = load_tiktok_mode()
+    pass
 
 @bot.event
 async def on_message(message):
-    if message.author.bot:
-        return
-    
-    tiktok_mode_data = load_tiktok_mode()
-    guild_id_str = str(message.guild.id) if message.guild else None
-    
-    has_tiktok = False
-    if guild_id_str and guild_id_str in tiktok_mode_data:
-        guild_mode = tiktok_mode_data[guild_id_str]
-        if guild_mode.get("enabled", False):
-            urls = re.findall(r'https?://[^\s<>"\']+', message.content)
-            tiktok_urls = [url for url in urls if is_tiktok_url(url)]
-            if tiktok_urls:
-                has_tiktok = True
-    
-    if has_tiktok:
-        print(f"[TikTok] Detected TikTok URL from {message.author}: {tiktok_urls[0]}")
-        
-        try:
-            await message.edit(suppress=True)
-        except:
-            pass
-        
-        mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
-        
-        async with message.channel.typing():
-            for url in tiktok_urls[:3]:
-                try:
-                    await message.add_reaction("⏳")
-                    
-                    filename, title = await download_tiktok_video(url, mode)
-                    
-                    if filename and os.path.exists(filename):
-                        file_size = os.path.getsize(filename)
-                        print(f"[TikTok] Sending file: {file_size} bytes")
-                        
-                        if file_size > 8 * 1024 * 1024:
-                            await message.remove_reaction("⏳", bot.user)
-                            await message.add_reaction("❌")
-                            await message.reply(
-                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 8MB.",
-                                mention_author=False
-                            )
-                            os.remove(filename)
-                            continue
-                        
-                        await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("✅")
-                        
-                        discord_file = discord.File(filename, filename="tiktok.mp4")
-                        await message.reply(
-                            file=discord_file,
-                            mention_author=False
-                        )
-                        
-                        os.remove(filename)
-                    else:
-                        await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("❌")
-                        print(f"[TikTok] Download returned None for: {url}")
-                except Exception as e:
-                    print(f"[TikTok] Exception in loop: {e}")
-                    try:
-                        await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("❌")
-                    except:
-                        pass
-    
-    await bot.process_commands(message)
+    pass
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    pass
 
 # =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
@@ -2310,6 +2239,663 @@ async def vc_changeowner(interaction: discord.Interaction, user_id: str):
     await old_owner_channel.send(embed=embed, view=view)
     
     await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
+
+# =====================================
+# LEVEL SYSTEM
+# =====================================
+
+LEVEL_DATA_FILE = DATA_DIR / "levels.json"
+LEVEL_CONFIG_FILE = DATA_DIR / "level_config.json"
+LEVEL_IMAGES_DIR = DATA_DIR / "level_images"
+LEVEL_IMAGES_DIR.mkdir(exist_ok=True)
+
+voice_start_times = {}
+voice_total_times = {}
+
+def load_level_data():
+    if LEVEL_DATA_FILE.exists():
+        with open(LEVEL_DATA_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_level_data(data):
+    with open(LEVEL_DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_level_config():
+    if LEVEL_CONFIG_FILE.exists():
+        with open(LEVEL_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_level_config(data):
+    with open(LEVEL_CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def get_xp_for_level(level):
+    return 5 * (level ** 2) + 50 * level + 100
+
+def get_user_data(guild_id, user_id):
+    data = load_level_data()
+    guild_str = str(guild_id)
+    user_str = str(user_id)
+    if guild_str not in data:
+        data[guild_str] = {}
+    if user_str not in data[guild_str]:
+        data[guild_str][user_str] = {
+            "xp": 0,
+            "level": 0,
+            "messages": 0,
+            "voice_seconds": 0
+        }
+    return data[guild_str][user_str]
+
+def add_xp(guild_id, user_id, amount):
+    data = load_level_data()
+    guild_str = str(guild_id)
+    user_str = str(user_id)
+    
+    if guild_str not in data:
+        data[guild_str] = {}
+    if user_str not in data[guild_str]:
+        data[guild_str][user_str] = {
+            "xp": 0,
+            "level": 0,
+            "messages": 0,
+            "voice_seconds": 0
+        }
+    
+    user_data = data[guild_str][user_str]
+    user_data["xp"] += amount
+    user_data["messages"] += 1
+    
+    old_level = user_data["level"]
+    xp_needed = get_xp_for_level(user_data["level"])
+    
+    while user_data["xp"] >= xp_needed:
+        user_data["xp"] -= xp_needed
+        user_data["level"] += 1
+        xp_needed = get_xp_for_level(user_data["level"])
+    
+    new_level = user_data["level"]
+    save_level_data(data)
+    
+    return old_level, new_level
+
+def format_time(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    if hours > 0:
+        return f"{hours}h {minutes}m {secs}s"
+    elif minutes > 0:
+        return f"{minutes}m {secs}s"
+    else:
+        return f"{secs}s"
+
+@bot.event
+async def on_message_level_system(message):
+    if message.author.bot:
+        return
+    if not message.guild:
+        return
+    
+    config = load_level_config()
+    guild_str = str(message.guild.id)
+    
+    no_xp_channels = config.get(guild_str, {}).get("no_xp_channels", [])
+    if message.channel.id in no_xp_channels:
+        return
+    
+    old_level, new_level = add_xp(message.guild.id, message.author.id, 15)
+    
+    if new_level > old_level:
+        level_config = config.get(guild_str, {})
+        level_channel_id = level_config.get("level_channel")
+        
+        level_images = level_config.get("level_images", {})
+        image_path = level_images.get(str(new_level))
+        
+        embed = discord.Embed(
+            title="Level Up!",
+            description=f"{message.author.mention} ist jetzt **Level {new_level}**!",
+            color=discord.Color.gold()
+        )
+        
+        if image_path and os.path.exists(image_path):
+            file = discord.File(image_path, filename=f"level_{new_level}.png")
+            embed.set_image(url=f"attachment://level_{new_level}.png")
+            
+            if level_channel_id:
+                channel = bot.get_channel(level_channel_id)
+                if channel:
+                    await channel.send(content=f"{message.author.mention}", embed=embed, file=file)
+            else:
+                await message.channel.send(content=f"{message.author.mention}", embed=embed, file=file)
+        else:
+            if level_channel_id:
+                channel = bot.get_channel(level_channel_id)
+                if channel:
+                    await channel.send(content=f"{message.author.mention}", embed=embed)
+            else:
+                await message.channel.send(content=f"{message.author.mention}", embed=embed)
+
+@bot.event
+async def on_voice_state_update_level(member, before, after):
+    if member.bot:
+        return
+    
+    guild_str = str(member.guild.id)
+    user_str = str(member.id)
+    
+    if before.channel and not after.channel:
+        if member.id in voice_start_times:
+            start_time = voice_start_times.pop(member.id)
+            elapsed = int(time.time() - start_time)
+            
+            data = load_level_data()
+            if guild_str not in data:
+                data[guild_str] = {}
+            if user_str not in data[guild_str]:
+                data[guild_str][user_str] = {
+                    "xp": 0,
+                    "level": 0,
+                    "messages": 0,
+                    "voice_seconds": 0
+                }
+            
+            data[guild_str][user_str]["voice_seconds"] = data[guild_str][user_str].get("voice_seconds", 0) + elapsed
+            save_level_data(data)
+    
+    elif not before.channel and after.channel:
+        if member.id not in voice_start_times:
+            voice_start_times[member.id] = time.time()
+
+@bot.tree.command(name="level", description="Zeigt dein aktuelles Level und XP an")
+async def level_command(interaction: discord.Interaction, user: discord.Member = None):
+    target = user or interaction.user
+    user_data = get_user_data(interaction.guild_id, target.id)
+    
+    xp_needed = get_xp_for_level(user_data["level"])
+    progress = user_data["xp"] / xp_needed * 100 if xp_needed > 0 else 0
+    
+    bar_length = 20
+    filled = int(bar_length * progress / 100)
+    bar = "█" * filled + "░" * (bar_length - filled)
+    
+    embed = discord.Embed(
+        title=f"Level von {target.display_name}",
+        color=discord.Color.blue()
+    )
+    embed.set_thumbnail(url=target.display_avatar.url)
+    embed.add_field(name="Level", value=str(user_data["level"]), inline=True)
+    embed.add_field(name="XP", value=f"{user_data['xp']}/{xp_needed}", inline=True)
+    embed.add_field(name="Fortschritt", value=f"`{bar}` {progress:.1f}%", inline=False)
+    embed.add_field(name="Nachrichten", value=str(user_data.get("messages", 0)), inline=True)
+    embed.add_field(name="Voice-Zeit", value=format_time(user_data.get("voice_seconds", 0)), inline=True)
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="leaderboard", description="Zeigt das Leaderboard an")
+async def leaderboard_command(interaction: discord.Interaction):
+    data = load_level_data()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in data or not data[guild_str]:
+        await interaction.response.send_message("Noch keine Daten vorhanden!", ephemeral=True)
+        return
+    
+    guild_data = data[guild_str]
+    
+    sorted_users = sorted(
+        guild_data.items(),
+        key=lambda x: (x[1].get("level", 0), x[1].get("xp", 0)),
+        reverse=True
+    )
+    
+    embed = discord.Embed(
+        title=f"Leaderboard - {interaction.guild.name}",
+        color=discord.Color.gold()
+    )
+    
+    medals = ["", "", ""]
+    
+    lines = []
+    for i, (user_id, user_data) in enumerate(sorted_users[:15]):
+        member = interaction.guild.get_member(int(user_id))
+        if not member:
+            continue
+        
+        medal = medals[i] if i < 3 else f"**{i+1}.**"
+        voice_time = format_time(user_data.get("voice_seconds", 0))
+        messages = user_data.get("messages", 0)
+        
+        lines.append(
+            f"{medal} {member.mention}\n"
+            f"    Level **{user_data['level']}** | {user_data['xp']}/{get_xp_for_level(user_data['level'])} XP\n"
+            f"    {messages} Nachrichten | {voice_time} Voice"
+        )
+    
+    embed.description = "\n\n".join(lines)
+    embed.set_footer(text=f"Gesamt: {len(guild_data)} User")
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="setlevelchannel", description="Setzt den Channel für Level-Up Nachrichten")
+@is_admin_or_owner()
+@app_commands.describe(channel="Der Channel für Level-Up Nachrichten")
+async def setlevelchannel_command(interaction: discord.Interaction, channel: discord.TextChannel):
+    config = load_level_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        config[guild_str] = {}
+    
+    config[guild_str]["level_channel"] = channel.id
+    save_level_config(config)
+    
+    await interaction.response.send_message(
+        f"Level-Up Channel gesetzt auf {channel.mention}!"
+    )
+
+@bot.tree.command(name="setleaderboard", description="Setzt den Channel für das Live-Leaderboard")
+@is_admin_or_owner()
+@app_commands.describe(channel="Der Channel für das Leaderboard")
+async def setleaderboard_command(interaction: discord.Interaction, channel: discord.TextChannel):
+    config = load_level_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        config[guild_str] = {}
+    
+    config[guild_str]["leaderboard_channel"] = channel.id
+    save_level_config(config)
+    
+    await interaction.response.send_message(
+        f"Leaderboard Channel gesetzt auf {channel.mention}!"
+    )
+
+@bot.tree.command(name="levelimage", description="Setzt ein Bild für einen bestimmten Levelaufstieg")
+@is_admin_or_owner()
+@app_commands.describe(
+    level="Das Level (z.B. 5)",
+    bild="Das Bild für diesen Level"
+)
+async def levelimage_command(interaction: discord.Interaction, level: int, bild: discord.Attachment):
+    await interaction.response.defer(ephemeral=True)
+    
+    allowed_exts = ('.png', '.jpg', '.jpeg', '.gif', '.webp')
+    if not any(bild.filename.lower().endswith(ext) for ext in allowed_exts):
+        await interaction.followup.send("Nur Bilddateien erlaubt!", ephemeral=True)
+        return
+    
+    image_data = await bild.read()
+    if len(image_data) > 8 * 1024 * 1024:
+        await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
+        return
+    
+    filename = f"level_{level}.png"
+    filepath = LEVEL_IMAGES_DIR / filename
+    
+    with open(filepath, "wb") as f:
+        f.write(image_data)
+    
+    config = load_level_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        config[guild_str] = {}
+    if "level_images" not in config[guild_str]:
+        config[guild_str]["level_images"] = {}
+    
+    config[guild_str]["level_images"][str(level)] = str(filepath)
+    save_level_config(config)
+    
+    await interaction.followup.send(
+        f"Bild für Level **{level}** gespeichert!",
+        ephemeral=True
+    )
+
+@bot.tree.command(name="noxpchannel", description="Toggle: Kein XP in diesem Channel")
+@is_admin_or_owner()
+async def noxpchannel_command(interaction: discord.Interaction):
+    config = load_level_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        config[guild_str] = {}
+    
+    no_xp_channels = config[guild_str].get("no_xp_channels", [])
+    
+    if interaction.channel_id in no_xp_channels:
+        no_xp_channels.remove(interaction.channel_id)
+        state = "entfernt"
+        icon = "❌"
+    else:
+        no_xp_channels.append(interaction.channel_id)
+        state = "hinzugefügt"
+        icon = "✅"
+    
+    config[guild_str]["no_xp_channels"] = no_xp_channels
+    save_level_config(config)
+    
+    await interaction.response.send_message(
+        f"{icon} Dieser Channel wurde {state} (kein XP)"
+    )
+
+@bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurück")
+@is_admin_or_owner()
+async def resetlevels_command(interaction: discord.Interaction):
+    data = load_level_data()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str in data:
+        del data[guild_str]
+        save_level_data(data)
+    
+    await interaction.response.send_message("Alle Level-Daten für diesen Server zurückgesetzt!")
+
+@bot.tree.command(name="setlevel", description="Setzt das Level eines Users manuell")
+@is_admin_or_owner()
+@app_commands.describe(
+    user="Der User",
+    level="Das neue Level"
+)
+async def setlevel_command(interaction: discord.Interaction, user: discord.Member, level: int):
+    data = load_level_data()
+    guild_str = str(interaction.guild_id)
+    user_str = str(user.id)
+    
+    if guild_str not in data:
+        data[guild_str] = {}
+    
+    data[guild_str][user_str] = {
+        "xp": 0,
+        "level": level,
+        "messages": data.get(guild_str, {}).get(user_str, {}).get("messages", 0),
+        "voice_seconds": data.get(guild_str, {}).get(user_str, {}).get("voice_seconds", 0)
+    }
+    
+    save_level_data(data)
+    
+    await interaction.response.send_message(
+        f"Level von {user.mention} auf **{level}** gesetzt!"
+    )
+
+# Live Leaderboard Update Task
+@tasks.loop(minutes=5)
+async def update_live_leaderboard():
+    for guild in bot.guilds:
+        config = load_level_config()
+        guild_str = str(guild.id)
+        leaderboard_channel_id = config.get(guild_str, {}).get("leaderboard_channel")
+        
+        if not leaderboard_channel_id:
+            continue
+        
+        channel = bot.get_channel(leaderboard_channel_id)
+        if not channel:
+            continue
+        
+        data = load_level_data()
+        if guild_str not in data or not data[guild_str]:
+            continue
+        
+        guild_data = data[guild_str]
+        
+        sorted_users = sorted(
+            guild_data.items(),
+            key=lambda x: (x[1].get("level", 0), x[1].get("xp", 0)),
+            reverse=True
+        )
+        
+        embed = discord.Embed(
+            title=f"Leaderboard - {guild.name}",
+            description="Live-Update alle 5 Minuten",
+            color=discord.Color.gold()
+        )
+        
+        medals = ["", "", ""]
+        
+        lines = []
+        for i, (user_id, user_data) in enumerate(sorted_users[:10]):
+            member = guild.get_member(int(user_id))
+            if not member:
+                continue
+            
+            medal = medals[i] if i < 3 else f"**{i+1}.**"
+            voice_time = format_time(user_data.get("voice_seconds", 0))
+            messages = user_data.get("messages", 0)
+            
+            lines.append(
+                f"{medal} {member.display_name}\n"
+                f"    Level **{user_data['level']}** | {user_data['xp']}/{get_xp_for_level(user_data['level'])} XP\n"
+                f"    {messages} Nachrichten | {voice_time} Voice"
+            )
+        
+        if lines:
+            embed.description = "\n\n".join(lines)
+        else:
+            embed.description = "Keine Daten vorhanden"
+        
+        embed.set_footer(text=f"Letztes Update: {discord.utils.utcnow().strftime('%d.%m.%Y %H:%M')}")
+        
+        try:
+            async for msg in channel.history(limit=10):
+                if msg.author == bot.user and msg.embeds:
+                    if msg.embeds[0].title and "Leaderboard" in msg.embeds[0].title:
+                        await msg.edit(embed=embed)
+                        break
+            else:
+                await channel.send(embed=embed)
+        except:
+            pass
+
+@bot.event
+async def on_ready_level():
+    if not update_live_leaderboard.is_running():
+        update_live_leaderboard.start()
+
+# Override on_ready to include level system
+original_on_ready = bot.get_event("on_ready")
+
+@bot.event
+async def on_ready():
+    print(f"Bot eingeloggt als {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"{len(synced)} Commands synchronisiert")
+    except Exception as e:
+        print(f"Sync fehlgeschlagen: {e}")
+    
+    global tiktok_mode
+    tiktok_mode = load_tiktok_mode()
+    
+    if not update_live_leaderboard.is_running():
+        update_live_leaderboard.start()
+
+# Override on_message to include level system
+original_on_message = bot.get_event("on_message")
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    
+    tiktok_mode_data = load_tiktok_mode()
+    guild_id_str = str(message.guild.id) if message.guild else None
+    
+    has_tiktok = False
+    if guild_id_str and guild_id_str in tiktok_mode_data:
+        guild_mode = tiktok_mode_data[guild_id_str]
+        if guild_mode.get("enabled", False):
+            urls = re.findall(r'https?://[^\s<>"\']+', message.content)
+            tiktok_urls = [url for url in urls if is_tiktok_url(url)]
+            if tiktok_urls:
+                has_tiktok = True
+    
+    if has_tiktok:
+        print(f"[TikTok] Detected TikTok URL from {message.author}: {tiktok_urls[0]}")
+        
+        try:
+            await message.edit(suppress=True)
+        except:
+            pass
+        
+        mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
+        
+        async with message.channel.typing():
+            for url in tiktok_urls[:3]:
+                try:
+                    await message.add_reaction("⏳")
+                    
+                    filename, title = await download_tiktok_video(url, mode)
+                    
+                    if filename and os.path.exists(filename):
+                        file_size = os.path.getsize(filename)
+                        print(f"[TikTok] Sending file: {file_size} bytes")
+                        
+                        if file_size > 8 * 1024 * 1024:
+                            await message.remove_reaction("⏳", bot.user)
+                            await message.add_reaction("❌")
+                            await message.reply(
+                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 8MB.",
+                                mention_author=False
+                            )
+                            os.remove(filename)
+                            continue
+                        
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("✅")
+                        
+                        discord_file = discord.File(filename, filename="tiktok.mp4")
+                        await message.reply(
+                            file=discord_file,
+                            mention_author=False
+                        )
+                        
+                        os.remove(filename)
+                    else:
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("❌")
+                        print(f"[TikTok] Download returned None for: {url}")
+                except Exception as e:
+                    print(f"[TikTok] Exception in loop: {e}")
+                    try:
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("❌")
+                    except:
+                        pass
+    
+    await on_message_level_system(message)
+    await bot.process_commands(message)
+
+# Override on_voice_state_update to include level system
+original_on_voice_state_update = bot.get_event("on_voice_state_update")
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member.bot:
+        return
+    
+    setup_data = load_voice_setup()
+    guild_setup = setup_data.get(str(member.guild.id))
+    
+    if guild_setup:
+        lobby_id = guild_setup.get("lobby_id")
+        category_id = guild_setup.get("category_id")
+        
+        if after.channel and after.channel.id == lobby_id:
+            guild = member.guild
+            category = guild.get_channel(category_id)
+            
+            if category:
+                overwrites = {
+                    guild.default_role: discord.PermissionOverwrite(
+                        view_channel=True,
+                        connect=True,
+                        speak=True
+                    ),
+                    member: discord.PermissionOverwrite(
+                        view_channel=True,
+                        connect=True,
+                        speak=True,
+                        move_members=True,
+                        manage_channels=True,
+                        manage_permissions=True,
+                        priority_speaker=True
+                    ),
+                    guild.me: discord.PermissionOverwrite(
+                        view_channel=True,
+                        connect=True,
+                        speak=True,
+                        manage_channels=True,
+                        move_members=True
+                    )
+                }
+                
+                new_channel = await guild.create_voice_channel(
+                    name=f"{member.display_name}'s Chat",
+                    category=category,
+                    overwrites=overwrites
+                )
+                
+                voice_channel_owners[new_channel.id] = member.id
+                voice_channel_settings[new_channel.id] = {"private": False, "hidden": False}
+                
+                try:
+                    await member.move_to(new_channel)
+                except:
+                    pass
+                
+                embed, view = await create_voice_control_embed(member, new_channel)
+                try:
+                    await new_channel.send(embed=embed, view=view)
+                except:
+                    pass
+        
+        if before.channel and before.channel.id in voice_channel_owners:
+            channel = before.channel
+            
+            if len(channel.members) == 0:
+                voice_channel_owners.pop(channel.id, None)
+                voice_channel_settings.pop(channel.id, None)
+                try:
+                    await channel.delete(reason="Channel leer")
+                except:
+                    pass
+            elif voice_channel_owners.get(channel.id) == member.id:
+                new_owner = channel.members[0]
+                voice_channel_owners[channel.id] = new_owner.id
+                
+                try:
+                    old_overwrites = channel.overwrites_for(member)
+                    old_overwrites.update(move_members=False, manage_channels=False, manage_permissions=False, priority_speaker=False)
+                    await channel.set_permissions(member, overwrite=old_overwrites)
+                except:
+                    pass
+                
+                try:
+                    new_overwrites = channel.overwrites_for(new_owner)
+                    new_overwrites.update(
+                        view_channel=True,
+                        connect=True,
+                        speak=True,
+                        move_members=True,
+                        manage_channels=True,
+                        manage_permissions=True,
+                        priority_speaker=True
+                    )
+                    await channel.set_permissions(new_owner, overwrite=new_overwrites)
+                except:
+                    pass
+                
+                try:
+                    await channel.send(f"Der Besitzer hat den Channel verlassen. {new_owner.mention} ist jetzt der neue Besitzer!")
+                except:
+                    pass
+    
+    await on_voice_state_update_level(member, before, after)
 
 if __name__ == "__main__":
     TOKEN = os.getenv("DISCORD_TOKEN")
