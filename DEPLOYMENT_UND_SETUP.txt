@@ -57,6 +57,7 @@ Commands:
   /tiktokmode  - TikTok Auto-Download Service wählen
   /tiktoktoggle - TikTok Auto-Download ein/ausschalten
   /tiktokstatus - TikTok Auto-Download Status anzeigen
+  /setavatar    - Bot-Profilbild ändern (Bild reinziehen)
 
 4. ROLLEN-FILTER (masssetup)
 =====================================

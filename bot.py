@@ -917,6 +917,25 @@ async def hoistall_command(interaction: discord.Interaction):
             skipped += 1
     await interaction.followup.send(f"**{updated} Rollen aktualisiert!** ({skipped} übersprungen – bereits aktiv oder keine Berechtigung)")
 
+@bot.tree.command(name="setavatar", description="Setzt das Bot-Profilbild (Bild reinziehen)")
+@is_admin_or_owner()
+@app_commands.describe(bild="Bild als Profilbild (PNG, JPG, GIF, WebP)")
+async def setavatar_command(interaction: discord.Interaction, bild: discord.Attachment):
+    await interaction.response.defer(ephemeral=True)
+    allowed_exts = ('.png', '.jpg', '.jpeg', '.gif', '.webp')
+    if not any(bild.filename.lower().endswith(ext) for ext in allowed_exts):
+        await interaction.followup.send("Nur Bilddateien erlaubt (PNG, JPG, GIF, WebP)!", ephemeral=True)
+        return
+    image_data = await bild.read()
+    if len(image_data) > 8 * 1024 * 1024:
+        await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
+        return
+    try:
+        await bot.user.edit(avatar=image_data)
+        await interaction.followup.send("Profilbild erfolgreich geändert!", ephemeral=True)
+    except discord.HTTPException as e:
+        await interaction.followup.send(f"Fehler beim Ändern: {e}", ephemeral=True)
+
 @bot.tree.command(name="reactionrole", description="Verwaltet Reaction-Roles (wie Carl-bot)")
 @is_admin_or_owner()
 @app_commands.describe(
