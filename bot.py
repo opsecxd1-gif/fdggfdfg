@@ -936,6 +936,25 @@ async def setavatar_command(interaction: discord.Interaction, bild: discord.Atta
     except discord.HTTPException as e:
         await interaction.followup.send(f"Fehler beim Ändern: {e}", ephemeral=True)
 
+@bot.tree.command(name="setbanner", description="Setzt das Bot-Bannerbild (Bild reinziehen)")
+@is_admin_or_owner()
+@app_commands.describe(bild="Bild als Banner (PNG, JPG, GIF, WebP)")
+async def setbanner_command(interaction: discord.Interaction, bild: discord.Attachment):
+    await interaction.response.defer(ephemeral=True)
+    allowed_exts = ('.png', '.jpg', '.jpeg', '.gif', '.webp')
+    if not any(bild.filename.lower().endswith(ext) for ext in allowed_exts):
+        await interaction.followup.send("Nur Bilddateien erlaubt (PNG, JPG, GIF, WebP)!", ephemeral=True)
+        return
+    image_data = await bild.read()
+    if len(image_data) > 10 * 1024 * 1024:
+        await interaction.followup.send("Bild ist zu groß (max 10MB)!", ephemeral=True)
+        return
+    try:
+        await bot.user.edit(banner=image_data)
+        await interaction.followup.send("Banner erfolgreich geändert!", ephemeral=True)
+    except discord.HTTPException as e:
+        await interaction.followup.send(f"Fehler beim Ändern: {e}\n\n**Hinweis:** Banner-Änderung funktioniert nur bei verifizierten Bots.", ephemeral=True)
+
 @bot.tree.command(name="reactionrole", description="Verwaltet Reaction-Roles (wie Carl-bot)")
 @is_admin_or_owner()
 @app_commands.describe(
