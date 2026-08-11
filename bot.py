@@ -2617,6 +2617,11 @@ def save_level_config(data):
     with open(LEVEL_CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+def is_leveling_enabled(guild_id):
+    config = load_level_config()
+    guild_str = str(guild_id)
+    return config.get(guild_str, {}).get("leveling_enabled", False)
+
 def load_leaderboard_messages():
     if LEADERBOARD_MSG_FILE.exists():
         with open(LEADERBOARD_MSG_FILE, "r") as f:
@@ -2711,6 +2716,9 @@ async def on_message_level_system(message):
     if message.author.bot:
         return
     if not message.guild:
+        return
+
+    if not is_leveling_enabled(message.guild.id):
         return
 
     config = load_level_config()
@@ -3054,6 +3062,22 @@ async def noxpchannel_command(interaction: discord.Interaction):
     config[guild_str]["no_xp_channels"] = no_xp_channels
     save_level_config(config)
     await interaction.response.send_message(f"{icon} Dieser Channel wurde {state} (kein XP)")
+
+@bot.tree.command(name="toggleleveling", description="Toggle: Level-System komplett ein/ausschalten")
+@is_admin_or_owner()
+async def toggleleveling_command(interaction: discord.Interaction):
+    config = load_level_config()
+    guild_str = str(interaction.guild_id)
+    if guild_str not in config:
+        config[guild_str] = {}
+
+    current = config[guild_str].get("leveling_enabled", True)
+    config[guild_str]["leveling_enabled"] = not current
+    save_level_config(config)
+
+    state = "AN" if not current else "AUS"
+    icon = "✅" if not current else "❌"
+    await interaction.response.send_message(f"{icon} Level-System: **{state}**")
 
 @bot.tree.command(name="togglelevelimage", description="Toggle: Bilder bei Level-Up ein/ausschalten")
 @is_admin_or_owner()
