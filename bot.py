@@ -3631,6 +3631,48 @@ async def on_ready():
             if not frage_des_tages_task.is_running():
                 frage_des_tages_task.start()
                 break
+    
+    if not auto_save_data.is_running():
+        auto_save_data.start()
+
+@tasks.loop(minutes=30)
+async def auto_save_data():
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git", "add", "data/",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+        
+        proc = await asyncio.create_subprocess_exec(
+            "git", "diff", "--cached", "--quiet",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await proc.communicate()
+        
+        if proc.returncode != 0:
+            proc = await asyncio.create_subprocess_exec(
+                "git", "commit", "-m", "auto-save: data backup",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            
+            proc = await asyncio.create_subprocess_exec(
+                "git", "push",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            print("[AutoSave] Data backup pushed")
+    except Exception as e:
+        print(f"[AutoSave] Fehler: {e}")
+
+@auto_save_data.before_loop
+async def before_auto_save():
+    await bot.wait_until_ready()
 
 @bot.event
 async def on_message(message):
