@@ -1394,6 +1394,467 @@ async def masssetup_command(
         ephemeral=True
     )
 
+# =====================================
+# TICKET SYSTEM
+# =====================================
+
+TICKET_CONFIG_FILE = DATA_DIR / "ticket_config.json"
+TICKET_DATA_FILE = DATA_DIR / "tickets.json"
+TICKET_LOG_CHANNEL = None
+
+def load_ticket_config():
+    if TICKET_CONFIG_FILE.exists():
+        with open(TICKET_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_ticket_config(data):
+    with open(TICKET_CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_ticket_data():
+    if TICKET_DATA_FILE.exists():
+        with open(TICKET_DATA_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_ticket_data(data):
+    with open(TICKET_DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+class TicketCreateView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="Create Ticket",
+        style=discord.ButtonStyle.blurple,
+        emoji="",
+        custom_id="ticket_create_button"
+    )
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+
+        config = load_ticket_config()
+        guild_str = str(interaction.guild_id)
+
+        if guild_str not in config:
+            await interaction.followup.send("Ticket-System nicht konfiguriert!", ephemeral=True)
+            return
+
+        guild_config = config[guild_str]
+        category_id = guild_config.get("category_id")
+        support_role_id = guild_config.get("support_role_id")
+        log_channel_id = guild_config.get("log_channel_id")
+
+        category = interaction.guild.get_channel(category_id) if category_id else None
+        support_role = interaction.guild.get_role(support_role_id) if support_role_id else None
+
+        ticket_data = load_ticket_data()
+        if guild_str not in ticket_data:
+            ticket_data[guild_str] = {"counter": 0, "tickets": {}}
+
+        user_str = str(interaction.user.id)
+        for ticket_id, ticket_info in ticket_data[guild_str].get("tickets", {}).items():
+            if ticket_info.get("user_id") == user_str and ticket_info.get("status") == "open":
+                channel = interaction.guild.get_channel(int(ticket_id))
+                if channel:
+                    await interaction.followup.send(
+                        f"Du hast bereits ein offenes Ticket: {channel.mention}",
+                        ephemeral=True
+                    )
+                    return
+
+        ticket_data[guild_str]["counter"] = ticket_data[guild_str].get("counter", 0) + 1
+        ticket_number = ticket_data[guild_str]["counter"]
+
+        channel_name = f"ticket-{ticket_number:04d}-{interaction.user.name.lower()[:20]}"
+
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                attach_files=True,
+                embed_links=True,
+                read_message_history=True
+            ),
+            interaction.guild.me: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                manage_channels=True,
+                attach_files=True,
+                embed_links=True,
+                read_message_history=True
+            )
+        }
+
+        if support_role:
+            overwrites[support_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                attach_files=True,
+                embed_links=True,
+                read_message_history=True
+            )
+
+        try:
+            if category:
+                ticket_channel = await interaction.guild.create_text_channel(
+                    name=channel_name,
+                    category=category,
+                    overwrites=overwrites,
+                    reason=f"Ticket #{ticket_number:04d} von {interaction.user}"
+                )
+            else:
+                ticket_channel = await interaction.guild.create_text_channel(
+                    name=channel_name,
+                    overwrites=overwrites,
+                    reason=f"Ticket #{ticket_number:04d} von {interaction.user}"
+                )
+        except discord.Forbidden:
+            await interaction.followup.send("Keine Berechtigung um Channel zu erstellen!", ephemeral=True)
+            return
+        except Exception as e:
+            await interaction.followup.send(f"Fehler: {e}", ephemeral=True)
+            return
+
+        ticket_data[guild_str]["tickets"][str(ticket_channel.id)] = {
+            "user_id": user_str,
+            "user_name": interaction.user.display_name,
+            "status": "open",
+            "created_at": discord.utils.utcnow().isoformat(),
+            "ticket_number": ticket_number
+        }
+        save_ticket_data(ticket_data)
+
+        embed = discord.Embed(
+            title=f"Ticket #{ticket_number:04d}",
+            description=(
+                f"Willkommen {interaction.user.mention}!\n\n"
+                f"Beschreibe bitte dein Anliegen.\n"
+                f"Ein Supporter wird sich bald um dich kuemmern."
+            ),
+            color=discord.Color.blurple(),
+            timestamp=discord.utils.utcnow()
+        )
+        embed.set_footer(text=f"Ticket #{ticket_number:04d}")
+
+        if support_role:
+            support_mention = support_role.mention
+        else:
+            support_mention = "@Support"
+
+        await ticket_channel.send(
+            content=f"{interaction.user.mention} {support_mention}",
+            embed=embed,
+            view=TicketManageView()
+        )
+
+        await interaction.followup.send(
+            f"Ticket erstellt: {ticket_channel.mention}",
+            ephemeral=True
+        )
+
+        if log_channel_id:
+            log_channel = interaction.guild.get_channel(log_channel_id)
+            if log_channel:
+                log_embed = discord.Embed(
+                    title="Ticket Erstellt",
+                    description=(
+                        f"**User:** {interaction.user.mention}\n"
+                        f"**Channel:** {ticket_channel.mention}\n"
+                        f"**Ticket:** #{ticket_number:04d}"
+                    ),
+                    color=discord.Color.green(),
+                    timestamp=discord.utils.utcnow()
+                )
+                await log_channel.send(embed=log_embed)
+
+class TicketManageView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="Close",
+        style=discord.ButtonStyle.red,
+        emoji="",
+        custom_id="ticket_close_button"
+    )
+    async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="Ticket schliessen?",
+            description="Bist du sicher? Das Transkript wird gespeichert.",
+            color=discord.Color.red()
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=TicketCloseConfirmView(),
+            ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Transcript",
+        style=discord.ButtonStyle.grey,
+        emoji="",
+        custom_id="ticket_transcript_button"
+    )
+    async def transcript_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+        transcript = await generate_transcript(interaction.channel)
+        if transcript:
+            file = discord.File(
+                fp=transcript,
+                filename=f"transcript-{interaction.channel.name}.txt"
+            )
+            await interaction.followup.send("Transkript:", file=file, ephemeral=True)
+        else:
+            await interaction.followup.send("Keine Nachrichten zum Transkribieren.", ephemeral=True)
+
+class TicketCloseConfirmView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
+
+    @discord.ui.button(
+        label="Ja, schliessen",
+        style=discord.ButtonStyle.red,
+        custom_id="ticket_close_confirm"
+    )
+    async def confirm_close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+
+        config = load_ticket_config()
+        guild_str = str(interaction.guild_id)
+        log_channel_id = config.get(guild_str, {}).get("log_channel_id")
+
+        transcript_content = await generate_transcript_text(interaction.channel)
+
+        ticket_data = load_ticket_data()
+        ticket_info = None
+        if guild_str in ticket_data:
+            ticket_info = ticket_data[guild_str].get("tickets", {}).get(str(interaction.channel.id))
+
+        if ticket_info:
+            ticket_info["status"] = "closed"
+            ticket_info["closed_at"] = discord.utils.utcnow().isoformat()
+            ticket_info["closed_by"] = str(interaction.user.id)
+            save_ticket_data(ticket_data)
+
+        if log_channel_id:
+            log_channel = interaction.guild.get_channel(log_channel_id)
+            if log_channel:
+                user = interaction.guild.get_member(int(ticket_info["user_id"])) if ticket_info else None
+
+                log_embed = discord.Embed(
+                    title="Ticket Geschlossen",
+                    description=(
+                        f"**Ticket:** {interaction.channel.name}\n"
+                        f"**User:** {user.mention if user else 'Unbekannt'}\n"
+                        f"**Geschlossen von:** {interaction.user.mention}\n"
+                        f"**Geschlossen am:** {discord.utils.utcnow().strftime('%d.%m.%Y %H:%M')}"
+                    ),
+                    color=discord.Color.red(),
+                    timestamp=discord.utils.utcnow()
+                )
+
+                if transcript_content:
+                    transcript_file = discord.File(
+                        fp=__import__('io').BytesIO(transcript_content.encode('utf-8')),
+                        filename=f"transcript-{interaction.channel.name}.txt"
+                    )
+                    await log_channel.send(embed=log_embed, file=transcript_file)
+                else:
+                    await log_channel.send(embed=log_embed)
+
+        try:
+            await interaction.channel.delete(reason=f"Ticket geschlossen von {interaction.user}")
+        except discord.Forbidden:
+            await interaction.followup.send("Keine Berechtigung um Channel zu loeschen!", ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"Fehler: {e}", ephemeral=True)
+
+    @discord.ui.button(
+        label="Abbrechen",
+        style=discord.ButtonStyle.grey,
+        custom_id="ticket_close_cancel"
+    )
+    async def cancel_close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content="Ticket bleibt offen.", embed=None, view=None)
+
+async def generate_transcript(channel, limit=500):
+    import io
+    messages = []
+    async for message in channel.history(limit=limit, oldest_first=True):
+        timestamp = message.created_at.strftime("%d.%m.%Y %H:%M")
+        content = message.content or ""
+        if message.attachments:
+            content += " " + " ".join(a.url for a in message.attachments)
+        messages.append(f"[{timestamp}] {message.author.display_name}: {content}")
+
+    if not messages:
+        return None
+
+    text = f"=== Transcript: {channel.name} ===\n"
+    text += f"Erstellt: {discord.utils.utcnow().strftime('%d.%m.%Y %H:%M')}\n"
+    text += "=" * 40 + "\n\n"
+    text += "\n".join(messages)
+
+    return io.BytesIO(text.encode('utf-8'))
+
+async def generate_transcript_text(channel, limit=500):
+    messages = []
+    async for message in channel.history(limit=limit, oldest_first=True):
+        timestamp = message.created_at.strftime("%d.%m.%Y %H:%M")
+        content = message.content or ""
+        if message.attachments:
+            content += " " + " ".join(a.url for a in message.attachments)
+        messages.append(f"[{timestamp}] {message.author.display_name}: {content}")
+
+    if not messages:
+        return None
+
+    text = f"=== Transcript: {channel.name} ===\n"
+    text += f"Erstellt: {discord.utils.utcnow().strftime('%d.%m.%Y %H:%M')}\n"
+    text += "=" * 40 + "\n\n"
+    text += "\n".join(messages)
+    return text
+
+@bot.tree.command(name="ticketsetup", description="Ticket-System einrichten")
+@is_admin_or_owner()
+@app_commands.describe(
+    channel="Channel fuer das Ticket-Panel",
+    kategorie="Kategorie fuer Ticket-Channels",
+    support_rolle="Support-Rolle die Tickets sehen kann",
+    log_channel="Channel fuer Ticket-Logs (optional)"
+)
+async def ticketsetup_command(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel,
+    kategorie: str,
+    support_rolle: discord.Role,
+    log_channel: discord.TextChannel = None
+):
+    await interaction.response.defer(ephemeral=True)
+
+    category = None
+    for cat in interaction.guild.categories:
+        if cat.name.lower() == kategorie.lower():
+            category = cat
+            break
+
+    if not category:
+        try:
+            category = await interaction.guild.create_category(
+                name=kategorie,
+                reason=f"Ticket-System von {interaction.user}"
+            )
+        except discord.Forbidden:
+            await interaction.followup.send("Keine Berechtigung um Kategorie zu erstellen!", ephemeral=True)
+            return
+
+    config = load_ticket_config()
+    guild_str = str(interaction.guild_id)
+    config[guild_str] = {
+        "category_id": category.id,
+        "support_role_id": support_rolle.id,
+        "log_channel_id": log_channel.id if log_channel else None,
+        "setup_channel_id": channel.id
+    }
+    save_ticket_config(config)
+
+    embed = discord.Embed(
+        title="Support Tickets",
+        description=(
+            "Brauchst du Hilfe?\n"
+            "Klicke auf den Button um ein Ticket zu erstellen!\n\n"
+            "**Wann ein Ticket erstellen?**\n"
+            "• Allgemeine Fragen\n"
+            "• Probleme melden\n"
+            "• Beantragungen\n"
+            "• Beschwerden"
+        ),
+        color=discord.Color.blurple()
+    )
+    embed.set_footer(text="Support Team | Tickets")
+
+    await channel.send(embed=embed, view=TicketCreateView())
+
+    await interaction.followup.send(
+        f"Ticket-System eingerichtet!\n\n"
+        f"**Panel:** {channel.mention}\n"
+        f"**Kategorie:** {category.name}\n"
+        f"**Support:** {support_rolle.mention}\n"
+        f"**Logs:** {log_channel.mention if log_channel else 'Keine'}",
+        ephemeral=True
+    )
+
+@bot.tree.command(name="close", description="Ticket schliessen")
+async def close_command(interaction: discord.Interaction):
+    if not interaction.channel.name.startswith("ticket-"):
+        await interaction.response.send_message("Das ist kein Ticket-Channel!", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="Ticket schliessen?",
+        description="Bist du sicher? Das Transkript wird gespeichert.",
+        color=discord.Color.red()
+    )
+    await interaction.response.send_message(
+        embed=embed,
+        view=TicketCloseConfirmView(),
+        ephemeral=True
+    )
+
+@bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+@app_commands.describe(user="Der User der hinzugefuegt werden soll")
+async def add_command(interaction: discord.Interaction, user: discord.Member):
+    if not interaction.channel.name.startswith("ticket-"):
+        await interaction.response.send_message("Das ist kein Ticket-Channel!", ephemeral=True)
+        return
+
+    try:
+        await interaction.channel.set_permissions(
+            user,
+            view_channel=True,
+            send_messages=True,
+            attach_files=True,
+            embed_links=True,
+            read_message_history=True
+        )
+        await interaction.response.send_message(f"{user.mention} wurde hinzugefuegt!")
+    except discord.Forbidden:
+        await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+@bot.tree.command(name="remove", description="User aus dem Ticket entfernen")
+@app_commands.describe(user="Der User der entfernt werden soll")
+async def remove_command(interaction: discord.Interaction, user: discord.Member):
+    if not interaction.channel.name.startswith("ticket-"):
+        await interaction.response.send_message("Das ist kein Ticket-Channel!", ephemeral=True)
+        return
+
+    try:
+        await interaction.channel.set_permissions(user, overwrite=None)
+        await interaction.response.send_message(f"{user.mention} wurde entfernt!")
+    except discord.Forbidden:
+        await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+
+@bot.tree.command(name="transcript", description="Transkript des Tickets generieren")
+async def transcript_command(interaction: discord.Interaction):
+    if not interaction.channel.name.startswith("ticket-"):
+        await interaction.response.send_message("Das ist kein Ticket-Channel!", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    transcript = await generate_transcript(interaction.channel)
+    if transcript:
+        file = discord.File(
+            fp=transcript,
+            filename=f"transcript-{interaction.channel.name}.txt"
+        )
+        await interaction.followup.send("Transkript:", file=file, ephemeral=True)
+    else:
+        await interaction.followup.send("Keine Nachrichten zum Transkribieren.", ephemeral=True)
+
 MAX_ROLES_FOR_MITGLIED = 7
 PROTECTED_ROLE_NAMES = ["976", "owner", "head admin", "admin", "moderator", "bot", "muted", "timeout", "booster"]
 

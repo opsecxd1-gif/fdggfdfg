@@ -67,6 +67,11 @@ Commands:
   /noxpchannel - Toggle: Kein XP in diesem Channel
   /resetlevels - Setzt alle Level-Daten zurück
   /setlevel    - Setzt das Level eines Users manuell
+  /ticketsetup - Ticket-System einrichten
+  /close       - Ticket schliessen
+  /add         - User zum Ticket hinzufuegen
+  /remove      - User aus Ticket entfernen
+  /transcript  - Transkript generieren
 
 4. ROLLEN-FILTER (masssetup)
 =====================================
