@@ -2370,7 +2370,8 @@ async def on_message_level_system(message):
         level_config = config.get(guild_str, {})
         level_channel_id = level_config.get("level_channel")
         level_images = level_config.get("level_images", {})
-        image_path = level_images.get(str(new_level))
+        images_enabled = level_config.get("level_images_enabled", True)
+        image_path = level_images.get(str(new_level)) if images_enabled else None
 
         embed = discord.Embed(
             title="Level Up!",
@@ -2647,6 +2648,22 @@ async def noxpchannel_command(interaction: discord.Interaction):
     config[guild_str]["no_xp_channels"] = no_xp_channels
     save_level_config(config)
     await interaction.response.send_message(f"{icon} Dieser Channel wurde {state} (kein XP)")
+
+@bot.tree.command(name="togglelevelimage", description="Toggle: Bilder bei Level-Up ein/ausschalten")
+@is_admin_or_owner()
+async def togglelevelimage_command(interaction: discord.Interaction):
+    config = load_level_config()
+    guild_str = str(interaction.guild_id)
+    if guild_str not in config:
+        config[guild_str] = {}
+
+    current = config[guild_str].get("level_images_enabled", True)
+    config[guild_str]["level_images_enabled"] = not current
+    save_level_config(config)
+
+    state = "AN" if not current else "AUS"
+    icon = "✅" if not current else "❌"
+    await interaction.response.send_message(f"{icon} Level-Up Bilder: **{state}**")
 
 @bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurück")
 @is_admin_or_owner()
