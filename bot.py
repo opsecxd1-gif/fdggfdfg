@@ -4848,6 +4848,7 @@ async def fixvoice_command(interaction: discord.Interaction):
             overwrites = channel.overwrites_for(interaction.guild.default_role)
             overwrites.speak = True
             overwrites.connect = True
+            overwrites.use_voice_activation = True
             await channel.set_permissions(interaction.guild.default_role, overwrite=overwrites)
             fixed += 1
         except discord.Forbidden:
