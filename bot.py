@@ -3896,40 +3896,58 @@ async def auto_memes_task():
         source = settings.get("source", "reddit")
         exclude_ids = set(settings.get("sent_video_ids", [])) if source == "interpol" else None
         
-        meme_url, video_id = await get_meme_for_guild(guild.id, exclude_ids=exclude_ids)
-        if not meme_url and source == "interpol" and exclude_ids:
-            settings["sent_video_ids"] = []
-            save_memes_config(config)
-            meme_url, video_id = await get_meme_for_guild(guild.id)
-        if meme_url:
-            try:
-                if source == "interpol" and ".mp4" in meme_url:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(meme_url) as resp:
-                            if resp.status == 200:
-                                video_data = await resp.read()
-                                if len(video_data) <= 8 * 1024 * 1024:
-                                    video_file = discord.File(
-                                        fp=__import__('io').BytesIO(video_data),
-                                        filename="interpol_video.mp4"
-                                    )
-                                    embed = discord.Embed(
-                                        title="Interpol.cc Video",
-                                        color=discord.Color.random()
-                                    )
-                                    embed.set_footer(text="Quelle: INTERPOL.CC")
-                                    await channel.send(embed=embed, file=video_file)
-                                    print(f"[Memes] Interpol Video gesendet in {channel.name} ({guild.name})")
-                                    if video_id:
-                                        if "sent_video_ids" not in settings:
-                                            settings["sent_video_ids"] = []
-                                        settings["sent_video_ids"].append(video_id)
-                                        save_memes_config(config)
+        if source == "interpol":
+            config_changed = False
+            videos = await fetch_interpol_videos(exclude_ids=exclude_ids)
+            if not videos and exclude_ids:
+                settings["sent_video_ids"] = []
+                save_memes_config(config)
+                videos = await fetch_interpol_videos()
+            if videos:
+                random.shuffle(videos)
+                for chosen in videos:
+                    meme_url = chosen["url"]
+                    video_id = chosen["id"]
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(meme_url) as resp:
+                                if resp.status == 200:
+                                    video_data = await resp.read()
+                                    if len(video_data) <= 8 * 1024 * 1024:
+                                        video_file = discord.File(
+                                            fp=__import__('io').BytesIO(video_data),
+                                            filename="interpol_video.mp4"
+                                        )
+                                        embed = discord.Embed(
+                                            title="Interpol.cc Video",
+                                            color=discord.Color.random()
+                                        )
+                                        embed.set_footer(text="Quelle: INTERPOL.CC")
+                                        await channel.send(embed=embed, file=video_file)
+                                        print(f"[Memes] Interpol Video gesendet in {channel.name} ({guild.name})")
+                                        if video_id:
+                                            if "sent_video_ids" not in settings:
+                                                settings["sent_video_ids"] = []
+                                            settings["sent_video_ids"].append(video_id)
+                                            config_changed = True
+                                        break
+                                    else:
+                                        print(f"[Memes] Interpol Video zu gross: {len(video_data)} bytes - naechstes")
+                                        if video_id:
+                                            if "sent_video_ids" not in settings:
+                                                settings["sent_video_ids"] = []
+                                            settings["sent_video_ids"].append(video_id)
+                                            config_changed = True
                                 else:
-                                    print(f"[Memes] Interpol Video zu gross: {len(video_data)} bytes")
-                            else:
-                                print(f"[Memes] Interpol Download fehlgeschlagen: {resp.status}")
-                else:
+                                    print(f"[Memes] Interpol Download fehlgeschlagen: {resp.status} - naechstes")
+                    except Exception as e:
+                        print(f"[Memes] Interpol Fehler: {e} - naechstes")
+            if config_changed:
+                save_memes_config(config)
+        else:
+            meme_url, video_id = await get_meme_for_guild(guild.id)
+            if meme_url:
+                try:
                     embed = discord.Embed(
                         title="Auto-Meme",
                         color=discord.Color.random()
@@ -3937,9 +3955,9 @@ async def auto_memes_task():
                     embed.set_image(url=meme_url)
                     embed.set_footer(text=f"Quelle: {source.upper()}")
                     await channel.send(embed=embed)
-                print(f"[Memes] Gesendet in {channel.name} ({guild.name})")
-            except Exception as e:
-                print(f"[Memes] Fehler beim Senden: {e}")
+                    print(f"[Memes] Gesendet in {channel.name} ({guild.name})")
+                except Exception as e:
+                    print(f"[Memes] Fehler beim Senden: {e}")
 
 @auto_memes_task.before_loop
 async def before_auto_memes():
