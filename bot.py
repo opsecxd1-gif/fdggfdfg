@@ -4189,6 +4189,10 @@ async def frage_des_tages_task():
         view = FrageVoteView(frage_data, msg.id)
         await msg.edit(view=view)
         
+        config[guild_str]["last_message_id"] = msg.id
+        config[guild_str]["last_channel_id"] = channel.id
+        save_fragen_config(config)
+        
         print(f"[Frage] Gesendet in {channel.name} ({guild.name})")
 
 @frage_des_tages_task.before_loop
@@ -4362,11 +4366,19 @@ async def fragetest_command(interaction: discord.Interaction):
     view = FrageVoteView(frage_data, msg.id)
     await msg.edit(view=view)
 
-@bot.tree.command(name="frageresults", description="Zeigt die Ergebnisse einer Frage")
+@bot.tree.command(name="frageresults", description="Zeigt die Ergebnisse einer Frage mit Users")
 @is_admin_or_owner()
-@app_commands.describe(message_id="Die ID der Frage-Nachricht")
-async def frageresults_command(interaction: discord.Interaction, message_id: str):
+@app_commands.describe(message_id="Die ID der Frage-Nachricht (leer = letzte Frage)")
+async def frageresults_command(interaction: discord.Interaction, message_id: str = ""):
     votes = load_memes_votes()
+    
+    if not message_id:
+        config = load_fragen_config()
+        guild_str = str(interaction.guild_id)
+        message_id = config.get(guild_str, {}).get("last_message_id", "")
+        if not message_id:
+            await interaction.response.send_message("Keine aktuelle Frage gefunden! Message-ID angeben.", ephemeral=True)
+            return
     
     if message_id not in votes:
         await interaction.response.send_message("Keine Stimmen für diese Nachricht gefunden!", ephemeral=True)
@@ -4379,14 +4391,20 @@ async def frageresults_command(interaction: discord.Interaction, message_id: str
         return
     
     vote_counts = {}
+    vote_users = {}
     for user_id, option_index in vote_data.items():
         vote_counts[option_index] = vote_counts.get(option_index, 0) + 1
+        if option_index not in vote_users:
+            vote_users[option_index] = []
+        vote_users[option_index].append(f"<@{user_id}>")
     
     emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
     results_text = ""
-    for idx, count in sorted(vote_counts.items()):
+    for idx in sorted(vote_counts.keys()):
         if idx < len(emojis):
-            results_text += f"{emojis[idx]} **{count}** Stimmen\n"
+            count = vote_counts[idx]
+            users = ", ".join(vote_users[idx])
+            results_text += f"{emojis[idx]} **{count} Stimme(n):** {users}\n"
     
     total_votes = sum(vote_counts.values())
     
@@ -4397,6 +4415,69 @@ async def frageresults_command(interaction: discord.Interaction, message_id: str
     )
     
     await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="frageskip", description="Aktuelle Frage ueberspringen und neue senden")
+@is_admin_or_owner()
+async def frageskip_command(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.followup.send("Noch nicht eingerichtet! Benutze /fragesetup", ephemeral=True)
+        return
+    
+    settings = config[guild_str]
+    last_msg_id = settings.get("last_message_id")
+    last_channel_id = settings.get("last_channel_id")
+    
+    if last_msg_id and last_channel_id:
+        channel = bot.get_channel(last_channel_id)
+        if channel:
+            try:
+                old_msg = await channel.fetch_message(int(last_msg_id))
+                await old_msg.delete()
+            except:
+                pass
+    
+    channel_id = settings.get("channel_id")
+    channel = bot.get_channel(channel_id)
+    if not channel:
+        await interaction.followup.send("Channel nicht gefunden!", ephemeral=True)
+        return
+    
+    fragen = get_all_fragen(interaction.guild_id)
+    if not fragen:
+        await interaction.followup.send("Keine Fragen vorhanden!", ephemeral=True)
+        return
+    
+    frage_data = random.choice(fragen)
+    
+    emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+    options_text = ""
+    for i, option in enumerate(frage_data["optionen"][:8]):
+        options_text += f"{emojis[i]} {option}\n"
+    
+    embed = discord.Embed(
+        title=f"{frage_data.get('emoji', '\u2753')} Frage des Tages",
+        description=f"**{frage_data['frage']}**\n\n{options_text}",
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+    
+    msg = await channel.send(embed=embed)
+    
+    view = FrageVoteView(frage_data, msg.id)
+    await msg.edit(view=view)
+    
+    config[guild_str]["last_message_id"] = msg.id
+    config[guild_str]["last_channel_id"] = channel.id
+    save_fragen_config(config)
+    
+    await interaction.followup.send(
+        f"**Frage uebersprungen!** Neue Frage gesendet in {channel.mention}"
+    )
 
 # =====================================
 # MAIN / ON_READY (Tasks starten)
