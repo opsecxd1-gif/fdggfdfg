@@ -3935,7 +3935,8 @@ async def before_auto_memes():
 @is_admin_or_owner()
 @app_commands.describe(
     channel="Channel für Auto-Memes",
-    quelle="reddit, imgur, liste, gemischt oder interpol"
+    quelle="reddit, imgur, liste, gemischt oder interpol",
+    stunden="Interval in Stunden (1-48, Standard: 16)"
 )
 @app_commands.choices(quelle=[
     app_commands.Choice(name="Reddit (Empfohlen)", value="reddit"),
@@ -3947,8 +3948,13 @@ async def before_auto_memes():
 async def memessetup_command(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
-    quelle: app_commands.Choice[str]
+    quelle: app_commands.Choice[str],
+    stunden: int = 16
 ):
+    if stunden < 1 or stunden > 48:
+        await interaction.response.send_message("Ungueltig! Erlaubt: 1-48 Stunden", ephemeral=True)
+        return
+    
     config = load_memes_config()
     guild_str = str(interaction.guild_id)
     
@@ -3956,13 +3962,17 @@ async def memessetup_command(
         "enabled": True,
         "channel_id": channel.id,
         "source": quelle.value,
-        "interval_hours": 16,
+        "interval_hours": stunden,
         "subreddit": "memes",
         "imgur_tag": "memes"
     }
     save_memes_config(config)
     
     if not auto_memes_task.is_running():
+        auto_memes_task.start()
+    else:
+        auto_memes_task.cancel()
+        auto_memes_task.change_interval(hours=stunden)
         auto_memes_task.start()
     
     source_names = {
@@ -3977,7 +3987,7 @@ async def memessetup_command(
         f"**Auto-Memes eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
         f"**Quelle:** {source_names.get(quelle.value, quelle.value)}\n"
-        f"**Interval:** Alle 16 Stunden\n\n"
+        f"**Interval:** Alle {stunden} Stunden\n\n"
         f"Der Bot postet jetzt automatisch Memes!"
     )
 
