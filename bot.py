@@ -161,14 +161,22 @@ async def fetch_imgur_memes(tag="memes", page=1):
     return []
 
 async def fetch_interpol_videos(limit=50, exclude_ids=None):
-    url = f"https://interpol.cc/api/videos?pageSize={limit}"
+    all_videos = []
+    cursor = None
+    max_pages = 20
+    page = 0
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
+            while page < max_pages:
+                url = f"https://interpol.cc/api/videos?pageSize=50"
+                if cursor:
+                    url += f"&cursor={cursor}"
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        break
                     data = await resp.json()
                     items = data.get("items", [])
-                    videos = []
+                    cursor = data.get("nextCursor")
                     for item in items:
                         if item.get("transcodeStatus") != "Completed":
                             continue
@@ -179,15 +187,17 @@ async def fetch_interpol_videos(limit=50, exclude_ids=None):
                         if download_url:
                             if download_url.startswith("/"):
                                 download_url = "https://interpol.cc" + download_url
-                            videos.append({
+                            all_videos.append({
                                 "url": download_url,
                                 "title": item.get("title", "Interpol Video"),
                                 "id": video_id
                             })
-                    return videos
+                    page += 1
+                    if not cursor:
+                        break
     except Exception as e:
         print(f"[Memes] Interpol API Fehler: {e}")
-    return []
+    return all_videos
 
 async def get_meme_for_guild(guild_id, exclude_ids=None):
     config = load_memes_config()
