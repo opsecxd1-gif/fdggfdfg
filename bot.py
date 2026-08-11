@@ -8,7 +8,6 @@ import os
 import asyncio
 import tempfile
 import time
-from datetime import timedelta
 import yt_dlp
 from pathlib import Path
 
@@ -2298,10 +2297,6 @@ def get_user_data(guild_id, user_id):
 def today_str():
     return discord.utils.utcnow().strftime("%Y-%m-%d")
 
-def days_ago_str(days):
-    from datetime import datetime, timedelta
-    return (discord.utils.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
-
 def add_xp(guild_id, user_id, amount):
     data = load_level_data()
     guild_str = str(guild_id)
@@ -2336,24 +2331,6 @@ def add_xp(guild_id, user_id, amount):
     save_level_data(data)
     return old_level, new_level
 
-def get_messages_last_7_days(user_data):
-    messages = user_data.get("messages", {})
-    total = 0
-    cutoff = days_ago_str(7)
-    for date_key, count in messages.items():
-        if date_key >= cutoff:
-            total += count
-    return total
-
-def get_voice_last_7_days(user_data):
-    voice_daily = user_data.get("voice_daily", {})
-    total = 0
-    cutoff = days_ago_str(7)
-    for date_key, seconds in voice_daily.items():
-        if date_key >= cutoff:
-            total += seconds
-    return total
-
 def format_time_short(seconds):
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
@@ -2372,13 +2349,6 @@ def format_time_full(seconds):
         return f"{minutes}m {secs}s"
     else:
         return f"{secs}s"
-
-def cleanup_old_dates(user_data):
-    cutoff = days_ago_str(14)
-    if "messages" in user_data:
-        user_data["messages"] = {k: v for k, v in user_data["messages"].items() if k >= cutoff}
-    if "voice_daily" in user_data:
-        user_data["voice_daily"] = {k: v for k, v in user_data["voice_daily"].items() if k >= cutoff}
 
 @bot.event
 async def on_message_level_system(message):
@@ -2454,7 +2424,6 @@ async def on_voice_state_update_level(member, before, after):
 
             user_data["voice_seconds"] = user_data.get("voice_seconds", 0) + elapsed
             user_data["voice_daily"][today] = user_data["voice_daily"].get(today, 0) + elapsed
-            cleanup_old_dates(user_data)
             save_level_data(data)
 
     elif not before.channel and after.channel:
@@ -2480,7 +2449,6 @@ async def on_voice_state_update_level(member, before, after):
 
             user_data["voice_seconds"] = user_data.get("voice_seconds", 0) + elapsed
             user_data["voice_daily"][today] = user_data["voice_daily"].get(today, 0) + elapsed
-            cleanup_old_dates(user_data)
             save_level_data(data)
 
             voice_start_times[member.id] = time.time()
@@ -2497,9 +2465,6 @@ async def level_command(interaction: discord.Interaction, user: discord.Member =
     filled = int(bar_length * progress / 100)
     bar = "█" * filled + "░" * (bar_length - filled)
 
-    msgs_7d = get_messages_last_7_days(user_data)
-    voice_7d = get_voice_last_7_days(user_data)
-
     embed = discord.Embed(
         title=f"Level von {target.display_name}",
         color=discord.Color.blue()
@@ -2508,8 +2473,9 @@ async def level_command(interaction: discord.Interaction, user: discord.Member =
     embed.add_field(name="Level", value=str(user_data["level"]), inline=True)
     embed.add_field(name="XP", value=f"{user_data['xp']}/{xp_needed}", inline=True)
     embed.add_field(name="Fortschritt", value=f"`{bar}` {progress:.1f}%", inline=False)
-    embed.add_field(name="Nachrichten (7 Tage)", value=str(msgs_7d), inline=True)
-    embed.add_field(name="Voice-Zeit (7 Tage)", value=format_time_full(voice_7d), inline=True)
+    total_msgs = sum(user_data.get("messages", {}).values())
+    embed.add_field(name="Nachrichten", value=str(total_msgs), inline=True)
+    embed.add_field(name="Voice-Zeit", value=format_time_full(user_data.get("voice_seconds", 0)), inline=True)
 
     await interaction.response.send_message(embed=embed)
 
@@ -2526,19 +2492,18 @@ def build_leaderboard_embeds(guild):
             if not member or member.bot:
                 continue
 
-            msgs_7d = get_messages_last_7_days(user_data)
-            voice_7d = get_voice_last_7_days(user_data)
+            msgs_total = sum(user_data.get("messages", {}).values())
+            voice_total = user_data.get("voice_seconds", 0)
 
-            if msgs_7d > 0:
-                messages_ranking.append((member, msgs_7d))
-            if voice_7d > 0:
-                voice_ranking.append((member, voice_7d))
+            if msgs_total > 0:
+                messages_ranking.append((member, msgs_total))
+            if voice_total > 0:
+                voice_ranking.append((member, voice_total))
 
     messages_ranking.sort(key=lambda x: x[1], reverse=True)
     voice_ranking.sort(key=lambda x: x[1], reverse=True)
 
     medals = ["", "", ""]
-    end_date = discord.utils.utcnow() + timedelta(days=7 - discord.utils.utcnow().weekday())
 
     msg_lines = []
     for i, (member, count) in enumerate(messages_ranking[:15]):
@@ -2555,7 +2520,7 @@ def build_leaderboard_embeds(guild):
 
     embed_messages = discord.Embed(
         title=f"{guild.name} Leaderboard",
-        description=f" Top Messages (Last 7 Days) — {top_msg_user}",
+        description=f" Top Messages (Lifetime) — {top_msg_user}",
         color=discord.Color.red()
     )
     embed_messages.description += "\n\n**Rankings**\n"
@@ -2563,11 +2528,10 @@ def build_leaderboard_embeds(guild):
         embed_messages.description += "\n".join(msg_lines)
     else:
         embed_messages.description += "Noch keine Nachrichten getrackt."
-    embed_messages.set_footer(text=f"Ends in {7 - discord.utils.utcnow().weekday()} days · {end_date.strftime('%m/%d/%Y 11:59 PM')}")
 
     embed_voice = discord.Embed(
         title=f"{guild.name} Leaderboard",
-        description=f" Top Voice Time (Last 7 Days) — {top_voice_user}",
+        description=f" Top Voice Time (Lifetime) — {top_voice_user}",
         color=discord.Color.blue()
     )
     embed_voice.description += "\n\n**Rankings**\n"
@@ -2575,7 +2539,6 @@ def build_leaderboard_embeds(guild):
         embed_voice.description += "\n".join(voice_lines)
     else:
         embed_voice.description += "Noch keine Voice-Zeit getrackt."
-    embed_voice.set_footer(text=f"Ends in {7 - discord.utils.utcnow().weekday()} days · {end_date.strftime('%m/%d/%Y 11:59 PM')}")
 
     return embed_messages, embed_voice
 
