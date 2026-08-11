@@ -9,6 +9,8 @@ import asyncio
 import io
 import tempfile
 import time
+import random
+import aiohttp
 import yt_dlp
 from pathlib import Path
 
@@ -34,6 +36,298 @@ TIKTOK_MODE_FILE = DATA_DIR / "tiktok_mode.json"
 tiktok_mode = {}
 TIKTOK_DOWNLOAD_DIR = Path("tiktok_downloads")
 TIKTOK_DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+# =====================================
+# AUTO-MEMES SYSTEM
+# =====================================
+
+MEMES_CONFIG_FILE = DATA_DIR / "memes_config.json"
+MEMES_VOTES_FILE = DATA_DIR / "memes_votes.json"
+MEMES_LIST_DIR = DATA_DIR / "memes_lists"
+MEMES_LIST_DIR.mkdir(exist_ok=True)
+
+REDDIT_MEME_SUBREDDITS = [
+    "memes", "dankmemes", "me_irl", "MemeEconomy", "ComedyCemetery",
+    "funny", "wholesomememes", "shitposting", "okbuddyretard",
+    "HistoryMemes", "PrequelMemes", "StarWarsMemes", "animememes"
+]
+
+IMGUR_MEME_ALBUMS = [
+    "r/memes", "r/dankmemes", "r/funny", "r/me_irl"
+]
+
+def load_memes_config():
+    if MEMES_CONFIG_FILE.exists():
+        with open(MEMES_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_memes_config(data):
+    with open(MEMES_CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_memes_votes():
+    if MEMES_VOTES_FILE.exists():
+        with open(MEMES_VOTES_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_memes_votes(data):
+    with open(MEMES_VOTES_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def get_memes_list_file(guild_id):
+    return MEMES_LIST_DIR / f"{guild_id}_memes.txt"
+
+def load_memes_list(guild_id):
+    path = get_memes_list_file(guild_id)
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            lines = [l.strip() for l in f.readlines() if l.strip()]
+        return lines
+    return []
+
+def save_memes_list(guild_id, urls):
+    path = get_memes_list_file(guild_id)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(urls))
+
+async def fetch_reddit_memes(subreddit="memes", limit=25):
+    url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit={limit}"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DiscordBot/1.0"}
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    posts = data.get("data", {}).get("children", [])
+                    image_urls = []
+                    for post in posts:
+                        post_data = post.get("data", {})
+                        post_url = post_data.get("url", "")
+                        is_video = post_data.get("is_video", False)
+                        if is_video:
+                            continue
+                        if any(ext in post_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                            image_urls.append(post_url)
+                        elif "imgur.com" in post_url and not post_url.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                            imgur_url = post_url + ".jpg"
+                            image_urls.append(imgur_url)
+                        elif "i.redd.it" in post_url:
+                            image_urls.append(post_url)
+                    return image_urls
+    except Exception as e:
+        print(f"[Memes] Reddit API Fehler: {e}")
+    return []
+
+async def fetch_imgur_memes(tag="memes", page=1):
+    url = f"https://api.imgur.com/3/gallery/t/{tag}/hot/{page}"
+    headers = {"Authorization": "Client-ID 546c25a59c58ad7"}
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    items = data.get("data", {}).get("items", [])
+                    image_urls = []
+                    for item in items:
+                        if item.get("is_album"):
+                            continue
+                        link = item.get("link", "")
+                        if any(ext in link.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                            image_urls.append(link)
+                    return image_urls
+    except Exception as e:
+        print(f"[Memes] Imgur API Fehler: {e}")
+    return []
+
+async def get_meme_for_guild(guild_id):
+    config = load_memes_config()
+    guild_str = str(guild_id)
+    source = config.get(guild_str, {}).get("source", "reddit")
+    
+    if source == "reddit":
+        sub = config.get(guild_str, {}).get("subreddit", random.choice(REDDIT_MEME_SUBREDDITS))
+        memes = await fetch_reddit_memes(sub)
+        if memes:
+            return random.choice(memes)
+    
+    elif source == "imgur":
+        tag = config.get(guild_str, {}).get("imgur_tag", "memes")
+        memes = await fetch_imgur_memes(tag)
+        if memes:
+            return random.choice(memes)
+    
+    elif source == "liste":
+        liste = load_memes_list(guild_id)
+        if liste:
+            return random.choice(liste)
+    
+    elif source == "gemischt":
+        all_memes = []
+        reddit_memes = await fetch_reddit_memes(random.choice(REDDIT_MEME_SUBREDDITS))
+        all_memes.extend(reddit_memes)
+        liste = load_memes_list(guild_id)
+        all_memes.extend(liste)
+        if all_memes:
+            return random.choice(all_memes)
+    
+    return None
+
+# =====================================
+# FRAGE DES TAGES SYSTEM
+# =====================================
+
+FRAGEN_CONFIG_FILE = DATA_DIR / "fragen_config.json"
+FRAGEN_CUSTOM_FILE = DATA_DIR / "fragen_custom.json"
+
+DEFAULT_FRAGEN = [
+    {
+        "frage": "Welche Pizza mögt ihr am liebsten?",
+        "emoji": "🍕",
+        "optionen": ["Salami", "Schinken", "Thunfisch", "Ananas", "Margherita", "Vegetarisch"]
+    },
+    {
+        "frage": "Bett oder Couch?",
+        "emoji": "🛋️",
+        "optionen": ["Bett", "Couch", "Boden", "Hängematte"]
+    },
+    {
+        "frage": "Frühstück oder Abendessen?",
+        "emoji": "🍳",
+        "optionen": ["Frühstück", "Abendessen", "Beides gleich"]
+    },
+    {
+        "frage": "Katze oder Hund?",
+        "emoji": "🐱",
+        "optionen": ["Katze", "Hund", "Beide", "Keins"]
+    },
+    {
+        "frage": "Gaming oder Serien schauen?",
+        "emoji": "🎮",
+        "optionen": ["Gaming", "Serien", "Beides", "Nix von beidem"]
+    },
+    {
+        "frage": "Kaffee oder Tee?",
+        "emoji": "☕",
+        "optionen": ["Kaffee", "Tee", "Beide", "Wasser"]
+    },
+    {
+        "frage": "Sommer oder Winter?",
+        "emoji": "☀️",
+        "optionen": ["Sommer", "Winter", "Frühling", "Herbst"]
+    },
+    {
+        "frage": "Berühmtheit zum Abendessen - wen würdest du einladen?",
+        "emoji": "🍽️",
+        "optionen": ["Elon Musk", "Taylor Swift", "MrBeast", "Johnny Depp", "Die Queen"]
+    },
+    {
+        "frage": "Welches Instrument könntet ihr lernen?",
+        "emoji": "🎸",
+        "optionen": ["Gitarre", "Klavier", "Schlagzeug", "Geige", "Saxophon"]
+    },
+    {
+        "frage": "Was ist euer guilty pleasure Food?",
+        "emoji": "😋",
+        "optionen": ["Döner", "Pizza", "McDonalds", "Kebab", "Süßigkeiten"]
+    },
+    {
+        "frage": "Würdet ihr lieber fliegen können oder unsichtbar sein?",
+        "emoji": "🦅",
+        "optionen": ["Fliegen", "Unsichtbar", "Zeitreise", "Teleportation"]
+    },
+    {
+        "frage": "Wie lange braucht ihr morgens zum fertig werden?",
+        "emoji": "⏰",
+        "optionen": ["5 Minuten", "15 Minuten", "30 Minuten", "1 Stunde+", "Schlafe an"]
+    },
+    {
+        "frage": "Welches Wetter mögt ihr am liebsten?",
+        "emoji": "🌤️",
+        "optionen": ["Sonne", "Regen", "Schnee", "Bewölkt", "Sturm"]
+    },
+    {
+        "frage": "Was ist das wichtigste auf einer Party?",
+        "emoji": "🎉",
+        "optionen": ["Musik", "Leute", "Getränke", "Essen", "Vibe"]
+    },
+    {
+        "frage": "Welchen Superpower hättet ihr?",
+        "emoji": "💪",
+        "optionen": ["Fliegen", "Unsichtbarkeit", "Telepathie", "Superkraft", "Zeitreise"]
+    },
+    {
+        "frage": "Was hört ihr gerade für Musik?",
+        "emoji": "🎵",
+        "optionen": ["Pop", "Rap/Hip-Hop", "Rock", "EDM", "Klassik", "Metal"]
+    },
+    {
+        "frage": "Lieblings-Season in Serien?",
+        "emoji": "📺",
+        "optionen": ["Staffel 1", "Finale Staffel", "Alle gleich", "Keine Serien"]
+    },
+    {
+        "frage": "Was macht einen guten Freund aus?",
+        "emoji": "🤝",
+        "optionen": ["Ehrlichkeit", "Humor", "Loyalität", "Verständnis", "Spaß"]
+    },
+    {
+        "frage": "Welches Land wolltet ihr immer mal besuchen?",
+        "emoji": "✈️",
+        "optionen": ["USA", "Japan", "Australien", "Brasilien", "Island", "Thailand"]
+    },
+    {
+        "frage": "Wie chillt ihr am liebsten am Wochenende?",
+        "emoji": "😎",
+        "optionen": ["Gaming", "Schlafen", "Essen gehen", "Mit Freunden", "Sport"]
+    }
+]
+
+def load_fragen_config():
+    if FRAGEN_CONFIG_FILE.exists():
+        with open(FRAGEN_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_fragen_config(data):
+    with open(FRAGEN_CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_custom_fragen():
+    if FRAGEN_CUSTOM_FILE.exists():
+        with open(FRAGEN_CUSTOM_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_custom_fragen(data):
+    with open(FRAGEN_CUSTOM_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def get_all_fragen(guild_id):
+    custom = load_custom_fragen()
+    all_fragen = DEFAULT_FRAGEN.copy()
+    guild_str = str(guild_id)
+    for frag in custom:
+        if frag.get("guild_id") == guild_str or frag.get("guild_id") == "global":
+            all_fragen.append(frag)
+    return all_fragen
+
+class FrageVoteView(discord.ui.View):
+    def __init__(self, frage_data, msg_id):
+        super().__init__(timeout=None)
+        self.frage_data = frage_data
+        self.msg_id = str(msg_id)
+        
+        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+        for i, option in enumerate(frage_data["optionen"][:8]):
+            button = discord.ui.Button(
+                label=option,
+                style=discord.ButtonStyle.secondary,
+                emoji=emojis[i],
+                custom_id=f"frage_vote_{self.msg_id}_{i}"
+            )
+            self.add_item(button)
 
 EXCLUDED_ROLE_NAMES = ["owner", "head admin", "admin", "moderator", "bot", "muted", "timeout"]
 
@@ -2001,6 +2295,38 @@ async def on_interaction(interaction: discord.Interaction):
                 await interaction.response.send_message(f"**{role.name}** hinzugefügt!", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
+    
+    elif custom_id.startswith("frage_vote_"):
+        parts = custom_id.split("_")
+        msg_id = parts[2]
+        option_index = int(parts[3])
+        
+        votes = load_memes_votes()
+        if msg_id not in votes:
+            votes[msg_id] = {}
+        
+        user_str = str(interaction.user.id)
+        old_vote = votes[msg_id].get(user_str)
+        
+        if old_vote == option_index:
+            del votes[msg_id][user_str]
+            save_memes_votes(votes)
+            await interaction.response.send_message(
+                "Deine Stimme wurde entfernt!",
+                ephemeral=True
+            )
+            return
+        
+        votes[msg_id][user_str] = option_index
+        save_memes_votes(votes)
+        
+        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+        emoji = emojis[option_index] if option_index < len(emojis) else "❓"
+        
+        await interaction.response.send_message(
+            f"Du hast für {emoji} abgestimmt!",
+            ephemeral=True
+        )
 
 # =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
@@ -3189,6 +3515,20 @@ async def on_ready():
     
     if not update_live_leaderboard.is_running():
         update_live_leaderboard.start()
+    
+    memes_config = load_memes_config()
+    for guild_str, settings in memes_config.items():
+        if settings.get("enabled", False):
+            if not auto_memes_task.is_running():
+                auto_memes_task.start()
+                break
+    
+    fragen_config = load_fragen_config()
+    for guild_str, settings in fragen_config.items():
+        if settings.get("enabled", False):
+            if not frage_des_tages_task.is_running():
+                frage_des_tages_task.start()
+                break
 
 @bot.event
 async def on_message(message):
@@ -3381,6 +3721,602 @@ async def on_voice_state_update(member, before, after):
         await on_voice_state_update_level(member, before, after)
     except Exception as e:
         print(f"[Level] Fehler in Voice-Level-Tracking: {e}")
+
+# =====================================
+# AUTO-MEMES TASK & COMMANDS
+# =====================================
+
+@tasks.loop(hours=16)
+async def auto_memes_task():
+    config = load_memes_config()
+    for guild in bot.guilds:
+        guild_str = str(guild.id)
+        if guild_str not in config:
+            continue
+        
+        settings = config[guild_str]
+        if not settings.get("enabled", False):
+            continue
+        
+        channel_id = settings.get("channel_id")
+        if not channel_id:
+            continue
+        
+        channel = bot.get_channel(channel_id)
+        if not channel:
+            continue
+        
+        meme_url = await get_meme_for_guild(guild.id)
+        if meme_url:
+            try:
+                embed = discord.Embed(
+                    title="Auto-Meme",
+                    color=discord.Color.random()
+                )
+                embed.set_image(url=meme_url)
+                embed.set_footer(text=f"Quelle: {settings.get('source', 'reddit').upper()}")
+                await channel.send(embed=embed)
+                print(f"[Memes] Gesendet in {channel.name} ({guild.name})")
+            except Exception as e:
+                print(f"[Memes] Fehler beim Senden: {e}")
+
+@auto_memes_task.before_loop
+async def before_auto_memes():
+    await bot.wait_until_ready()
+
+@bot.tree.command(name="memessetup", description="Auto-Memes Channel einrichten")
+@is_admin_or_owner()
+@app_commands.describe(
+    channel="Channel für Auto-Memes",
+    quelle="reddit, imgur, liste oder gemischt"
+)
+@app_commands.choices(quelle=[
+    app_commands.Choice(name="Reddit (Empfohlen)", value="reddit"),
+    app_commands.Choice(name="Imgur", value="imgur"),
+    app_commands.Choice(name="Eigene Liste", value="liste"),
+    app_commands.Choice(name="Gemischt (Alles)", value="gemischt")
+])
+async def memessetup_command(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel,
+    quelle: app_commands.Choice[str]
+):
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    config[guild_str] = {
+        "enabled": True,
+        "channel_id": channel.id,
+        "source": quelle.value,
+        "interval_hours": 16,
+        "subreddit": "memes",
+        "imgur_tag": "memes"
+    }
+    save_memes_config(config)
+    
+    if not auto_memes_task.is_running():
+        auto_memes_task.start()
+    
+    source_names = {
+        "reddit": "Reddit",
+        "imgur": "Imgur",
+        "liste": "Eigene Liste",
+        "gemischt": "Gemischt (Reddit + Liste)"
+    }
+    
+    await interaction.response.send_message(
+        f"**Auto-Memes eingerichtet!**\n\n"
+        f"**Channel:** {channel.mention}\n"
+        f"**Quelle:** {source_names.get(quelle.value, quelle.value)}\n"
+        f"**Interval:** Alle 16 Stunden\n\n"
+        f"Der Bot postet jetzt automatisch Memes!"
+    )
+
+@bot.tree.command(name="memesinterval", description="Auto-Memes Interval ändern")
+@is_admin_or_owner()
+@app_commands.describe(stunden="Interval in Stunden (1-48)")
+async def memesinterval_command(interaction: discord.Interaction, stunden: int):
+    if stunden < 1 or stunden > 48:
+        await interaction.response.send_message("Ungültig! Erlaubt: 1-48 Stunden", ephemeral=True)
+        return
+    
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    config[guild_str]["interval_hours"] = stunden
+    save_memes_config(config)
+    
+    auto_memes_task.cancel()
+    auto_memes_task.change_interval(hours=stunden)
+    auto_memes_task.start()
+    
+    await interaction.response.send_message(f"**Interval geändert auf alle {stunden} Stunden!**")
+
+@bot.tree.command(name="memestoggle", description="Auto-Memes ein/ausschalten")
+@is_admin_or_owner()
+async def memestoggle_command(interaction: discord.Interaction):
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    current = config[guild_str].get("enabled", False)
+    config[guild_str]["enabled"] = not current
+    save_memes_config(config)
+    
+    state = "AN" if not current else "AUS"
+    icon = "✅" if not current else "❌"
+    await interaction.response.send_message(f"{icon} **Auto-Memes:** {state}")
+
+@bot.tree.command(name="memesquelle", description="Memes-Quelle ändern")
+@is_admin_or_owner()
+@app_commands.describe(quelle="reddit, imgur, liste oder gemischt")
+@app_commands.choices(quelle=[
+    app_commands.Choice(name="Reddit", value="reddit"),
+    app_commands.Choice(name="Imgur", value="imgur"),
+    app_commands.Choice(name="Eigene Liste", value="liste"),
+    app_commands.Choice(name="Gemischt (Alles)", value="gemischt")
+])
+async def memesquelle_command(
+    interaction: discord.Interaction,
+    quelle: app_commands.Choice[str]
+):
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    config[guild_str]["source"] = quelle.value
+    save_memes_config(config)
+    
+    source_names = {
+        "reddit": "Reddit",
+        "imgur": "Imgur",
+        "liste": "Eigene Liste",
+        "gemischt": "Gemischt (Reddit + Liste)"
+    }
+    
+    await interaction.response.send_message(f"**Quelle geändert auf:** {source_names.get(quelle.value, quelle.value)}")
+
+@bot.tree.command(name="memessubreddit", description="Reddit Subreddit für Memes setzen")
+@is_admin_or_owner()
+@app_commands.describe(subreddit="Reddit Subreddit (z.B. memes, dankmemes)")
+async def memessubreddit_command(interaction: discord.Interaction, subreddit: str):
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    config[guild_str]["subreddit"] = subreddit
+    save_memes_config(config)
+    
+    await interaction.response.send_message(f"**Subreddit gesetzt auf:** r/{subreddit}")
+
+@bot.tree.command(name="memesskip", description="Nächstes Memé manuell senden")
+@is_admin_or_owner()
+async def memesskip_command(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.followup.send("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    meme_url = await get_meme_for_guild(interaction.guild_id)
+    if not meme_url:
+        await interaction.followup.send("Kein Memé gefunden! Quelle prüfen.", ephemeral=True)
+        return
+    
+    embed = discord.Embed(
+        title="Manuelles Memé",
+        color=discord.Color.random()
+    )
+    embed.set_image(url=meme_url)
+    embed.set_footer(text=f"Gesendet von {interaction.user.display_name}")
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="memestest", description="Testet die Memes-Quelle")
+@is_admin_or_owner()
+async def memestest_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    source = config.get(guild_str, {}).get("source", "reddit")
+    
+    results = []
+    
+    if source in ("reddit", "gemischt"):
+        sub = config.get(guild_str, {}).get("subreddit", "memes")
+        memes = await fetch_reddit_memes(sub)
+        results.append(f"**Reddit r/{sub}:** {len(memes)} Memes gefunden")
+    
+    if source in ("imgur", "gemischt"):
+        tag = config.get(guild_str, {}).get("imgur_tag", "memes")
+        memes = await fetch_imgur_memes(tag)
+        results.append(f"**Imgur #{tag}:** {len(memes)} Memes gefunden")
+    
+    if source in ("liste", "gemischt"):
+        liste = load_memes_list(interaction.guild_id)
+        results.append(f"**Eigene Liste:** {len(liste)} Memes vorhanden")
+    
+    if not results:
+        results.append("Keine Quelle konfiguriert!")
+    
+    await interaction.followup.send("\n".join(results), ephemeral=True)
+
+@bot.tree.command(name="memesstatus", description="Zeigt den Auto-Memes Status")
+@is_admin_or_owner()
+async def memesstatus_command(interaction: discord.Interaction):
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    settings = config[guild_str]
+    channel = bot.get_channel(settings.get("channel_id", 0))
+    channel_name = channel.mention if channel else "Nicht gefunden"
+    status = "✅ AN" if settings.get("enabled") else "❌ AUS"
+    
+    source_names = {
+        "reddit": "Reddit",
+        "imgur": "Imgur",
+        "liste": "Eigene Liste",
+        "gemischt": "Gemischt"
+    }
+    
+    embed = discord.Embed(
+        title="Auto-Memes Status",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="Status", value=status, inline=True)
+    embed.add_field(name="Channel", value=channel_name, inline=True)
+    embed.add_field(name="Quelle", value=source_names.get(settings.get("source"), settings.get("source")), inline=True)
+    embed.add_field(name="Interval", value=f"{settings.get('interval_hours', 16)}h", inline=True)
+    
+    if settings.get("source") == "reddit":
+        embed.add_field(name="Subreddit", value=f"r/{settings.get('subreddit', 'memes')}", inline=True)
+    elif settings.get("source") == "imgur":
+        embed.add_field(name="Imgur Tag", value=settings.get("imgur_tag", "memes"), inline=True)
+    elif settings.get("source") == "liste":
+        liste = load_memes_list(interaction.guild_id)
+        embed.add_field(name="Liste", value=f"{len(liste)} Memes", inline=True)
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufügen")
+@is_admin_or_owner()
+@app_commands.describe(
+    links="Meme-Links (einer pro Zeile oder kommagetrennt)"
+)
+async def memesadd_command(interaction: discord.Interaction, links: str):
+    existing = load_memes_list(interaction.guild_id)
+    
+    new_links = []
+    for line in links.replace("\r", "").split("\n"):
+        for link in line.split(","):
+            link = link.strip()
+            if link.startswith("http"):
+                new_links.append(link)
+    
+    if not new_links:
+        await interaction.response.send_message("Keine Links gefunden!", ephemeral=True)
+        return
+    
+    existing.extend(new_links)
+    save_memes_list(interaction.guild_id, existing)
+    
+    await interaction.response.send_message(
+        f"**{len(new_links)} Memes hinzugefügt!**\n"
+        f"Gesamt in der Liste: {len(existing)}"
+    )
+
+@bot.tree.command(name="memesload", description="Memes aus .txt Datei laden")
+@is_admin_or_owner()
+@app_commands.describe(datei="Textdatei mit Meme-Links")
+async def memesload_command(interaction: discord.Interaction, datei: discord.Attachment):
+    await interaction.response.defer()
+    
+    if not datei.filename.endswith('.txt'):
+        await interaction.followup.send("Nur .txt Dateien erlaubt!", ephemeral=True)
+        return
+    
+    content = await datei.read()
+    text = content.decode('utf-8', errors='ignore')
+    
+    new_links = []
+    for line in text.split("\n"):
+        line = line.strip()
+        if line.startswith("http"):
+            new_links.append(line)
+    
+    if not new_links:
+        await interaction.followup.send("Keine Links in der Datei gefunden!", ephemeral=True)
+        return
+    
+    existing = load_memes_list(interaction.guild_id)
+    existing.extend(new_links)
+    save_memes_list(interaction.guild_id, existing)
+    
+    await interaction.followup.send(
+        f"**{len(new_links)} Memes aus Datei geladen!**\n"
+        f"Gesamt: {len(existing)}"
+    )
+
+# =====================================
+# FRAGE DES TAGES TASK & COMMANDS
+# =====================================
+
+@tasks.loop(hours=16)
+async def frage_des_tages_task():
+    config = load_fragen_config()
+    for guild in bot.guilds:
+        guild_str = str(guild.id)
+        if guild_str not in config:
+            continue
+        
+        settings = config[guild_str]
+        if not settings.get("enabled", False):
+            continue
+        
+        channel_id = settings.get("channel_id")
+        if not channel_id:
+            continue
+        
+        channel = bot.get_channel(channel_id)
+        if not channel:
+            continue
+        
+        fragen = get_all_fragen(guild.id)
+        if not fragen:
+            continue
+        
+        frage_data = random.choice(fragen)
+        
+        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+        options_text = ""
+        for i, option in enumerate(frage_data["optionen"][:8]):
+            options_text += f"{emojis[i]} {option}\n"
+        
+        embed = discord.Embed(
+            title=f"{frage_data.get('emoji', '❓')} Frage des Tages",
+            description=f"**{frage_data['frage']}**\n\n{options_text}",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+        
+        msg = await channel.send(embed=embed)
+        
+        view = FrageVoteView(frage_data, msg.id)
+        await msg.edit(view=view)
+        
+        print(f"[Frage] Gesendet in {channel.name} ({guild.name})")
+
+@frage_des_tages_task.before_loop
+async def before_frage_des_tages():
+    await bot.wait_until_ready()
+
+@bot.tree.command(name="fragesetup", description="Frage des Tages einrichten")
+@is_admin_or_owner()
+@app_commands.describe(channel="Channel für die tägliche Frage")
+async def fragesetup_command(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel
+):
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
+    
+    config[guild_str] = {
+        "enabled": True,
+        "channel_id": channel.id,
+        "interval_hours": 16
+    }
+    save_fragen_config(config)
+    
+    if not frage_des_tages_task.is_running():
+        frage_des_tages_task.start()
+    
+    await interaction.response.send_message(
+        f"**Frage des Tages eingerichtet!**\n\n"
+        f"**Channel:** {channel.mention}\n"
+        f"**Interval:** Alle 16 Stunden\n\n"
+        f"Der Bot postet jetzt automatisch Fragen mit Buttons!"
+    )
+
+@bot.tree.command(name="frageinterval", description="Frage des Tages Interval ändern")
+@is_admin_or_owner()
+@app_commands.describe(stunden="Interval in Stunden (1-48)")
+async def frageinterval_command(interaction: discord.Interaction, stunden: int):
+    if stunden < 1 or stunden > 48:
+        await interaction.response.send_message("Ungültig! Erlaubt: 1-48 Stunden", ephemeral=True)
+        return
+    
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /fragesetup", ephemeral=True)
+        return
+    
+    config[guild_str]["interval_hours"] = stunden
+    save_fragen_config(config)
+    
+    frage_des_tages_task.cancel()
+    frage_des_tages_task.change_interval(hours=stunden)
+    frage_des_tages_task.start()
+    
+    await interaction.response.send_message(f"**Interval geändert auf alle {stunden} Stunden!**")
+
+@bot.tree.command(name="fragetoggle", description="Frage des Tages ein/ausschalten")
+@is_admin_or_owner()
+async def fragetoggle_command(interaction: discord.Interaction):
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /fragesetup", ephemeral=True)
+        return
+    
+    current = config[guild_str].get("enabled", False)
+    config[guild_str]["enabled"] = not current
+    save_fragen_config(config)
+    
+    state = "AN" if not current else "AUS"
+    icon = "✅" if not current else "❌"
+    await interaction.response.send_message(f"{icon} **Frage des Tages:** {state}")
+
+@bot.tree.command(name="fragestatus", description="Zeigt den Frage-des-Tages Status")
+@is_admin_or_owner()
+async def fragestatus_command(interaction: discord.Interaction):
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /fragesetup", ephemeral=True)
+        return
+    
+    settings = config[guild_str]
+    channel = bot.get_channel(settings.get("channel_id", 0))
+    channel_name = channel.mention if channel else "Nicht gefunden"
+    status = "✅ AN" if settings.get("enabled") else "❌ AUS"
+    
+    fragen = get_all_fragen(interaction.guild_id)
+    
+    embed = discord.Embed(
+        title="Frage des Tages Status",
+        color=discord.Color.gold()
+    )
+    embed.add_field(name="Status", value=status, inline=True)
+    embed.add_field(name="Channel", value=channel_name, inline=True)
+    embed.add_field(name="Interval", value=f"{settings.get('interval_hours', 16)}h", inline=True)
+    embed.add_field(name="Fragen gesamt", value=str(len(fragen)), inline=True)
+    
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="frageadd", description="Eigene Frage hinzufügen")
+@is_admin_or_owner()
+@app_commands.describe(
+    frage="Die Frage",
+    option1="Option 1",
+    option2="Option 2",
+    option3="Option 3 (optional)",
+    option4="Option 4 (optional)"
+)
+async def frageadd_command(
+    interaction: discord.Interaction,
+    frage: str,
+    option1: str,
+    option2: str,
+    option3: str = "",
+    option4: str = ""
+):
+    custom = load_custom_fragen()
+    
+    optionen = [option1, option2]
+    if option3:
+        optionen.append(option3)
+    if option4:
+        optionen.append(option4)
+    
+    new_frage = {
+        "frage": frage,
+        "emoji": "❓",
+        "optionen": optionen,
+        "guild_id": str(interaction.guild_id)
+    }
+    
+    custom.append(new_frage)
+    save_custom_fragen(custom)
+    
+    await interaction.response.send_message(
+        f"**Frage hinzugefügt!**\n\n"
+        f"**{frage}**\n"
+        f"Optionen: {', '.join(optionen)}"
+    )
+
+@bot.tree.command(name="fragetest", description="Testet eine Frage manuell")
+@is_admin_or_owner()
+async def fragetest_command(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
+    fragen = get_all_fragen(interaction.guild_id)
+    if not fragen:
+        await interaction.followup.send("Keine Fragen vorhanden!", ephemeral=True)
+        return
+    
+    frage_data = random.choice(fragen)
+    
+    emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+    options_text = ""
+    for i, option in enumerate(frage_data["optionen"][:8]):
+        options_text += f"{emojis[i]} {option}\n"
+    
+    embed = discord.Embed(
+        title=f"{frage_data.get('emoji', '❓')} Frage des Tages (Test)",
+        description=f"**{frage_data['frage']}**\n\n{options_text}",
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+    
+    msg = await interaction.followup.send(embed=embed)
+    
+    view = FrageVoteView(frage_data, msg.id)
+    await msg.edit(view=view)
+
+@bot.tree.command(name="frageresults", description="Zeigt die Ergebnisse einer Frage")
+@is_admin_or_owner()
+@app_commands.describe(message_id="Die ID der Frage-Nachricht")
+async def frageresults_command(interaction: discord.Interaction, message_id: str):
+    votes = load_memes_votes()
+    
+    if message_id not in votes:
+        await interaction.response.send_message("Keine Stimmen für diese Nachricht gefunden!", ephemeral=True)
+        return
+    
+    vote_data = votes[message_id]
+    
+    if not vote_data:
+        await interaction.response.send_message("Noch keine Stimmen abgegeben!", ephemeral=True)
+        return
+    
+    vote_counts = {}
+    for user_id, option_index in vote_data.items():
+        vote_counts[option_index] = vote_counts.get(option_index, 0) + 1
+    
+    emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+    results_text = ""
+    for idx, count in sorted(vote_counts.items()):
+        if idx < len(emojis):
+            results_text += f"{emojis[idx]} **{count}** Stimmen\n"
+    
+    total_votes = sum(vote_counts.values())
+    
+    embed = discord.Embed(
+        title="Frage-Ergebnisse",
+        description=f"**Gesamt:** {total_votes} Stimmen\n\n{results_text}",
+        color=discord.Color.gold()
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
+# =====================================
+# MAIN / ON_READY (Tasks starten)
+# =====================================
 
 if __name__ == "__main__":
     TOKEN = os.getenv("DISCORD_TOKEN")

@@ -69,9 +69,34 @@ Commands:
   /setlevel    - Setzt das Level eines Users manuell
   /ticketsetup - Ticket-System einrichten
   /close       - Ticket schliessen
-  /add         - User zum Ticket hinzufuegen
-  /remove      - User aus Ticket entfernen
+  /ticketadd   - User zum Ticket hinzufuegen
+  /ticketremove - User aus Ticket entfernen
   /transcript  - Transkript generieren
+  
+  =====================================
+  AUTO-MEMES SYSTEM (NEU)
+  =====================================
+  /memessetup  - Auto-Memes Channel einrichten (reddit/imgur/liste/gemischt)
+  /memesinterval - Interval ändern (1-48 Stunden)
+  /memestoggle - Auto-Memes ein/ausschalten
+  /memesquelle - Memes-Quelle ändern
+  /memessubreddit - Reddit Subreddit setzen
+  /memesskip   - Nächstes Memé manuell senden
+  /memestest   - Testet die Memes-Quelle
+  /memesstatus - Zeigt Auto-Memes Status
+  /memesadd    - Meme-Links zur Liste hinzufügen
+  /memesload   - Memes aus .txt Datei laden
+  
+  =====================================
+  FRAGE DES TAGES (NEU)
+  =====================================
+  /fragesetup  - Frage des Tages einrichten
+  /frageinterval - Interval ändern (1-48 Stunden)
+  /fragetoggle - Frage des Tages ein/ausschalten
+  /fragestatus - Zeigt Frage-des-Tages Status
+  /frageadd    - Eigene Frage hinzufügen
+  /fragetest   - Testet eine Frage manuell
+  /frageresults - Zeigt Ergebnisse einer Frage
 
 4. ROLLEN-FILTER (masssetup)
 =====================================
@@ -112,5 +137,5 @@ Problem: Git Push fehler wegen Tokens
   → .env Datei wird nicht hochgeladen (.gitignore)
 
 =====================================
-Stand: 06.08.2026
+Stand: 11.08.2026
 =====================================
