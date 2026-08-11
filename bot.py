@@ -1968,112 +1968,6 @@ async def voicesetup(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
-@bot.event
-async def on_voice_state_update(member, before, after):
-    if member.bot:
-        return
-    
-    setup_data = load_voice_setup()
-    guild_setup = setup_data.get(str(member.guild.id))
-    
-    if not guild_setup:
-        return
-    
-    lobby_id = guild_setup.get("lobby_id")
-    category_id = guild_setup.get("category_id")
-    
-    if after.channel and after.channel.id == lobby_id:
-        guild = member.guild
-        category = guild.get_channel(category_id)
-        
-        if not category:
-            return
-        
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(
-                view_channel=True,
-                connect=True,
-                speak=True
-            ),
-            member: discord.PermissionOverwrite(
-                view_channel=True,
-                connect=True,
-                speak=True,
-                move_members=True,
-                manage_channels=True,
-                manage_permissions=True,
-                priority_speaker=True
-            ),
-            guild.me: discord.PermissionOverwrite(
-                view_channel=True,
-                connect=True,
-                speak=True,
-                manage_channels=True,
-                move_members=True
-            )
-        }
-        
-        new_channel = await guild.create_voice_channel(
-            name=f"{member.display_name}'s Chat",
-            category=category,
-            overwrites=overwrites
-        )
-        
-        voice_channel_owners[new_channel.id] = member.id
-        voice_channel_settings[new_channel.id] = {"private": False, "hidden": False}
-        
-        try:
-            await member.move_to(new_channel)
-        except:
-            pass
-        
-        embed, view = await create_voice_control_embed(member, new_channel)
-        try:
-            await new_channel.send(embed=embed, view=view)
-        except:
-            pass
-    
-    if before.channel and before.channel.id in voice_channel_owners:
-        channel = before.channel
-        
-        if len(channel.members) == 0:
-            voice_channel_owners.pop(channel.id, None)
-            voice_channel_settings.pop(channel.id, None)
-            try:
-                await channel.delete(reason="Channel leer")
-            except:
-                pass
-        elif voice_channel_owners.get(channel.id) == member.id:
-            new_owner = channel.members[0]
-            voice_channel_owners[channel.id] = new_owner.id
-            
-            try:
-                old_overwrites = channel.overwrites_for(member)
-                old_overwrites.update(move_members=False, manage_channels=False, manage_permissions=False, priority_speaker=False)
-                await channel.set_permissions(member, overwrite=old_overwrites)
-            except:
-                pass
-            
-            try:
-                new_overwrites = channel.overwrites_for(new_owner)
-                new_overwrites.update(
-                    view_channel=True,
-                    connect=True,
-                    speak=True,
-                    move_members=True,
-                    manage_channels=True,
-                    manage_permissions=True,
-                    priority_speaker=True
-                )
-                await channel.set_permissions(new_owner, overwrite=new_overwrites)
-            except:
-                pass
-            
-            try:
-                await channel.send(f"Der Besitzer hat den Channel verlassen. {new_owner.mention} ist jetzt der neue Besitzer!")
-            except:
-                pass
-
 @bot.tree.command(name="vc_kick", description="User aus deinem Voice Channel kicken")
 async def vc_kick(interaction: discord.Interaction, user_id: str):
     try:
@@ -2890,18 +2784,22 @@ async def on_voice_state_update(member, before, after):
     if member.bot:
         return
     
-    setup_data = load_voice_setup()
-    guild_setup = setup_data.get(str(member.guild.id))
-    
-    if guild_setup:
-        lobby_id = guild_setup.get("lobby_id")
-        category_id = guild_setup.get("category_id")
+    try:
+        setup_data = load_voice_setup()
+        guild_setup = setup_data.get(str(member.guild.id))
         
-        if after.channel and after.channel.id == lobby_id:
-            guild = member.guild
-            category = guild.get_channel(category_id)
+        if guild_setup:
+            lobby_id = guild_setup.get("lobby_id")
+            category_id = guild_setup.get("category_id")
             
-            if category:
+            if after.channel and after.channel.id == lobby_id:
+                guild = member.guild
+                category = guild.get_channel(category_id)
+                
+                if not category:
+                    print(f"[Voice] Category {category_id} nicht gefunden!")
+                    return
+                
                 overwrites = {
                     guild.default_role: discord.PermissionOverwrite(
                         view_channel=True,
@@ -2926,68 +2824,77 @@ async def on_voice_state_update(member, before, after):
                     )
                 }
                 
-                new_channel = await guild.create_voice_channel(
-                    name=f"{member.display_name}'s Chat",
-                    category=category,
-                    overwrites=overwrites
-                )
+                try:
+                    new_channel = await guild.create_voice_channel(
+                        name=f"{member.display_name}'s Chat",
+                        category=category,
+                        overwrites=overwrites
+                    )
+                except discord.HTTPException as e:
+                    print(f"[Voice] FEHLER beim Erstellen des Channels: {e}")
+                    return
                 
                 voice_channel_owners[new_channel.id] = member.id
                 voice_channel_settings[new_channel.id] = {"private": False, "hidden": False}
                 
                 try:
                     await member.move_to(new_channel)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"[Voice] Fehler beim Move: {e}")
                 
-                embed, view = await create_voice_control_embed(member, new_channel)
                 try:
+                    embed, view = await create_voice_control_embed(member, new_channel)
                     await new_channel.send(embed=embed, view=view)
-                except:
-                    pass
-        
-        if before.channel and before.channel.id in voice_channel_owners:
-            channel = before.channel
+                except Exception as e:
+                    print(f"[Voice] Fehler beim Senden des Embeds: {e}")
             
-            if len(channel.members) == 0:
-                voice_channel_owners.pop(channel.id, None)
-                voice_channel_settings.pop(channel.id, None)
-                try:
-                    await channel.delete(reason="Channel leer")
-                except:
-                    pass
-            elif voice_channel_owners.get(channel.id) == member.id:
-                new_owner = channel.members[0]
-                voice_channel_owners[channel.id] = new_owner.id
+            if before.channel and before.channel.id in voice_channel_owners:
+                channel = before.channel
                 
-                try:
-                    old_overwrites = channel.overwrites_for(member)
-                    old_overwrites.update(move_members=False, manage_channels=False, manage_permissions=False, priority_speaker=False)
-                    await channel.set_permissions(member, overwrite=old_overwrites)
-                except:
-                    pass
-                
-                try:
-                    new_overwrites = channel.overwrites_for(new_owner)
-                    new_overwrites.update(
-                        view_channel=True,
-                        connect=True,
-                        speak=True,
-                        move_members=True,
-                        manage_channels=True,
-                        manage_permissions=True,
-                        priority_speaker=True
-                    )
-                    await channel.set_permissions(new_owner, overwrite=new_overwrites)
-                except:
-                    pass
-                
-                try:
-                    await channel.send(f"Der Besitzer hat den Channel verlassen. {new_owner.mention} ist jetzt der neue Besitzer!")
-                except:
-                    pass
+                if len(channel.members) == 0:
+                    voice_channel_owners.pop(channel.id, None)
+                    voice_channel_settings.pop(channel.id, None)
+                    try:
+                        await channel.delete(reason="Channel leer")
+                    except Exception as e:
+                        print(f"[Voice] Fehler beim Loeschen: {e}")
+                elif voice_channel_owners.get(channel.id) == member.id:
+                    new_owner = channel.members[0]
+                    voice_channel_owners[channel.id] = new_owner.id
+                    
+                    try:
+                        old_overwrites = channel.overwrites_for(member)
+                        old_overwrites.update(move_members=False, manage_channels=False, manage_permissions=False, priority_speaker=False)
+                        await channel.set_permissions(member, overwrite=old_overwrites)
+                    except:
+                        pass
+                    
+                    try:
+                        new_overwrites = channel.overwrites_for(new_owner)
+                        new_overwrites.update(
+                            view_channel=True,
+                            connect=True,
+                            speak=True,
+                            move_members=True,
+                            manage_channels=True,
+                            manage_permissions=True,
+                            priority_speaker=True
+                        )
+                        await channel.set_permissions(new_owner, overwrite=new_overwrites)
+                    except:
+                        pass
+                    
+                    try:
+                        await channel.send(f"Der Besitzer hat den Channel verlassen. {new_owner.mention} ist jetzt der neue Besitzer!")
+                    except:
+                        pass
+    except Exception as e:
+        print(f"[Voice] Unerwarteter Fehler in on_voice_state_update: {e}")
     
-    await on_voice_state_update_level(member, before, after)
+    try:
+        await on_voice_state_update_level(member, before, after)
+    except Exception as e:
+        print(f"[Level] Fehler in Voice-Level-Tracking: {e}")
 
 if __name__ == "__main__":
     TOKEN = os.getenv("DISCORD_TOKEN")
