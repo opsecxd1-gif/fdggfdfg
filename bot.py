@@ -2592,7 +2592,57 @@ async def setleaderboard_command(interaction: discord.Interaction, channel: disc
         ephemeral=True
     )
 
-@bot.tree.command(name="levelimage", description="Setzt ein Bild für einen bestimmten Levelaufstieg")
+@bot.tree.command(name="leaderboardrefresh", description="Loescht alte Leaderboard-Embeds und sendet neue")
+@is_admin_or_owner()
+async def leaderboardrefresh_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
+    lb_msgs = load_leaderboard_messages()
+    guild_str = str(interaction.guild_id)
+
+    if guild_str in lb_msgs:
+        old = lb_msgs[guild_str]
+        channel = bot.get_channel(old.get("channel_id", 0))
+        if channel:
+            try:
+                msg = await channel.fetch_message(old["messages_msg_id"])
+                await msg.delete()
+            except:
+                pass
+            try:
+                msg = await channel.fetch_message(old["voice_msg_id"])
+                await msg.delete()
+            except:
+                pass
+        del lb_msgs[guild_str]
+        save_leaderboard_messages(lb_msgs)
+
+    config = load_level_config()
+    leaderboard_channel_id = config.get(guild_str, {}).get("leaderboard_channel")
+    if not leaderboard_channel_id:
+        await interaction.followup.send("Kein Leaderboard-Channel gesetzt! Benutze zuerst /setleaderboard", ephemeral=True)
+        return
+
+    channel = bot.get_channel(leaderboard_channel_id)
+    if not channel:
+        await interaction.followup.send("Channel nicht gefunden!", ephemeral=True)
+        return
+
+    embed_msg, embed_voice = build_leaderboard_embeds(interaction.guild)
+    msg_sent = await channel.send(embed=embed_msg)
+    voice_sent = await channel.send(embed=embed_voice)
+
+    lb_msgs = load_leaderboard_messages()
+    lb_msgs[guild_str] = {
+        "messages_msg_id": msg_sent.id,
+        "voice_msg_id": voice_sent.id,
+        "channel_id": channel.id
+    }
+    save_leaderboard_messages(lb_msgs)
+
+    await interaction.followup.send(f"Leaderboard refreshed in {channel.mention}!", ephemeral=True)
+
+@bot.tree.command(name="levelimage", description="Setzt ein Bild fuer einen bestimmten Levelaufstieg")
 @is_admin_or_owner()
 @app_commands.describe(level="Das Level (z.B. 5)", bild="Das Bild für diesen Level")
 async def levelimage_command(interaction: discord.Interaction, level: int, bild: discord.Attachment):
