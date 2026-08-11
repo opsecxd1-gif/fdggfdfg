@@ -2257,28 +2257,21 @@ async def on_raw_reaction_add(payload):
     if message_id in frage_messages:
         frage_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
         if emoji_str in frage_emojis:
-            channel = bot.get_channel(payload.channel_id)
-            if not channel:
-                return
-            
-            msg = await channel.fetch_message(payload.message_id)
-            
-            for reaction in msg.reactions:
-                if str(reaction.emoji) != emoji_str:
-                    async for user in reaction.users():
-                        if user.id == payload.user_id:
-                            try:
-                                await reaction.remove(user)
-                            except:
-                                pass
-            
             votes = load_memes_votes()
             if message_id not in votes:
                 votes[message_id] = {}
             
             user_str = str(payload.user_id)
-            old_vote = votes[message_id].get(user_str)
             option_index = frage_emojis.index(emoji_str)
+            old_vote = votes[message_id].get(user_str)
+            
+            if old_vote is not None and old_vote != option_index:
+                old_emoji = frage_emojis[old_vote]
+                try:
+                    await bot.http.remove_reaction(payload.channel_id, payload.message_id, old_emoji, payload.user_id)
+                except:
+                    pass
+            
             votes[message_id][user_str] = option_index
             save_memes_votes(votes)
             
@@ -2292,12 +2285,14 @@ async def on_raw_reaction_add(payload):
                     break
             
             if results_msg_id:
-                try:
-                    results_text = build_results_text(message_id, display_mode)
-                    results_msg = await channel.fetch_message(int(results_msg_id))
-                    await results_msg.edit(content=results_text)
-                except:
-                    pass
+                channel = bot.get_channel(payload.channel_id)
+                if channel:
+                    try:
+                        results_text = build_results_text(message_id, display_mode)
+                        results_msg = await channel.fetch_message(int(results_msg_id))
+                        await results_msg.edit(content=results_text)
+                    except:
+                        pass
             return
     
     if guild_id_str not in reaction_roles:
@@ -4315,9 +4310,6 @@ async def fragesetup_command(
         "display_mode": display
     }
     save_fragen_config(config)
-    
-    if not frage_des_tages_task.is_running():
-        frage_des_tages_task.start()
     
     fragen = get_all_fragen(interaction.guild_id)
     frage_data = random.choice(fragen) if fragen else None
