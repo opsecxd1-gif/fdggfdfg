@@ -12,6 +12,7 @@ import time
 import random
 import aiohttp
 import yt_dlp
+import datetime
 from pathlib import Path
 
 intents = discord.Intents.default()
@@ -36,6 +37,24 @@ TIKTOK_MODE_FILE = DATA_DIR / "tiktok_mode.json"
 tiktok_mode = {}
 TIKTOK_DOWNLOAD_DIR = Path("tiktok_downloads")
 TIKTOK_DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+# =====================================
+# AUTOMOD SYSTEM
+# =====================================
+
+AUTOMOD_FILE = DATA_DIR / "automod.json"
+automod_config = {}
+invite_spam_tracker = {}
+
+def load_automod_config():
+    if AUTOMOD_FILE.exists():
+        with open(AUTOMOD_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_automod_config(data):
+    with open(AUTOMOD_FILE, "w") as f:
+        json.dump(data, f, indent=2)
 
 # =====================================
 # AUTO-MEMES SYSTEM
@@ -3618,6 +3637,9 @@ async def on_ready():
     global tiktok_mode
     tiktok_mode = load_tiktok_mode()
     
+    global automod_config
+    automod_config = load_automod_config()
+    
     if not update_live_leaderboard.is_running():
         update_live_leaderboard.start()
     
@@ -3681,6 +3703,12 @@ async def before_auto_save():
 async def on_message(message):
     if message.author.bot:
         return
+    
+    try:
+        if message.guild:
+            await check_automod_invite_spam(message)
+    except Exception as e:
+        print(f"[Automod] Fehler: {e}")
     
     tiktok_mode_data = load_tiktok_mode()
     guild_id_str = str(message.guild.id) if message.guild else None
@@ -4868,6 +4896,119 @@ async def fixvoice_command(interaction: discord.Interaction):
         f"**{failed}** fehlgeschlagen\n\n"
         f"Alle koennen jetzt frei sprechen (kein Push-to-Talk noetig)."
     )
+
+# =====================================
+# AUTOMOD - INVITE SPAM PROTECTION
+# =====================================
+
+INVITE_PATTERN = re.compile(r'(discord\.gg|discordapp\.com/invite|discord\.com/invite)/[\w\-]+', re.IGNORECASE)
+AUTOMOD_TIMEOUT_MINUTES = 10080
+AUTOMOD_THRESHOLD = 4
+AUTOMOD_WINDOW = 300
+
+async def check_automod_invite_spam(message):
+    global automod_config
+    if not automod_config:
+        automod_config = load_automod_config()
+    
+    guild_str = str(message.guild.id)
+    if guild_str not in automod_config:
+        return
+    if not automod_config[guild_str].get("enabled", False):
+        return
+    
+    if not INVITE_PATTERN.search(message.content):
+        return
+    
+    user_id = str(message.author.id)
+    now = time.time()
+    key = f"{guild_str}:{user_id}"
+    
+    if key not in invite_spam_tracker:
+        invite_spam_tracker[key] = []
+    
+    invite_spam_tracker[key] = [t for t in invite_spam_tracker[key] if now - t < AUTOMOD_WINDOW]
+    invite_spam_tracker[key].append(now)
+    
+    count = len(invite_spam_tracker[key])
+    
+    if count >= AUTOMOD_THRESHOLD:
+        invite_spam_tracker[key] = []
+        
+        try:
+            timeout_duration = datetime.timedelta(minutes=AUTOMOD_TIMEOUT_MINUTES)
+            await message.author.timeout(timeout_duration, reason=f"Automod: {count}x Invite-Spam in {AUTOMOD_WINDOW}s")
+            
+            await message.delete()
+            
+            embed = discord.Embed(
+                title="Automod - Timeout",
+                description=(
+                    f"{message.author.mention} hat einen **1-Woche Timeout** bekommen.\n\n"
+                    f"**Grund:** {count}x Discord-Invite gespamt\n"
+                    f"**Nachricht:** {message.content[:200]}"
+                ),
+                color=discord.Color.red()
+            )
+            await message.channel.send(embed=embed, delete_after=10)
+            
+            print(f"[Automod] {message.author} ({message.author.id}) getimeoutet fuer 1 Woche ({count}x Invite-Spam)")
+        except discord.Forbidden:
+            print(f"[Automod] Keine Berechtigung fuer Timeout von {message.author}")
+        except Exception as e:
+            print(f"[Automod] Timeout Fehler: {e}")
+
+@bot.tree.command(name="automod", description="Invite-Spam Schutz ein/ausschalten")
+@is_admin_or_owner()
+@app_commands.describe(aktion="ein oder aus")
+@app_commands.choices(aktion=[
+    app_commands.Choice(name="Aktivieren", value="ein"),
+    app_commands.Choice(name="Deaktivieren", value="aus"),
+    app_commands.Choice(name="Status", value="status")
+])
+async def automod_command(interaction: discord.Interaction, aktion: app_commands.Choice[str]):
+    global automod_config
+    if not automod_config:
+        automod_config = load_automod_config()
+    
+    guild_str = str(interaction.guild_id)
+    
+    if aktion.value == "status":
+        settings = automod_config.get(guild_str, {})
+        enabled = settings.get("enabled", False)
+        status = "✅ AN" if enabled else "❌ AUS"
+        embed = discord.Embed(
+            title="Automod Status",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="Status", value=status, inline=True)
+        embed.add_field(name="Schwellenwert", value=f"{AUTOMOD_THRESHOLD}x", inline=True)
+        embed.add_field(name="Timeout", value="1 Woche", inline=True)
+        embed.add_field(name="Fenster", value=f"{AUTOMOD_WINDOW}s", inline=True)
+        embed.add_field(name="Pattern", value="discord.gg/ Links", inline=True)
+        await interaction.response.send_message(embed=embed)
+        return
+    
+    if guild_str not in automod_config:
+        automod_config[guild_str] = {}
+    
+    enabled = aktion.value == "ein"
+    automod_config[guild_str]["enabled"] = enabled
+    save_automod_config(automod_config)
+    
+    if enabled:
+        desc = (
+            f"✅ **Automod aktiviert!**\n\n"
+            f"**Schutz:** Discord-Invite-Spam\n"
+            f"**Schwellenwert:** {AUTOMOD_THRESHOLD}x in {AUTOMOD_WINDOW}s\n"
+            f"**Strafe:** 1-Woche Timeout + Nachricht gelöscht\n\n"
+            f"Wenn jemand {AUTOMOD_THRESHOLD}x oder öfter discord.gg/ Links posted, "
+            f"bekommt er automatisch Timeout."
+        )
+    else:
+        desc = "❌ **Automod deaktiviert!**"
+    
+    await interaction.response.send_message(desc)
 
 # =====================================
 # MAIN / ON_READY (Tasks starten)
