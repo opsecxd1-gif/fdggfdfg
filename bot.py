@@ -3873,6 +3873,76 @@ async def on_voice_state_update(member, before, after):
 # AUTO-MEMES TASK & COMMANDS
 # =====================================
 
+async def _compress_video(video_data, target_size_mb=20):
+    import shutil
+    import tempfile
+    ffmpeg_path = shutil.which('ffmpeg')
+    if not ffmpeg_path:
+        print("[Memes] FFmpeg nicht gefunden - Komprimierung nicht moeglich")
+        return None
+    try:
+        input_path = os.path.join(tempfile.gettempdir(), "interpol_input.mp4")
+        output_path = os.path.join(tempfile.gettempdir(), "interpol_output.mp4")
+        with open(input_path, "wb") as f:
+            f.write(video_data)
+        original_size = os.path.getsize(input_path)
+        target_bytes = target_size_mb * 1024 * 1024
+        duration_probe = await asyncio.create_subprocess_exec(
+            ffmpeg_path, "-i", input_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await duration_probe.communicate()
+        duration = 60
+        for line in stderr.decode(errors="ignore").split("\n"):
+            if "Duration:" in line:
+                parts = line.split("Duration:")[1].split(",")[0].strip().split(":")
+                if len(parts) == 3:
+                    h, m, s = parts
+                    duration = int(h)*3600 + int(m)*60 + float(s)
+                break
+        target_bitrate = int((target_bytes * 8) / duration * 0.9) if duration > 0 else 500000
+        video_bitrate = int(target_bitrate * 0.85)
+        audio_bitrate = int(target_bitrate * 0.15)
+        convert_cmd = [
+            ffmpeg_path, "-y", "-i", input_path,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "28",
+            "-b:v", str(video_bitrate),
+            "-maxrate", str(int(video_bitrate * 1.5)),
+            "-bufsize", str(video_bitrate * 2),
+            "-c:a", "aac", "-b:a", f"{audio_bitrate}",
+            "-movflags", "+faststart",
+            "-pix_fmt", "yuv420p",
+            "-fs", str(target_bytes),
+            output_path
+        ]
+        print(f"[Memes] Komprimiere Video ({original_size//1024//1024}MB -> ~{target_size_mb}MB)...")
+        proc = await asyncio.create_subprocess_exec(
+            *convert_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode == 0 and os.path.exists(output_path):
+            final_size = os.path.getsize(output_path)
+            with open(output_path, "rb") as f:
+                compressed = f.read()
+            os.remove(input_path)
+            os.remove(output_path)
+            print(f"[Memes] Komprimierung OK: {final_size//1024//1024}MB")
+            return compressed
+        else:
+            stderr_text = stderr.decode()[-500:] if stderr else "no stderr"
+            print(f"[Memes] FFmpeg fehlgeschlagen (code {proc.returncode}): {stderr_text}")
+            if os.path.exists(input_path):
+                os.remove(input_path)
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            return None
+    except Exception as e:
+        print(f"[Memes] Komprimierungs-Fehler: {e}")
+        return None
+
 @tasks.loop(minutes=60)
 async def auto_memes_task():
     config = load_memes_config()
@@ -3898,6 +3968,7 @@ async def auto_memes_task():
         
         if source == "interpol":
             config_changed = False
+            MAX_VIDEO_SIZE = 25 * 1024 * 1024
             videos = await fetch_interpol_videos(exclude_ids=exclude_ids)
             if not videos and exclude_ids:
                 settings["sent_video_ids"] = []
@@ -3913,7 +3984,7 @@ async def auto_memes_task():
                             async with session.get(meme_url) as resp:
                                 if resp.status == 200:
                                     video_data = await resp.read()
-                                    if len(video_data) <= 8 * 1024 * 1024:
+                                    if len(video_data) <= MAX_VIDEO_SIZE:
                                         video_file = discord.File(
                                             fp=__import__('io').BytesIO(video_data),
                                             filename="interpol_video.mp4"
@@ -3924,20 +3995,36 @@ async def auto_memes_task():
                                         )
                                         embed.set_footer(text="Quelle: INTERPOL.CC")
                                         await channel.send(embed=embed, file=video_file)
-                                        print(f"[Memes] Interpol Video gesendet in {channel.name} ({guild.name})")
-                                        if video_id:
-                                            if "sent_video_ids" not in settings:
-                                                settings["sent_video_ids"] = []
-                                            settings["sent_video_ids"].append(video_id)
-                                            config_changed = True
-                                        break
+                                        print(f"[Memes] Interpol Video gesendet ({len(video_data)//1024//1024}MB) in {channel.name} ({guild.name})")
                                     else:
-                                        print(f"[Memes] Interpol Video zu gross: {len(video_data)} bytes - naechstes")
-                                        if video_id:
-                                            if "sent_video_ids" not in settings:
-                                                settings["sent_video_ids"] = []
-                                            settings["sent_video_ids"].append(video_id)
-                                            config_changed = True
+                                        print(f"[Memes] Interpol Video zu gross ({len(video_data)//1024//1024}MB), komprimiere...")
+                                        compressed = await _compress_video(video_data)
+                                        if compressed:
+                                            video_file = discord.File(
+                                                fp=__import__('io').BytesIO(compressed),
+                                                filename="interpol_video.mp4"
+                                            )
+                                            embed = discord.Embed(
+                                                title="Interpol.cc Video",
+                                                color=discord.Color.random()
+                                            )
+                                            embed.set_footer(text="Quelle: INTERPOL.CC")
+                                            await channel.send(embed=embed, file=video_file)
+                                            print(f"[Memes] Interpol Video komprimiert gesendet ({len(compressed)//1024//1024}MB) in {channel.name} ({guild.name})")
+                                        else:
+                                            print(f"[Memes] Komprimierung fehlgeschlagen - naechstes")
+                                            if video_id:
+                                                if "sent_video_ids" not in settings:
+                                                    settings["sent_video_ids"] = []
+                                                settings["sent_video_ids"].append(video_id)
+                                                config_changed = True
+                                            continue
+                                    if video_id:
+                                        if "sent_video_ids" not in settings:
+                                            settings["sent_video_ids"] = []
+                                        settings["sent_video_ids"].append(video_id)
+                                        config_changed = True
+                                    break
                                 else:
                                     print(f"[Memes] Interpol Download fehlgeschlagen: {resp.status} - naechstes")
                     except Exception as e:
@@ -4155,12 +4242,16 @@ async def memesskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Kein Memé gefunden! Quelle prüfen.", ephemeral=True)
         return
     
-    if source == "interpol" and ".mp4" in meme_url:
+    if source == "interpol" and meme_url:
+        MAX_VIDEO_SIZE = 25 * 1024 * 1024
         async with aiohttp.ClientSession() as session:
             async with session.get(meme_url) as resp:
                 if resp.status == 200:
                     video_data = await resp.read()
-                    if len(video_data) <= 8 * 1024 * 1024:
+                    if len(video_data) > MAX_VIDEO_SIZE:
+                        print(f"[Memes] Skip: Video zu gross ({len(video_data)//1024//1024}MB), komprimiere...")
+                        video_data = await _compress_video(video_data) or video_data
+                    if video_data:
                         video_file = discord.File(
                             fp=__import__('io').BytesIO(video_data),
                             filename="interpol_video.mp4"
