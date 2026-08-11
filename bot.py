@@ -141,6 +141,32 @@ async def fetch_imgur_memes(tag="memes", page=1):
         print(f"[Memes] Imgur API Fehler: {e}")
     return []
 
+async def fetch_interpol_videos(limit=50):
+    url = f"https://interpol.cc/api/videos?pageSize={limit}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    items = data.get("items", [])
+                    videos = []
+                    for item in items:
+                        if item.get("transcodeStatus") != "Completed":
+                            continue
+                        download_url = item.get("downloadUrl", "")
+                        if download_url:
+                            if download_url.startswith("/"):
+                                download_url = "https://interpol.cc" + download_url
+                            videos.append({
+                                "url": download_url,
+                                "title": item.get("title", "Interpol Video"),
+                                "id": item.get("id")
+                            })
+                    return videos
+    except Exception as e:
+        print(f"[Memes] Interpol API Fehler: {e}")
+    return []
+
 async def get_meme_for_guild(guild_id):
     config = load_memes_config()
     guild_str = str(guild_id)
@@ -171,6 +197,12 @@ async def get_meme_for_guild(guild_id):
         all_memes.extend(liste)
         if all_memes:
             return random.choice(all_memes)
+    
+    elif source == "interpol":
+        videos = await fetch_interpol_videos()
+        if videos:
+            chosen = random.choice(videos)
+            return chosen["url"]
     
     return None
 
@@ -3749,13 +3781,36 @@ async def auto_memes_task():
         meme_url = await get_meme_for_guild(guild.id)
         if meme_url:
             try:
-                embed = discord.Embed(
-                    title="Auto-Meme",
-                    color=discord.Color.random()
-                )
-                embed.set_image(url=meme_url)
-                embed.set_footer(text=f"Quelle: {settings.get('source', 'reddit').upper()}")
-                await channel.send(embed=embed)
+                source = settings.get("source", "reddit")
+                if source == "interpol" and ".mp4" in meme_url:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(meme_url) as resp:
+                            if resp.status == 200:
+                                video_data = await resp.read()
+                                if len(video_data) <= 8 * 1024 * 1024:
+                                    video_file = discord.File(
+                                        fp=__import__('io').BytesIO(video_data),
+                                        filename="interpol_video.mp4"
+                                    )
+                                    embed = discord.Embed(
+                                        title="Interpol.cc Video",
+                                        color=discord.Color.random()
+                                    )
+                                    embed.set_footer(text="Quelle: INTERPOL.CC")
+                                    await channel.send(embed=embed, file=video_file)
+                                    print(f"[Memes] Interpol Video gesendet in {channel.name} ({guild.name})")
+                                else:
+                                    print(f"[Memes] Interpol Video zu gross: {len(video_data)} bytes")
+                            else:
+                                print(f"[Memes] Interpol Download fehlgeschlagen: {resp.status}")
+                else:
+                    embed = discord.Embed(
+                        title="Auto-Meme",
+                        color=discord.Color.random()
+                    )
+                    embed.set_image(url=meme_url)
+                    embed.set_footer(text=f"Quelle: {source.upper()}")
+                    await channel.send(embed=embed)
                 print(f"[Memes] Gesendet in {channel.name} ({guild.name})")
             except Exception as e:
                 print(f"[Memes] Fehler beim Senden: {e}")
@@ -3768,13 +3823,14 @@ async def before_auto_memes():
 @is_admin_or_owner()
 @app_commands.describe(
     channel="Channel für Auto-Memes",
-    quelle="reddit, imgur, liste oder gemischt"
+    quelle="reddit, imgur, liste, gemischt oder interpol"
 )
 @app_commands.choices(quelle=[
     app_commands.Choice(name="Reddit (Empfohlen)", value="reddit"),
     app_commands.Choice(name="Imgur", value="imgur"),
     app_commands.Choice(name="Eigene Liste", value="liste"),
-    app_commands.Choice(name="Gemischt (Alles)", value="gemischt")
+    app_commands.Choice(name="Gemischt (Alles)", value="gemischt"),
+    app_commands.Choice(name="Interpol.cc (Videos)", value="interpol")
 ])
 async def memessetup_command(
     interaction: discord.Interaction,
@@ -3801,7 +3857,8 @@ async def memessetup_command(
         "reddit": "Reddit",
         "imgur": "Imgur",
         "liste": "Eigene Liste",
-        "gemischt": "Gemischt (Reddit + Liste)"
+        "gemischt": "Gemischt (Reddit + Liste)",
+        "interpol": "Interpol.cc (Videos)"
     }
     
     await interaction.response.send_message(
@@ -3856,12 +3913,13 @@ async def memestoggle_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="memesquelle", description="Memes-Quelle ändern")
 @is_admin_or_owner()
-@app_commands.describe(quelle="reddit, imgur, liste oder gemischt")
+@app_commands.describe(quelle="reddit, imgur, liste, gemischt oder interpol")
 @app_commands.choices(quelle=[
     app_commands.Choice(name="Reddit", value="reddit"),
     app_commands.Choice(name="Imgur", value="imgur"),
     app_commands.Choice(name="Eigene Liste", value="liste"),
-    app_commands.Choice(name="Gemischt (Alles)", value="gemischt")
+    app_commands.Choice(name="Gemischt (Alles)", value="gemischt"),
+    app_commands.Choice(name="Interpol.cc (Videos)", value="interpol")
 ])
 async def memesquelle_command(
     interaction: discord.Interaction,
@@ -3881,7 +3939,8 @@ async def memesquelle_command(
         "reddit": "Reddit",
         "imgur": "Imgur",
         "liste": "Eigene Liste",
-        "gemischt": "Gemischt (Reddit + Liste)"
+        "gemischt": "Gemischt (Reddit + Liste)",
+        "interpol": "Interpol.cc (Videos)"
     }
     
     await interaction.response.send_message(f"**Quelle geändert auf:** {source_names.get(quelle.value, quelle.value)}")
@@ -3919,14 +3978,34 @@ async def memesskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Kein Memé gefunden! Quelle prüfen.", ephemeral=True)
         return
     
-    embed = discord.Embed(
-        title="Manuelles Memé",
-        color=discord.Color.random()
-    )
-    embed.set_image(url=meme_url)
-    embed.set_footer(text=f"Gesendet von {interaction.user.display_name}")
+    source = config.get(guild_str, {}).get("source", "reddit")
     
-    await interaction.followup.send(embed=embed)
+    if source == "interpol" and ".mp4" in meme_url:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(meme_url) as resp:
+                if resp.status == 200:
+                    video_data = await resp.read()
+                    if len(video_data) <= 8 * 1024 * 1024:
+                        video_file = discord.File(
+                            fp=__import__('io').BytesIO(video_data),
+                            filename="interpol_video.mp4"
+                        )
+                        embed = discord.Embed(
+                            title="Interpol.cc Video",
+                            color=discord.Color.random()
+                        )
+                        embed.set_footer(text=f"Gesendet von {interaction.user.display_name}")
+                        await interaction.followup.send(embed=embed, file=video_file)
+                        return
+        await interaction.followup.send("Video konnte nicht geladen werden.", ephemeral=True)
+    else:
+        embed = discord.Embed(
+            title="Manuelles Memé",
+            color=discord.Color.random()
+        )
+        embed.set_image(url=meme_url)
+        embed.set_footer(text=f"Gesendet von {interaction.user.display_name}")
+        await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="memestest", description="Testet die Memes-Quelle")
 @is_admin_or_owner()
@@ -3953,6 +4032,10 @@ async def memestest_command(interaction: discord.Interaction):
         liste = load_memes_list(interaction.guild_id)
         results.append(f"**Eigene Liste:** {len(liste)} Memes vorhanden")
     
+    if source in ("interpol", "gemischt"):
+        videos = await fetch_interpol_videos()
+        results.append(f"**Interpol.cc:** {len(videos)} Videos gefunden")
+    
     if not results:
         results.append("Keine Quelle konfiguriert!")
     
@@ -3977,7 +4060,8 @@ async def memesstatus_command(interaction: discord.Interaction):
         "reddit": "Reddit",
         "imgur": "Imgur",
         "liste": "Eigene Liste",
-        "gemischt": "Gemischt"
+        "gemischt": "Gemischt",
+        "interpol": "Interpol.cc"
     }
     
     embed = discord.Embed(

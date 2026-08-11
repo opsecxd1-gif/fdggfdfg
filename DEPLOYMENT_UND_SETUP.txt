@@ -76,7 +76,7 @@ Commands:
   =====================================
   AUTO-MEMES SYSTEM (NEU)
   =====================================
-  /memessetup  - Auto-Memes Channel einrichten (reddit/imgur/liste/gemischt)
+  /memessetup  - Auto-Memes Channel einrichten (reddit/imgur/liste/gemischt/interpol)
   /memesinterval - Interval ändern (1-48 Stunden)
   /memestoggle - Auto-Memes ein/ausschalten
   /memesquelle - Memes-Quelle ändern
@@ -86,6 +86,13 @@ Commands:
   /memesstatus - Zeigt Auto-Memes Status
   /memesadd    - Meme-Links zur Liste hinzufügen
   /memesload   - Memes aus .txt Datei laden
+  
+  Quellen:
+    reddit   - Reddit Memes (Standard)
+    imgur    - Imgur Memes
+    liste    - Eigene Link-Liste
+    gemischt - Reddit + Eigene Liste
+    interpol - Interpol.cc Videos (alle 5 Std empfohlen)
   
   =====================================
   FRAGE DES TAGES (NEU)
