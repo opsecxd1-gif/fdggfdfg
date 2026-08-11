@@ -212,6 +212,7 @@ async def get_meme_for_guild(guild_id):
 
 FRAGEN_CONFIG_FILE = DATA_DIR / "fragen_config.json"
 FRAGEN_CUSTOM_FILE = DATA_DIR / "fragen_custom.json"
+FRAGEN_MESSAGES_FILE = DATA_DIR / "fragen_messages.json"
 
 DEFAULT_FRAGEN = [
     {
@@ -336,6 +337,16 @@ def save_custom_fragen(data):
     with open(FRAGEN_CUSTOM_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+def load_frage_messages():
+    if FRAGEN_MESSAGES_FILE.exists():
+        with open(FRAGEN_MESSAGES_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_frage_messages(data):
+    with open(FRAGEN_MESSAGES_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
 def get_all_fragen(guild_id):
     custom = load_custom_fragen()
     all_fragen = DEFAULT_FRAGEN.copy()
@@ -378,22 +389,6 @@ def build_results_text(msg_id, display_mode="embed"):
                 lines.append(f"{emojis[idx]} **{count}** - {names_str}")
     
     return "\n".join(lines)
-
-class FrageVoteView(discord.ui.View):
-    def __init__(self, frage_data, msg_id):
-        super().__init__(timeout=None)
-        self.frage_data = frage_data
-        self.msg_id = str(msg_id)
-        
-        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
-        for i, option in enumerate(frage_data["optionen"][:8]):
-            button = discord.ui.Button(
-                label=option,
-                style=discord.ButtonStyle.secondary,
-                emoji=emojis[i],
-                custom_id=f"frage_vote_{self.msg_id}_{i}"
-            )
-            self.add_item(button)
 
 EXCLUDED_ROLE_NAMES = ["owner", "head admin", "admin", "moderator", "bot", "muted", "timeout"]
 
@@ -2258,6 +2253,53 @@ async def on_raw_reaction_add(payload):
     message_id = str(payload.message_id)
     emoji_str = str(payload.emoji)
     
+    frage_messages = load_frage_messages()
+    if message_id in frage_messages:
+        frage_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+        if emoji_str in frage_emojis:
+            channel = bot.get_channel(payload.channel_id)
+            if not channel:
+                return
+            
+            msg = await channel.fetch_message(payload.message_id)
+            
+            for reaction in msg.reactions:
+                if str(reaction.emoji) != emoji_str:
+                    async for user in reaction.users():
+                        if user.id == payload.user_id:
+                            try:
+                                await reaction.remove(user)
+                            except:
+                                pass
+            
+            votes = load_memes_votes()
+            if message_id not in votes:
+                votes[message_id] = {}
+            
+            user_str = str(payload.user_id)
+            old_vote = votes[message_id].get(user_str)
+            option_index = frage_emojis.index(emoji_str)
+            votes[message_id][user_str] = option_index
+            save_memes_votes(votes)
+            
+            config = load_fragen_config()
+            results_msg_id = None
+            display_mode = "embed"
+            for gid, cfg in config.items():
+                if cfg.get("last_message_id") == message_id:
+                    results_msg_id = cfg.get("last_results_id")
+                    display_mode = cfg.get("display_mode", "embed")
+                    break
+            
+            if results_msg_id:
+                try:
+                    results_text = build_results_text(message_id, display_mode)
+                    results_msg = await channel.fetch_message(int(results_msg_id))
+                    await results_msg.edit(content=results_text)
+                except:
+                    pass
+            return
+    
     if guild_id_str not in reaction_roles:
         return
     if message_id not in reaction_roles[guild_id_str]:
@@ -2296,6 +2338,37 @@ async def on_raw_reaction_remove(payload):
     guild_id_str = str(payload.guild_id)
     message_id = str(payload.message_id)
     emoji_str = str(payload.emoji)
+    
+    frage_messages = load_frage_messages()
+    if message_id in frage_messages:
+        frage_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+        if emoji_str in frage_emojis:
+            votes = load_memes_votes()
+            if message_id in votes:
+                user_str = str(payload.user_id)
+                if user_str in votes[message_id]:
+                    del votes[message_id][user_str]
+                    save_memes_votes(votes)
+                    
+                    channel = bot.get_channel(payload.channel_id)
+                    if channel:
+                        config = load_fragen_config()
+                        results_msg_id = None
+                        display_mode = "embed"
+                        for gid, cfg in config.items():
+                            if cfg.get("last_message_id") == message_id:
+                                results_msg_id = cfg.get("last_results_id")
+                                display_mode = cfg.get("display_mode", "embed")
+                                break
+                        
+                        if results_msg_id:
+                            try:
+                                results_text = build_results_text(message_id, display_mode)
+                                results_msg = await channel.fetch_message(int(results_msg_id))
+                                await results_msg.edit(content=results_text)
+                            except:
+                                pass
+            return
     
     if guild_id_str not in reaction_roles:
         return
@@ -2361,56 +2434,6 @@ async def on_interaction(interaction: discord.Interaction):
                 await interaction.response.send_message(f"**{role.name}** hinzugefügt!", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
-    
-    elif custom_id.startswith("frage_vote_"):
-        parts = custom_id.split("_")
-        msg_id = parts[2]
-        option_index = int(parts[3])
-        
-        votes = load_memes_votes()
-        if msg_id not in votes:
-            votes[msg_id] = {}
-        
-        user_str = str(interaction.user.id)
-        old_vote = votes[msg_id].get(user_str)
-        
-        if old_vote == option_index:
-            del votes[msg_id][user_str]
-            save_memes_votes(votes)
-            await interaction.response.send_message(
-                "Deine Stimme wurde entfernt!",
-                ephemeral=True
-            )
-            return
-        
-        votes[msg_id][user_str] = option_index
-        save_memes_votes(votes)
-        
-        emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
-        emoji = emojis[option_index] if option_index < len(emojis) else "?"
-        
-        frage_config = load_fragen_config()
-        display_mode = "embed"
-        results_msg_id = None
-        for guild_str, cfg in frage_config.items():
-            if cfg.get("last_message_id") == msg_id:
-                display_mode = cfg.get("display_mode", "embed")
-                results_msg_id = cfg.get("last_results_id")
-                break
-        
-        results_text = build_results_text(msg_id, display_mode)
-        
-        if results_msg_id and interaction.channel:
-            try:
-                results_msg = await interaction.channel.fetch_message(int(results_msg_id))
-                await results_msg.edit(content=results_text)
-            except:
-                pass
-        
-        await interaction.response.send_message(
-            f"**{interaction.user.display_name}** hat fuer {emoji} abgestimmt!",
-            ephemeral=True
-        )
 
 # =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
@@ -4230,16 +4253,24 @@ async def frage_des_tages_task():
             options_text += f"{emojis[i]} {option}\n"
         
         embed = discord.Embed(
-            title=f"{frage_data.get('emoji', '❓')} Frage des Tages",
+            title=f"{frage_data.get('emoji', '\u2753')} Frage des Tages",
             description=f"**{frage_data['frage']}**\n\n{options_text}",
             color=discord.Color.gold()
         )
-        embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+        embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
         
         msg = await channel.send(embed=embed)
         
-        view = FrageVoteView(frage_data, msg.id)
-        await msg.edit(view=view)
+        reaction_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+        for i in range(len(frage_data["optionen"][:8])):
+            await msg.add_reaction(reaction_emojis[i])
+        
+        frage_messages = load_frage_messages()
+        frage_messages[str(msg.id)] = {
+            "guild_id": guild_str,
+            "options": frage_data["optionen"][:8]
+        }
+        save_frage_messages(frage_messages)
         
         display_mode = settings.get("display_mode", "embed")
         results_text = build_results_text(str(msg.id), display_mode)
@@ -4303,11 +4334,20 @@ async def fragesetup_command(
             description=f"**{frage_data['frage']}**\n\n{options_text}",
             color=discord.Color.gold()
         )
-        embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+        embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
         
         msg = await channel.send(embed=embed)
-        view = FrageVoteView(frage_data, msg.id)
-        await msg.edit(view=view)
+        
+        reaction_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+        for i in range(len(frage_data["optionen"][:8])):
+            await msg.add_reaction(reaction_emojis[i])
+        
+        frage_messages = load_frage_messages()
+        frage_messages[str(msg.id)] = {
+            "guild_id": guild_str,
+            "options": frage_data["optionen"][:8]
+        }
+        save_frage_messages(frage_messages)
         
         results_text = build_results_text(str(msg.id), display)
         results_msg = await channel.send(results_text)
@@ -4327,7 +4367,7 @@ async def fragesetup_command(
         f"**Interval:** Alle 16 Stunden\n"
         f"**Anzeige:** {display_names.get(display, display)}"
         f"{first_msg}\n\n"
-        f"Der Bot postet jetzt automatisch Fragen mit Buttons!"
+        f"Der Bot postet jetzt automatisch Fragen mit Reactions!"
     )
 
 @bot.tree.command(name="frageinterval", description="Frage des Tages Interval ändern")
@@ -4456,22 +4496,29 @@ async def fragetest_command(interaction: discord.Interaction):
     
     frage_data = random.choice(fragen)
     
-    emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+    emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
     options_text = ""
     for i, option in enumerate(frage_data["optionen"][:8]):
         options_text += f"{emojis[i]} {option}\n"
     
     embed = discord.Embed(
-        title=f"{frage_data.get('emoji', '❓')} Frage des Tages (Test)",
+        title=f"{frage_data.get('emoji', '\u2753')} Frage des Tages (Test)",
         description=f"**{frage_data['frage']}**\n\n{options_text}",
         color=discord.Color.gold()
     )
-    embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+    embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
     
     msg = await interaction.followup.send(embed=embed)
     
-    view = FrageVoteView(frage_data, msg.id)
-    await msg.edit(view=view)
+    for i in range(len(frage_data["optionen"][:8])):
+        await msg.add_reaction(emojis[i])
+    
+    frage_messages = load_frage_messages()
+    frage_messages[str(msg.id)] = {
+        "guild_id": str(interaction.guild_id),
+        "options": frage_data["optionen"][:8]
+    }
+    save_frage_messages(frage_messages)
 
 @bot.tree.command(name="frageresults", description="Zeigt die Ergebnisse einer Frage mit Users")
 @is_admin_or_owner()
@@ -4545,12 +4592,20 @@ async def frageskip_command(interaction: discord.Interaction):
         description=f"**{frage_data['frage']}**\n\n{options_text}",
         color=discord.Color.gold()
     )
-    embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+    embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
     
     msg = await channel.send(embed=embed)
     
-    view = FrageVoteView(frage_data, msg.id)
-    await msg.edit(view=view)
+    reaction_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+    for i in range(len(frage_data["optionen"][:8])):
+        await msg.add_reaction(reaction_emojis[i])
+    
+    frage_messages = load_frage_messages()
+    frage_messages[str(msg.id)] = {
+        "guild_id": guild_str,
+        "options": frage_data["optionen"][:8]
+    }
+    save_frage_messages(frage_messages)
     
     display_mode = config[guild_str].get("display_mode", "embed")
     results_text = build_results_text(str(msg.id), display_mode)
