@@ -3969,8 +3969,10 @@ async def auto_memes_task():
         if source == "interpol":
             config_changed = False
             MAX_VIDEO_SIZE = 25 * 1024 * 1024
+            sent_any = False
             videos = await fetch_interpol_videos(exclude_ids=exclude_ids)
             if not videos and exclude_ids:
+                print(f"[Memes] Alle {len(exclude_ids)} Videos bereits gesendet - Reset fuer {guild.name}")
                 settings["sent_video_ids"] = []
                 save_memes_config(config)
                 videos = await fetch_interpol_videos()
@@ -3981,7 +3983,7 @@ async def auto_memes_task():
                     video_id = chosen["id"]
                     try:
                         async with aiohttp.ClientSession() as session:
-                            async with session.get(meme_url) as resp:
+                            async with session.get(meme_url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                                 if resp.status == 200:
                                     video_data = await resp.read()
                                     if len(video_data) <= MAX_VIDEO_SIZE:
@@ -3995,11 +3997,12 @@ async def auto_memes_task():
                                         )
                                         embed.set_footer(text="Quelle: INTERPOL.CC")
                                         await channel.send(embed=embed, file=video_file)
-                                        print(f"[Memes] Interpol Video gesendet ({len(video_data)//1024//1024}MB) in {channel.name} ({guild.name})")
+                                        print(f"[Memes] Interpol Video gesendet ({len(video_data)//1024//1024}MB) in {channel.name}")
+                                        sent_any = True
                                     else:
-                                        print(f"[Memes] Interpol Video zu gross ({len(video_data)//1024//1024}MB), komprimiere...")
+                                        print(f"[Memes] Video zu gross ({len(video_data)//1024//1024}MB), komprimiere...")
                                         compressed = await _compress_video(video_data)
-                                        if compressed:
+                                        if compressed and len(compressed) <= MAX_VIDEO_SIZE:
                                             video_file = discord.File(
                                                 fp=__import__('io').BytesIO(compressed),
                                                 filename="interpol_video.mp4"
@@ -4010,27 +4013,29 @@ async def auto_memes_task():
                                             )
                                             embed.set_footer(text="Quelle: INTERPOL.CC")
                                             await channel.send(embed=embed, file=video_file)
-                                            print(f"[Memes] Interpol Video komprimiert gesendet ({len(compressed)//1024//1024}MB) in {channel.name} ({guild.name})")
+                                            print(f"[Memes] Video komprimiert gesendet ({len(compressed)//1024//1024}MB) in {channel.name}")
+                                            sent_any = True
                                         else:
-                                            print(f"[Memes] Komprimierung fehlgeschlagen - naechstes")
-                                            if video_id:
-                                                if "sent_video_ids" not in settings:
-                                                    settings["sent_video_ids"] = []
-                                                settings["sent_video_ids"].append(video_id)
-                                                config_changed = True
-                                            continue
+                                            print(f"[Memes] Komprimierung fehlgeschlagen")
                                     if video_id:
                                         if "sent_video_ids" not in settings:
                                             settings["sent_video_ids"] = []
                                         settings["sent_video_ids"].append(video_id)
                                         config_changed = True
-                                    break
+                                    if sent_any:
+                                        break
                                 else:
-                                    print(f"[Memes] Interpol Download fehlgeschlagen: {resp.status} - naechstes")
+                                    print(f"[Memes] HTTP {resp.status} fuer {meme_url[:50]}")
+                    except asyncio.TimeoutError:
+                        print(f"[Memes] Timeout bei Video {video_id} - naechstes")
                     except Exception as e:
-                        print(f"[Memes] Interpol Fehler: {e} - naechstes")
+                        print(f"[Memes] Fehler: {e} - naechstes")
+            else:
+                print(f"[Memes] Keine Videos von API fuer {guild.name}")
             if config_changed:
                 save_memes_config(config)
+            if not sent_any:
+                print(f"[Memes] Kein Video gesendet fuer {guild.name}!")
         else:
             meme_url, video_id = await get_meme_for_guild(guild.id)
             if meme_url:
