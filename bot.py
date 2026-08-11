@@ -141,7 +141,7 @@ async def fetch_imgur_memes(tag="memes", page=1):
         print(f"[Memes] Imgur API Fehler: {e}")
     return []
 
-async def fetch_interpol_videos(limit=50):
+async def fetch_interpol_videos(limit=50, exclude_ids=None):
     url = f"https://interpol.cc/api/videos?pageSize={limit}"
     try:
         async with aiohttp.ClientSession() as session:
@@ -153,6 +153,9 @@ async def fetch_interpol_videos(limit=50):
                     for item in items:
                         if item.get("transcodeStatus") != "Completed":
                             continue
+                        video_id = item.get("id")
+                        if exclude_ids and video_id in exclude_ids:
+                            continue
                         download_url = item.get("downloadUrl", "")
                         if download_url:
                             if download_url.startswith("/"):
@@ -160,14 +163,14 @@ async def fetch_interpol_videos(limit=50):
                             videos.append({
                                 "url": download_url,
                                 "title": item.get("title", "Interpol Video"),
-                                "id": item.get("id")
+                                "id": video_id
                             })
                     return videos
     except Exception as e:
         print(f"[Memes] Interpol API Fehler: {e}")
     return []
 
-async def get_meme_for_guild(guild_id):
+async def get_meme_for_guild(guild_id, exclude_ids=None):
     config = load_memes_config()
     guild_str = str(guild_id)
     source = config.get(guild_str, {}).get("source", "reddit")
@@ -176,18 +179,18 @@ async def get_meme_for_guild(guild_id):
         sub = config.get(guild_str, {}).get("subreddit", random.choice(REDDIT_MEME_SUBREDDITS))
         memes = await fetch_reddit_memes(sub)
         if memes:
-            return random.choice(memes)
+            return random.choice(memes), None
     
     elif source == "imgur":
         tag = config.get(guild_str, {}).get("imgur_tag", "memes")
         memes = await fetch_imgur_memes(tag)
         if memes:
-            return random.choice(memes)
+            return random.choice(memes), None
     
     elif source == "liste":
         liste = load_memes_list(guild_id)
         if liste:
-            return random.choice(liste)
+            return random.choice(liste), None
     
     elif source == "gemischt":
         all_memes = []
@@ -196,15 +199,15 @@ async def get_meme_for_guild(guild_id):
         liste = load_memes_list(guild_id)
         all_memes.extend(liste)
         if all_memes:
-            return random.choice(all_memes)
+            return random.choice(all_memes), None
     
     elif source == "interpol":
-        videos = await fetch_interpol_videos()
+        videos = await fetch_interpol_videos(exclude_ids=exclude_ids or set())
         if videos:
             chosen = random.choice(videos)
-            return chosen["url"]
+            return chosen["url"], chosen["id"]
     
-    return None
+    return None, None
 
 # =====================================
 # FRAGE DES TAGES SYSTEM
@@ -3890,10 +3893,16 @@ async def auto_memes_task():
         if not channel:
             continue
         
-        meme_url = await get_meme_for_guild(guild.id)
+        source = settings.get("source", "reddit")
+        exclude_ids = set(settings.get("sent_video_ids", [])) if source == "interpol" else None
+        
+        meme_url, video_id = await get_meme_for_guild(guild.id, exclude_ids=exclude_ids)
+        if not meme_url and source == "interpol" and exclude_ids:
+            settings["sent_video_ids"] = []
+            save_memes_config(config)
+            meme_url, video_id = await get_meme_for_guild(guild.id)
         if meme_url:
             try:
-                source = settings.get("source", "reddit")
                 if source == "interpol" and ".mp4" in meme_url:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(meme_url) as resp:
@@ -3911,6 +3920,11 @@ async def auto_memes_task():
                                     embed.set_footer(text="Quelle: INTERPOL.CC")
                                     await channel.send(embed=embed, file=video_file)
                                     print(f"[Memes] Interpol Video gesendet in {channel.name} ({guild.name})")
+                                    if video_id:
+                                        if "sent_video_ids" not in settings:
+                                            settings["sent_video_ids"] = []
+                                        settings["sent_video_ids"].append(video_id)
+                                        save_memes_config(config)
                                 else:
                                     print(f"[Memes] Interpol Video zu gross: {len(video_data)} bytes")
                             else:
@@ -4111,12 +4125,17 @@ async def memesskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
         return
     
-    meme_url = await get_meme_for_guild(interaction.guild_id)
+    source = config.get(guild_str, {}).get("source", "reddit")
+    exclude_ids = set(config.get(guild_str, {}).get("sent_video_ids", [])) if source == "interpol" else None
+    
+    meme_url, video_id = await get_meme_for_guild(interaction.guild_id, exclude_ids=exclude_ids)
+    if not meme_url and source == "interpol" and exclude_ids:
+        config[guild_str]["sent_video_ids"] = []
+        save_memes_config(config)
+        meme_url, video_id = await get_meme_for_guild(interaction.guild_id)
     if not meme_url:
         await interaction.followup.send("Kein Memé gefunden! Quelle prüfen.", ephemeral=True)
         return
-    
-    source = config.get(guild_str, {}).get("source", "reddit")
     
     if source == "interpol" and ".mp4" in meme_url:
         async with aiohttp.ClientSession() as session:
@@ -4134,6 +4153,11 @@ async def memesskip_command(interaction: discord.Interaction):
                         )
                         embed.set_footer(text=f"Gesendet von {interaction.user.display_name}")
                         await interaction.followup.send(embed=embed, file=video_file)
+                        if video_id:
+                            if "sent_video_ids" not in config[guild_str]:
+                                config[guild_str]["sent_video_ids"] = []
+                            config[guild_str]["sent_video_ids"].append(video_id)
+                            save_memes_config(config)
                         return
         await interaction.followup.send("Video konnte nicht geladen werden.", ephemeral=True)
     else:
@@ -4218,8 +4242,27 @@ async def memesstatus_command(interaction: discord.Interaction):
     elif settings.get("source") == "liste":
         liste = load_memes_list(interaction.guild_id)
         embed.add_field(name="Liste", value=f"{len(liste)} Memes", inline=True)
+    elif settings.get("source") == "interpol":
+        sent_ids = settings.get("sent_video_ids", [])
+        embed.add_field(name="Gesendet", value=f"{len(sent_ids)} Videos", inline=True)
     
     await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="memesreset", description="Resetet die gesendete Video-History (Interpol)")
+@is_admin_or_owner()
+async def memesreset_command(interaction: discord.Interaction):
+    config = load_memes_config()
+    guild_str = str(interaction.guild_id)
+    
+    if guild_str not in config:
+        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
+        return
+    
+    old_count = len(config[guild_str].get("sent_video_ids", []))
+    config[guild_str]["sent_video_ids"] = []
+    save_memes_config(config)
+    
+    await interaction.response.send_message(f"**History resetet!** {old_count} gesendete Videos vergessen. Alle Videos werden jetzt wieder gesendet.")
 
 @bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufügen")
 @is_admin_or_owner()
