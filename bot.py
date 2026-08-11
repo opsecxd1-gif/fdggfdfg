@@ -1806,9 +1806,9 @@ async def close_command(interaction: discord.Interaction):
         ephemeral=True
     )
 
-@bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+@bot.tree.command(name="ticketadd", description="User zum Ticket hinzufuegen")
 @app_commands.describe(user="Der User der hinzugefuegt werden soll")
-async def add_command(interaction: discord.Interaction, user: discord.Member):
+async def ticketadd_command(interaction: discord.Interaction, user: discord.Member):
     if not interaction.channel.name.startswith("ticket-"):
         await interaction.response.send_message("Das ist kein Ticket-Channel!", ephemeral=True)
         return
@@ -1826,9 +1826,9 @@ async def add_command(interaction: discord.Interaction, user: discord.Member):
     except discord.Forbidden:
         await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
-@bot.tree.command(name="remove", description="User aus dem Ticket entfernen")
+@bot.tree.command(name="ticketremove", description="User aus dem Ticket entfernen")
 @app_commands.describe(user="Der User der entfernt werden soll")
-async def remove_command(interaction: discord.Interaction, user: discord.Member):
+async def ticketremove_command(interaction: discord.Interaction, user: discord.Member):
     if not interaction.channel.name.startswith("ticket-"):
         await interaction.response.send_message("Das ist kein Ticket-Channel!", ephemeral=True)
         return
