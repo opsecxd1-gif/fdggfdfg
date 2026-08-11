@@ -6,6 +6,7 @@ import json
 import re
 import os
 import asyncio
+import io
 import tempfile
 import time
 import yt_dlp
