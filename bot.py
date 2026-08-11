@@ -2588,7 +2588,7 @@ async def setleaderboard_command(interaction: discord.Interaction, channel: disc
 
     await interaction.followup.send(
         f"Live-Leaderboard eingerichtet in {channel.mention}!\n"
-        f"Updatet alle 30 Sekunden automatisch.",
+        f"Updatet alle 15 Sekunden automatisch.",
         ephemeral=True
     )
 
@@ -2697,7 +2697,7 @@ async def setlevel_command(interaction: discord.Interaction, user: discord.Membe
     save_level_data(data)
     await interaction.response.send_message(f"Level von {user.mention} auf **{level}** gesetzt!")
 
-@tasks.loop(seconds=30)
+@tasks.loop(seconds=15)
 async def update_live_leaderboard():
     lb_msgs = load_leaderboard_messages()
 
