@@ -345,6 +345,40 @@ def get_all_fragen(guild_id):
             all_fragen.append(frag)
     return all_fragen
 
+def build_results_text(msg_id, display_mode="embed"):
+    votes = load_memes_votes()
+    vote_data = votes.get(msg_id, {})
+    
+    emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+    
+    if not vote_data:
+        return "**Ergebnisse:** Noch keine Stimmen"
+    
+    vote_counts = {}
+    vote_users = {}
+    for uid, opt in vote_data.items():
+        vote_counts[opt] = vote_counts.get(opt, 0) + 1
+        if opt not in vote_users:
+            vote_users[opt] = []
+        vote_users[opt].append(uid)
+    
+    total = sum(vote_counts.values())
+    lines = [f"**{total} Stimme(n):**"]
+    
+    for idx in sorted(vote_counts.keys()):
+        if idx < len(emojis):
+            count = vote_counts[idx]
+            if display_mode == "anonym":
+                lines.append(f"{emojis[idx]} **{count}**")
+            else:
+                names = []
+                for uid in vote_users[idx]:
+                    names.append(f"<@{uid}>")
+                names_str = ", ".join(names)
+                lines.append(f"{emojis[idx]} **{count}** - {names_str}")
+    
+    return "\n".join(lines)
+
 class FrageVoteView(discord.ui.View):
     def __init__(self, frage_data, msg_id):
         super().__init__(timeout=None)
@@ -2355,61 +2389,26 @@ async def on_interaction(interaction: discord.Interaction):
         emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
         emoji = emojis[option_index] if option_index < len(emojis) else "?"
         
-        vote_data = votes[msg_id]
-        
         frage_config = load_fragen_config()
         display_mode = "embed"
+        results_msg_id = None
         for guild_str, cfg in frage_config.items():
             if cfg.get("last_message_id") == msg_id:
                 display_mode = cfg.get("display_mode", "embed")
+                results_msg_id = cfg.get("last_results_id")
                 break
         
-        vote_counts = {}
-        vote_users = {}
-        for uid, opt in vote_data.items():
-            vote_counts[opt] = vote_counts.get(opt, 0) + 1
-            if opt not in vote_users:
-                vote_users[opt] = []
-            vote_users[opt].append(uid)
+        results_text = build_results_text(msg_id, display_mode)
         
-        total = sum(vote_counts.values())
-        
-        if display_mode == "text":
-            lines = [f"**{total} Stimme(n) gesamt:**\n"]
-            for idx in sorted(vote_counts.keys()):
-                if idx < len(emojis):
-                    count = vote_counts[idx]
-                    names = []
-                    for uid in vote_users[idx]:
-                        member = interaction.guild.get_member(int(uid))
-                        names.append(member.display_name if member else "Unbekannt")
-                    names_str = ", ".join(names)
-                    lines.append(f"{emojis[idx]} **{count}** - {names_str}")
-            feedback = "\n".join(lines)
-            
-        elif display_mode == "anonym":
-            lines = [f"**{total} Stimme(n) gesamt:**\n"]
-            for idx in sorted(vote_counts.keys()):
-                if idx < len(emojis):
-                    count = vote_counts[idx]
-                    lines.append(f"{emojis[idx]} **{count}** Stimme(n)")
-            feedback = "\n".join(lines)
-            
-        else:
-            lines = [f"**{total} Stimme(n) gesamt:**\n"]
-            for idx in sorted(vote_counts.keys()):
-                if idx < len(emojis):
-                    count = vote_counts[idx]
-                    names = []
-                    for uid in vote_users[idx]:
-                        member = interaction.guild.get_member(int(uid))
-                        names.append(member.display_name if member else "Unbekannt")
-                    names_str = ", ".join(names)
-                    lines.append(f"{emojis[idx]} **{count}** - {names_str}")
-            feedback = "\n".join(lines)
+        if results_msg_id and interaction.channel:
+            try:
+                results_msg = await interaction.channel.fetch_message(int(results_msg_id))
+                await results_msg.edit(content=results_text)
+            except:
+                pass
         
         await interaction.response.send_message(
-            f"**{interaction.user.display_name}** hat fuer {emoji} abgestimmt!\n\n{feedback}",
+            f"**{interaction.user.display_name}** hat fuer {emoji} abgestimmt!",
             ephemeral=True
         )
 
@@ -4242,8 +4241,13 @@ async def frage_des_tages_task():
         view = FrageVoteView(frage_data, msg.id)
         await msg.edit(view=view)
         
+        display_mode = settings.get("display_mode", "embed")
+        results_text = build_results_text(str(msg.id), display_mode)
+        results_msg = await channel.send(results_text)
+        
         config[guild_str]["last_message_id"] = msg.id
         config[guild_str]["last_channel_id"] = channel.id
+        config[guild_str]["last_results_id"] = results_msg.id
         save_fragen_config(config)
         
         print(f"[Frage] Gesendet in {channel.name} ({guild.name})")
@@ -4305,8 +4309,12 @@ async def fragesetup_command(
         view = FrageVoteView(frage_data, msg.id)
         await msg.edit(view=view)
         
+        results_text = build_results_text(str(msg.id), display)
+        results_msg = await channel.send(results_text)
+        
         config[guild_str]["last_message_id"] = msg.id
         config[guild_str]["last_channel_id"] = channel.id
+        config[guild_str]["last_results_id"] = results_msg.id
         save_fragen_config(config)
         
         first_msg = f"\n**Erste Frage direkt gesendet!**"
@@ -4469,47 +4477,21 @@ async def fragetest_command(interaction: discord.Interaction):
 @is_admin_or_owner()
 @app_commands.describe(message_id="Die ID der Frage-Nachricht (leer = letzte Frage)")
 async def frageresults_command(interaction: discord.Interaction, message_id: str = ""):
-    votes = load_memes_votes()
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
     
     if not message_id:
-        config = load_fragen_config()
-        guild_str = str(interaction.guild_id)
         message_id = config.get(guild_str, {}).get("last_message_id", "")
         if not message_id:
             await interaction.response.send_message("Keine aktuelle Frage gefunden! Message-ID angeben.", ephemeral=True)
             return
     
-    if message_id not in votes:
-        await interaction.response.send_message("Keine Stimmen für diese Nachricht gefunden!", ephemeral=True)
-        return
-    
-    vote_data = votes[message_id]
-    
-    if not vote_data:
-        await interaction.response.send_message("Noch keine Stimmen abgegeben!", ephemeral=True)
-        return
-    
-    vote_counts = {}
-    vote_users = {}
-    for user_id, option_index in vote_data.items():
-        vote_counts[option_index] = vote_counts.get(option_index, 0) + 1
-        if option_index not in vote_users:
-            vote_users[option_index] = []
-        vote_users[option_index].append(f"<@{user_id}>")
-    
-    emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
-    results_text = ""
-    for idx in sorted(vote_counts.keys()):
-        if idx < len(emojis):
-            count = vote_counts[idx]
-            users = ", ".join(vote_users[idx])
-            results_text += f"{emojis[idx]} **{count} Stimme(n):** {users}\n"
-    
-    total_votes = sum(vote_counts.values())
+    display_mode = config.get(guild_str, {}).get("display_mode", "embed")
+    results_text = build_results_text(message_id, display_mode)
     
     embed = discord.Embed(
         title="Frage-Ergebnisse",
-        description=f"**Gesamt:** {total_votes} Stimmen\n\n{results_text}",
+        description=results_text,
         color=discord.Color.gold()
     )
     
@@ -4570,8 +4552,13 @@ async def frageskip_command(interaction: discord.Interaction):
     view = FrageVoteView(frage_data, msg.id)
     await msg.edit(view=view)
     
+    display_mode = config[guild_str].get("display_mode", "embed")
+    results_text = build_results_text(str(msg.id), display_mode)
+    results_msg = await channel.send(results_text)
+    
     config[guild_str]["last_message_id"] = msg.id
     config[guild_str]["last_channel_id"] = channel.id
+    config[guild_str]["last_results_id"] = results_msg.id
     save_fragen_config(config)
     
     await interaction.followup.send(
