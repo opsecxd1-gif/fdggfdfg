@@ -8,6 +8,7 @@ import os
 import asyncio
 import tempfile
 import time
+from datetime import timedelta
 import yt_dlp
 from pathlib import Path
 
@@ -2236,9 +2237,10 @@ LEVEL_DATA_FILE = DATA_DIR / "levels.json"
 LEVEL_CONFIG_FILE = DATA_DIR / "level_config.json"
 LEVEL_IMAGES_DIR = DATA_DIR / "level_images"
 LEVEL_IMAGES_DIR.mkdir(exist_ok=True)
+LEADERBOARD_MSG_FILE = DATA_DIR / "leaderboard_messages.json"
 
 voice_start_times = {}
-voice_total_times = {}
+leaderboard_message_ids = {}
 
 def load_level_data():
     if LEVEL_DATA_FILE.exists():
@@ -2260,6 +2262,16 @@ def save_level_config(data):
     with open(LEVEL_CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+def load_leaderboard_messages():
+    if LEADERBOARD_MSG_FILE.exists():
+        with open(LEADERBOARD_MSG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_leaderboard_messages(data):
+    with open(LEADERBOARD_MSG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
 def get_xp_for_level(level):
     return 5 * (level ** 2) + 50 * level + 100
 
@@ -2273,44 +2285,84 @@ def get_user_data(guild_id, user_id):
         data[guild_str][user_str] = {
             "xp": 0,
             "level": 0,
-            "messages": 0,
-            "voice_seconds": 0
+            "messages": {},
+            "voice_seconds": 0,
+            "voice_daily": {}
         }
+    if "messages" not in data[guild_str][user_str]:
+        data[guild_str][user_str]["messages"] = {}
+    if "voice_daily" not in data[guild_str][user_str]:
+        data[guild_str][user_str]["voice_daily"] = {}
     return data[guild_str][user_str]
+
+def today_str():
+    return discord.utils.utcnow().strftime("%Y-%m-%d")
+
+def days_ago_str(days):
+    from datetime import datetime, timedelta
+    return (discord.utils.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
 
 def add_xp(guild_id, user_id, amount):
     data = load_level_data()
     guild_str = str(guild_id)
     user_str = str(user_id)
-    
+    today = today_str()
+
     if guild_str not in data:
         data[guild_str] = {}
     if user_str not in data[guild_str]:
         data[guild_str][user_str] = {
-            "xp": 0,
-            "level": 0,
-            "messages": 0,
-            "voice_seconds": 0
+            "xp": 0, "level": 0, "messages": {}, "voice_seconds": 0, "voice_daily": {}
         }
-    
+
     user_data = data[guild_str][user_str]
+    if "messages" not in user_data:
+        user_data["messages"] = {}
+    if "voice_daily" not in user_data:
+        user_data["voice_daily"] = {}
+
     user_data["xp"] += amount
-    user_data["messages"] += 1
-    
+    user_data["messages"][today] = user_data["messages"].get(today, 0) + 1
+
     old_level = user_data["level"]
     xp_needed = get_xp_for_level(user_data["level"])
-    
+
     while user_data["xp"] >= xp_needed:
         user_data["xp"] -= xp_needed
         user_data["level"] += 1
         xp_needed = get_xp_for_level(user_data["level"])
-    
+
     new_level = user_data["level"]
     save_level_data(data)
-    
     return old_level, new_level
 
-def format_time(seconds):
+def get_messages_last_7_days(user_data):
+    messages = user_data.get("messages", {})
+    total = 0
+    cutoff = days_ago_str(7)
+    for date_key, count in messages.items():
+        if date_key >= cutoff:
+            total += count
+    return total
+
+def get_voice_last_7_days(user_data):
+    voice_daily = user_data.get("voice_daily", {})
+    total = 0
+    cutoff = days_ago_str(7)
+    for date_key, seconds in voice_daily.items():
+        if date_key >= cutoff:
+            total += seconds
+    return total
+
+def format_time_short(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    if hours > 0:
+        return f"{hours}h {minutes:02d}m"
+    else:
+        return f"{minutes}m"
+
+def format_time_full(seconds):
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -2321,39 +2373,45 @@ def format_time(seconds):
     else:
         return f"{secs}s"
 
+def cleanup_old_dates(user_data):
+    cutoff = days_ago_str(14)
+    if "messages" in user_data:
+        user_data["messages"] = {k: v for k, v in user_data["messages"].items() if k >= cutoff}
+    if "voice_daily" in user_data:
+        user_data["voice_daily"] = {k: v for k, v in user_data["voice_daily"].items() if k >= cutoff}
+
 @bot.event
 async def on_message_level_system(message):
     if message.author.bot:
         return
     if not message.guild:
         return
-    
+
     config = load_level_config()
     guild_str = str(message.guild.id)
-    
+
     no_xp_channels = config.get(guild_str, {}).get("no_xp_channels", [])
     if message.channel.id in no_xp_channels:
         return
-    
+
     old_level, new_level = add_xp(message.guild.id, message.author.id, 15)
-    
+
     if new_level > old_level:
         level_config = config.get(guild_str, {})
         level_channel_id = level_config.get("level_channel")
-        
         level_images = level_config.get("level_images", {})
         image_path = level_images.get(str(new_level))
-        
+
         embed = discord.Embed(
             title="Level Up!",
             description=f"{message.author.mention} ist jetzt **Level {new_level}**!",
             color=discord.Color.gold()
         )
-        
+
         if image_path and os.path.exists(image_path):
             file = discord.File(image_path, filename=f"level_{new_level}.png")
             embed.set_image(url=f"attachment://level_{new_level}.png")
-            
+
             if level_channel_id:
                 channel = bot.get_channel(level_channel_id)
                 if channel:
@@ -2372,45 +2430,76 @@ async def on_message_level_system(message):
 async def on_voice_state_update_level(member, before, after):
     if member.bot:
         return
-    
+
     guild_str = str(member.guild.id)
     user_str = str(member.id)
-    
+    today = today_str()
+
     if before.channel and not after.channel:
         if member.id in voice_start_times:
             start_time = voice_start_times.pop(member.id)
             elapsed = int(time.time() - start_time)
-            
+
             data = load_level_data()
             if guild_str not in data:
                 data[guild_str] = {}
             if user_str not in data[guild_str]:
                 data[guild_str][user_str] = {
-                    "xp": 0,
-                    "level": 0,
-                    "messages": 0,
-                    "voice_seconds": 0
+                    "xp": 0, "level": 0, "messages": {}, "voice_seconds": 0, "voice_daily": {}
                 }
-            
-            data[guild_str][user_str]["voice_seconds"] = data[guild_str][user_str].get("voice_seconds", 0) + elapsed
+
+            user_data = data[guild_str][user_str]
+            if "voice_daily" not in user_data:
+                user_data["voice_daily"] = {}
+
+            user_data["voice_seconds"] = user_data.get("voice_seconds", 0) + elapsed
+            user_data["voice_daily"][today] = user_data["voice_daily"].get(today, 0) + elapsed
+            cleanup_old_dates(user_data)
             save_level_data(data)
-    
+
     elif not before.channel and after.channel:
         if member.id not in voice_start_times:
+            voice_start_times[member.id] = time.time()
+
+    elif before.channel and after.channel and before.channel.id != after.channel.id:
+        if member.id in voice_start_times:
+            start_time = voice_start_times.pop(member.id)
+            elapsed = int(time.time() - start_time)
+
+            data = load_level_data()
+            if guild_str not in data:
+                data[guild_str] = {}
+            if user_str not in data[guild_str]:
+                data[guild_str][user_str] = {
+                    "xp": 0, "level": 0, "messages": {}, "voice_seconds": 0, "voice_daily": {}
+                }
+
+            user_data = data[guild_str][user_str]
+            if "voice_daily" not in user_data:
+                user_data["voice_daily"] = {}
+
+            user_data["voice_seconds"] = user_data.get("voice_seconds", 0) + elapsed
+            user_data["voice_daily"][today] = user_data["voice_daily"].get(today, 0) + elapsed
+            cleanup_old_dates(user_data)
+            save_level_data(data)
+
             voice_start_times[member.id] = time.time()
 
 @bot.tree.command(name="level", description="Zeigt dein aktuelles Level und XP an")
 async def level_command(interaction: discord.Interaction, user: discord.Member = None):
     target = user or interaction.user
     user_data = get_user_data(interaction.guild_id, target.id)
-    
+
     xp_needed = get_xp_for_level(user_data["level"])
     progress = user_data["xp"] / xp_needed * 100 if xp_needed > 0 else 0
-    
+
     bar_length = 20
     filled = int(bar_length * progress / 100)
     bar = "█" * filled + "░" * (bar_length - filled)
-    
+
+    msgs_7d = get_messages_last_7_days(user_data)
+    voice_7d = get_voice_last_7_days(user_data)
+
     embed = discord.Embed(
         title=f"Level von {target.display_name}",
         color=discord.Color.blue()
@@ -2419,55 +2508,81 @@ async def level_command(interaction: discord.Interaction, user: discord.Member =
     embed.add_field(name="Level", value=str(user_data["level"]), inline=True)
     embed.add_field(name="XP", value=f"{user_data['xp']}/{xp_needed}", inline=True)
     embed.add_field(name="Fortschritt", value=f"`{bar}` {progress:.1f}%", inline=False)
-    embed.add_field(name="Nachrichten", value=str(user_data.get("messages", 0)), inline=True)
-    embed.add_field(name="Voice-Zeit", value=format_time(user_data.get("voice_seconds", 0)), inline=True)
-    
+    embed.add_field(name="Nachrichten (7 Tage)", value=str(msgs_7d), inline=True)
+    embed.add_field(name="Voice-Zeit (7 Tage)", value=format_time_full(voice_7d), inline=True)
+
     await interaction.response.send_message(embed=embed)
+
+def build_leaderboard_embeds(guild):
+    guild_str = str(guild.id)
+    data = load_level_data()
+
+    messages_ranking = []
+    voice_ranking = []
+
+    if guild_str in data:
+        for user_id, user_data in data[guild_str].items():
+            member = guild.get_member(int(user_id))
+            if not member or member.bot:
+                continue
+
+            msgs_7d = get_messages_last_7_days(user_data)
+            voice_7d = get_voice_last_7_days(user_data)
+
+            if msgs_7d > 0:
+                messages_ranking.append((member, msgs_7d))
+            if voice_7d > 0:
+                voice_ranking.append((member, voice_7d))
+
+    messages_ranking.sort(key=lambda x: x[1], reverse=True)
+    voice_ranking.sort(key=lambda x: x[1], reverse=True)
+
+    medals = ["", "", ""]
+    end_date = discord.utils.utcnow() + timedelta(days=7 - discord.utils.utcnow().weekday())
+
+    msg_lines = []
+    for i, (member, count) in enumerate(messages_ranking[:15]):
+        medal = medals[i] if i < 3 else f"**{i+1}.**"
+        msg_lines.append(f"{medal} {member.mention} — **{count:,}** messages")
+
+    voice_lines = []
+    for i, (member, seconds) in enumerate(voice_ranking[:15]):
+        medal = medals[i] if i < 3 else f"**{i+1}.**"
+        voice_lines.append(f"{medal} {member.mention} — **{format_time_short(seconds)}**")
+
+    top_msg_user = messages_ranking[0][0].mention if messages_ranking else "Keine Daten"
+    top_voice_user = voice_ranking[0][0].display_name if voice_ranking else "Keine Daten"
+
+    embed_messages = discord.Embed(
+        title=f"{guild.name} Leaderboard",
+        description=f" Top Messages (Last 7 Days) — {top_msg_user}",
+        color=discord.Color.red()
+    )
+    embed_messages.description += "\n\n**Rankings**\n"
+    if msg_lines:
+        embed_messages.description += "\n".join(msg_lines)
+    else:
+        embed_messages.description += "Noch keine Nachrichten getrackt."
+    embed_messages.set_footer(text=f"Ends in {7 - discord.utils.utcnow().weekday()} days · {end_date.strftime('%m/%d/%Y 11:59 PM')}")
+
+    embed_voice = discord.Embed(
+        title=f"{guild.name} Leaderboard",
+        description=f" Top Voice Time (Last 7 Days) — {top_voice_user}",
+        color=discord.Color.blue()
+    )
+    embed_voice.description += "\n\n**Rankings**\n"
+    if voice_lines:
+        embed_voice.description += "\n".join(voice_lines)
+    else:
+        embed_voice.description += "Noch keine Voice-Zeit getrackt."
+    embed_voice.set_footer(text=f"Ends in {7 - discord.utils.utcnow().weekday()} days · {end_date.strftime('%m/%d/%Y 11:59 PM')}")
+
+    return embed_messages, embed_voice
 
 @bot.tree.command(name="leaderboard", description="Zeigt das Leaderboard an")
 async def leaderboard_command(interaction: discord.Interaction):
-    data = load_level_data()
-    guild_str = str(interaction.guild_id)
-    
-    if guild_str not in data or not data[guild_str]:
-        await interaction.response.send_message("Noch keine Daten vorhanden!", ephemeral=True)
-        return
-    
-    guild_data = data[guild_str]
-    
-    sorted_users = sorted(
-        guild_data.items(),
-        key=lambda x: (x[1].get("level", 0), x[1].get("xp", 0)),
-        reverse=True
-    )
-    
-    embed = discord.Embed(
-        title=f"Leaderboard - {interaction.guild.name}",
-        color=discord.Color.gold()
-    )
-    
-    medals = ["", "", ""]
-    
-    lines = []
-    for i, (user_id, user_data) in enumerate(sorted_users[:15]):
-        member = interaction.guild.get_member(int(user_id))
-        if not member:
-            continue
-        
-        medal = medals[i] if i < 3 else f"**{i+1}.**"
-        voice_time = format_time(user_data.get("voice_seconds", 0))
-        messages = user_data.get("messages", 0)
-        
-        lines.append(
-            f"{medal} {member.mention}\n"
-            f"    Level **{user_data['level']}** | {user_data['xp']}/{get_xp_for_level(user_data['level'])} XP\n"
-            f"    {messages} Nachrichten | {voice_time} Voice"
-        )
-    
-    embed.description = "\n\n".join(lines)
-    embed.set_footer(text=f"Gesamt: {len(guild_data)} User")
-    
-    await interaction.response.send_message(embed=embed)
+    embed_msg, embed_voice = build_leaderboard_embeds(interaction.guild)
+    await interaction.response.send_message(embeds=[embed_msg, embed_voice])
 
 @bot.tree.command(name="setlevelchannel", description="Setzt den Channel für Level-Up Nachrichten")
 @is_admin_or_owner()
@@ -2475,86 +2590,88 @@ async def leaderboard_command(interaction: discord.Interaction):
 async def setlevelchannel_command(interaction: discord.Interaction, channel: discord.TextChannel):
     config = load_level_config()
     guild_str = str(interaction.guild_id)
-    
     if guild_str not in config:
         config[guild_str] = {}
-    
     config[guild_str]["level_channel"] = channel.id
     save_level_config(config)
-    
-    await interaction.response.send_message(
-        f"Level-Up Channel gesetzt auf {channel.mention}!"
-    )
+    await interaction.response.send_message(f"Level-Up Channel gesetzt auf {channel.mention}!")
 
-@bot.tree.command(name="setleaderboard", description="Setzt den Channel für das Live-Leaderboard")
+@bot.tree.command(name="setleaderboard", description="Richtet das Live-Leaderboard in einem Channel ein")
 @is_admin_or_owner()
 @app_commands.describe(channel="Der Channel für das Leaderboard")
 async def setleaderboard_command(interaction: discord.Interaction, channel: discord.TextChannel):
+    await interaction.response.defer(ephemeral=True)
+
     config = load_level_config()
     guild_str = str(interaction.guild_id)
-    
     if guild_str not in config:
         config[guild_str] = {}
-    
     config[guild_str]["leaderboard_channel"] = channel.id
     save_level_config(config)
-    
-    await interaction.response.send_message(
-        f"Leaderboard Channel gesetzt auf {channel.mention}!"
+
+    embed_msg, embed_voice = build_leaderboard_embeds(interaction.guild)
+
+    msg_sent = await channel.send(embed=embed_msg)
+    voice_sent = await channel.send(embed=embed_voice)
+
+    lb_msgs = load_leaderboard_messages()
+    lb_msgs[guild_str] = {
+        "messages_msg_id": msg_sent.id,
+        "voice_msg_id": voice_sent.id,
+        "channel_id": channel.id
+    }
+    save_leaderboard_messages(lb_msgs)
+
+    await interaction.followup.send(
+        f"Live-Leaderboard eingerichtet in {channel.mention}!\n"
+        f"Updatet alle 5 Minuten automatisch.",
+        ephemeral=True
     )
 
 @bot.tree.command(name="levelimage", description="Setzt ein Bild für einen bestimmten Levelaufstieg")
 @is_admin_or_owner()
-@app_commands.describe(
-    level="Das Level (z.B. 5)",
-    bild="Das Bild für diesen Level"
-)
+@app_commands.describe(level="Das Level (z.B. 5)", bild="Das Bild für diesen Level")
 async def levelimage_command(interaction: discord.Interaction, level: int, bild: discord.Attachment):
     await interaction.response.defer(ephemeral=True)
-    
+
     allowed_exts = ('.png', '.jpg', '.jpeg', '.gif', '.webp')
     if not any(bild.filename.lower().endswith(ext) for ext in allowed_exts):
         await interaction.followup.send("Nur Bilddateien erlaubt!", ephemeral=True)
         return
-    
+
     image_data = await bild.read()
     if len(image_data) > 8 * 1024 * 1024:
         await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
         return
-    
+
     filename = f"level_{level}.png"
     filepath = LEVEL_IMAGES_DIR / filename
-    
+
     with open(filepath, "wb") as f:
         f.write(image_data)
-    
+
     config = load_level_config()
     guild_str = str(interaction.guild_id)
-    
     if guild_str not in config:
         config[guild_str] = {}
     if "level_images" not in config[guild_str]:
         config[guild_str]["level_images"] = {}
-    
+
     config[guild_str]["level_images"][str(level)] = str(filepath)
     save_level_config(config)
-    
-    await interaction.followup.send(
-        f"Bild für Level **{level}** gespeichert!",
-        ephemeral=True
-    )
+
+    await interaction.followup.send(f"Bild für Level **{level}** gespeichert!", ephemeral=True)
 
 @bot.tree.command(name="noxpchannel", description="Toggle: Kein XP in diesem Channel")
 @is_admin_or_owner()
 async def noxpchannel_command(interaction: discord.Interaction):
     config = load_level_config()
     guild_str = str(interaction.guild_id)
-    
     if guild_str not in config:
         config[guild_str] = {}
-    
+
     no_xp_channels = config[guild_str].get("no_xp_channels", [])
-    
+
     if interaction.channel_id in no_xp_channels:
         no_xp_channels.remove(interaction.channel_id)
         state = "entfernt"
@@ -2563,121 +2680,87 @@ async def noxpchannel_command(interaction: discord.Interaction):
         no_xp_channels.append(interaction.channel_id)
         state = "hinzugefügt"
         icon = "✅"
-    
+
     config[guild_str]["no_xp_channels"] = no_xp_channels
     save_level_config(config)
-    
-    await interaction.response.send_message(
-        f"{icon} Dieser Channel wurde {state} (kein XP)"
-    )
+    await interaction.response.send_message(f"{icon} Dieser Channel wurde {state} (kein XP)")
 
 @bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurück")
 @is_admin_or_owner()
 async def resetlevels_command(interaction: discord.Interaction):
     data = load_level_data()
     guild_str = str(interaction.guild_id)
-    
     if guild_str in data:
         del data[guild_str]
         save_level_data(data)
-    
     await interaction.response.send_message("Alle Level-Daten für diesen Server zurückgesetzt!")
 
 @bot.tree.command(name="setlevel", description="Setzt das Level eines Users manuell")
 @is_admin_or_owner()
-@app_commands.describe(
-    user="Der User",
-    level="Das neue Level"
-)
+@app_commands.describe(user="Der User", level="Das neue Level")
 async def setlevel_command(interaction: discord.Interaction, user: discord.Member, level: int):
     data = load_level_data()
     guild_str = str(interaction.guild_id)
     user_str = str(user.id)
-    
+
     if guild_str not in data:
         data[guild_str] = {}
-    
+
+    old = data[guild_str].get(user_str, {})
     data[guild_str][user_str] = {
         "xp": 0,
         "level": level,
-        "messages": data.get(guild_str, {}).get(user_str, {}).get("messages", 0),
-        "voice_seconds": data.get(guild_str, {}).get(user_str, {}).get("voice_seconds", 0)
+        "messages": old.get("messages", {}),
+        "voice_seconds": old.get("voice_seconds", 0),
+        "voice_daily": old.get("voice_daily", {})
     }
-    
     save_level_data(data)
-    
-    await interaction.response.send_message(
-        f"Level von {user.mention} auf **{level}** gesetzt!"
-    )
+    await interaction.response.send_message(f"Level von {user.mention} auf **{level}** gesetzt!")
 
-# Live Leaderboard Update Task
 @tasks.loop(minutes=5)
 async def update_live_leaderboard():
+    lb_msgs = load_leaderboard_messages()
+
     for guild in bot.guilds:
-        config = load_level_config()
         guild_str = str(guild.id)
-        leaderboard_channel_id = config.get(guild_str, {}).get("leaderboard_channel")
-        
-        if not leaderboard_channel_id:
+        if guild_str not in lb_msgs:
             continue
-        
-        channel = bot.get_channel(leaderboard_channel_id)
+
+        lb_data = lb_msgs[guild_str]
+        channel_id = lb_data.get("channel_id")
+        messages_msg_id = lb_data.get("messages_msg_id")
+        voice_msg_id = lb_data.get("voice_msg_id")
+
+        if not channel_id:
+            continue
+
+        channel = bot.get_channel(channel_id)
         if not channel:
             continue
-        
-        data = load_level_data()
-        if guild_str not in data or not data[guild_str]:
-            continue
-        
-        guild_data = data[guild_str]
-        
-        sorted_users = sorted(
-            guild_data.items(),
-            key=lambda x: (x[1].get("level", 0), x[1].get("xp", 0)),
-            reverse=True
-        )
-        
-        embed = discord.Embed(
-            title=f"Leaderboard - {guild.name}",
-            description="Live-Update alle 5 Minuten",
-            color=discord.Color.gold()
-        )
-        
-        medals = ["", "", ""]
-        
-        lines = []
-        for i, (user_id, user_data) in enumerate(sorted_users[:10]):
-            member = guild.get_member(int(user_id))
-            if not member:
-                continue
-            
-            medal = medals[i] if i < 3 else f"**{i+1}.**"
-            voice_time = format_time(user_data.get("voice_seconds", 0))
-            messages = user_data.get("messages", 0)
-            
-            lines.append(
-                f"{medal} {member.display_name}\n"
-                f"    Level **{user_data['level']}** | {user_data['xp']}/{get_xp_for_level(user_data['level'])} XP\n"
-                f"    {messages} Nachrichten | {voice_time} Voice"
-            )
-        
-        if lines:
-            embed.description = "\n\n".join(lines)
-        else:
-            embed.description = "Keine Daten vorhanden"
-        
-        embed.set_footer(text=f"Letztes Update: {discord.utils.utcnow().strftime('%d.%m.%Y %H:%M')}")
-        
+
+        embed_msg, embed_voice = build_leaderboard_embeds(guild)
+
         try:
-            async for msg in channel.history(limit=10):
-                if msg.author == bot.user and msg.embeds:
-                    if msg.embeds[0].title and "Leaderboard" in msg.embeds[0].title:
-                        await msg.edit(embed=embed)
-                        break
-            else:
-                await channel.send(embed=embed)
+            msg_msg = await channel.fetch_message(messages_msg_id)
+            await msg_msg.edit(embed=embed_msg)
         except:
-            pass
+            try:
+                new_msg = await channel.send(embed=embed_msg)
+                lb_data["messages_msg_id"] = new_msg.id
+            except:
+                pass
+
+        try:
+            voice_msg = await channel.fetch_message(voice_msg_id)
+            await voice_msg.edit(embed=embed_voice)
+        except:
+            try:
+                new_msg = await channel.send(embed=embed_voice)
+                lb_data["voice_msg_id"] = new_msg.id
+            except:
+                pass
+
+    save_leaderboard_messages(lb_msgs)
 
 
 # =====================================
