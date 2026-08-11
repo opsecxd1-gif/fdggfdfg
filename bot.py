@@ -2352,11 +2352,64 @@ async def on_interaction(interaction: discord.Interaction):
         votes[msg_id][user_str] = option_index
         save_memes_votes(votes)
         
-        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
-        emoji = emojis[option_index] if option_index < len(emojis) else "❓"
+        emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+        emoji = emojis[option_index] if option_index < len(emojis) else "?"
+        
+        vote_data = votes[msg_id]
+        
+        frage_config = load_fragen_config()
+        display_mode = "embed"
+        for guild_str, cfg in frage_config.items():
+            if cfg.get("last_message_id") == msg_id:
+                display_mode = cfg.get("display_mode", "embed")
+                break
+        
+        vote_counts = {}
+        vote_users = {}
+        for uid, opt in vote_data.items():
+            vote_counts[opt] = vote_counts.get(opt, 0) + 1
+            if opt not in vote_users:
+                vote_users[opt] = []
+            vote_users[opt].append(uid)
+        
+        total = sum(vote_counts.values())
+        
+        if display_mode == "text":
+            lines = [f"**{total} Stimme(n) gesamt:**\n"]
+            for idx in sorted(vote_counts.keys()):
+                if idx < len(emojis):
+                    count = vote_counts[idx]
+                    names = []
+                    for uid in vote_users[idx]:
+                        member = interaction.guild.get_member(int(uid))
+                        names.append(member.display_name if member else "Unbekannt")
+                    names_str = ", ".join(names)
+                    lines.append(f"{emojis[idx]} **{count}** - {names_str}")
+            feedback = "\n".join(lines)
+            
+        elif display_mode == "anonym":
+            lines = [f"**{total} Stimme(n) gesamt:**\n"]
+            for idx in sorted(vote_counts.keys()):
+                if idx < len(emojis):
+                    count = vote_counts[idx]
+                    lines.append(f"{emojis[idx]} **{count}** Stimme(n)")
+            feedback = "\n".join(lines)
+            
+        else:
+            lines = [f"**{total} Stimme(n) gesamt:**\n"]
+            for idx in sorted(vote_counts.keys()):
+                if idx < len(emojis):
+                    count = vote_counts[idx]
+                    names = []
+                    for uid in vote_users[idx]:
+                        member = interaction.guild.get_member(int(uid))
+                        names.append(member.display_name if member else "Unbekannt")
+                    names_str = ", ".join(names)
+                    lines.append(f"{emojis[idx]} **{count}** - {names_str}")
+            feedback = "\n".join(lines)
         
         await interaction.response.send_message(
-            f"Du hast für {emoji} abgestimmt!",
+            f"**{interaction.user.display_name}** hat fuer {emoji} abgestimmt!\n\n{feedback}",
             ephemeral=True
         )
 
@@ -4201,28 +4254,71 @@ async def before_frage_des_tages():
 
 @bot.tree.command(name="fragesetup", description="Frage des Tages einrichten")
 @is_admin_or_owner()
-@app_commands.describe(channel="Channel für die tägliche Frage")
+@app_commands.describe(
+    channel="Channel für die tägliche Frage",
+    anzeige="Wie werden Stimmen angezeigt"
+)
+@app_commands.choices(anzeige=[
+    app_commands.Choice(name="Embed (Empfohlen)", value="embed"),
+    app_commands.Choice(name="Text (einfach)", value="text"),
+    app_commands.Choice(name="Anonym (keine Names)", value="anonym")
+])
 async def fragesetup_command(
     interaction: discord.Interaction,
-    channel: discord.TextChannel
+    channel: discord.TextChannel,
+    anzeige: app_commands.Choice[str] = None
 ):
     config = load_fragen_config()
     guild_str = str(interaction.guild_id)
     
+    display = anzeige.value if anzeige else "embed"
+    
     config[guild_str] = {
         "enabled": True,
         "channel_id": channel.id,
-        "interval_hours": 16
+        "interval_hours": 16,
+        "display_mode": display
     }
     save_fragen_config(config)
     
     if not frage_des_tages_task.is_running():
         frage_des_tages_task.start()
     
+    fragen = get_all_fragen(interaction.guild_id)
+    frage_data = random.choice(fragen) if fragen else None
+    
+    first_msg = ""
+    if frage_data and fragen:
+        emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+        options_text = ""
+        for i, option in enumerate(frage_data["optionen"][:8]):
+            options_text += f"{emojis[i]} {option}\n"
+        
+        embed = discord.Embed(
+            title=f"{frage_data.get('emoji', '\u2753')} Frage des Tages",
+            description=f"**{frage_data['frage']}**\n\n{options_text}",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text="Klicke auf einen Button um abzustimmen!")
+        
+        msg = await channel.send(embed=embed)
+        view = FrageVoteView(frage_data, msg.id)
+        await msg.edit(view=view)
+        
+        config[guild_str]["last_message_id"] = msg.id
+        config[guild_str]["last_channel_id"] = channel.id
+        save_fragen_config(config)
+        
+        first_msg = f"\n**Erste Frage direkt gesendet!**"
+    
+    display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
+    
     await interaction.response.send_message(
         f"**Frage des Tages eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
-        f"**Interval:** Alle 16 Stunden\n\n"
+        f"**Interval:** Alle 16 Stunden\n"
+        f"**Anzeige:** {display_names.get(display, display)}"
+        f"{first_msg}\n\n"
         f"Der Bot postet jetzt automatisch Fragen mit Buttons!"
     )
 
@@ -4282,6 +4378,8 @@ async def fragestatus_command(interaction: discord.Interaction):
     channel = bot.get_channel(settings.get("channel_id", 0))
     channel_name = channel.mention if channel else "Nicht gefunden"
     status = "✅ AN" if settings.get("enabled") else "❌ AUS"
+    display = settings.get("display_mode", "embed")
+    display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
     
     fragen = get_all_fragen(interaction.guild_id)
     
@@ -4292,6 +4390,7 @@ async def fragestatus_command(interaction: discord.Interaction):
     embed.add_field(name="Status", value=status, inline=True)
     embed.add_field(name="Channel", value=channel_name, inline=True)
     embed.add_field(name="Interval", value=f"{settings.get('interval_hours', 16)}h", inline=True)
+    embed.add_field(name="Anzeige", value=display_names.get(display, display), inline=True)
     embed.add_field(name="Fragen gesamt", value=str(len(fragen)), inline=True)
     
     await interaction.response.send_message(embed=embed)
