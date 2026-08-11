@@ -3870,7 +3870,7 @@ async def on_voice_state_update(member, before, after):
 # AUTO-MEMES TASK & COMMANDS
 # =====================================
 
-@tasks.loop(hours=16)
+@tasks.loop(minutes=60)
 async def auto_memes_task():
     config = load_memes_config()
     for guild in bot.guilds:
@@ -3936,7 +3936,8 @@ async def before_auto_memes():
 @app_commands.describe(
     channel="Channel für Auto-Memes",
     quelle="reddit, imgur, liste, gemischt oder interpol",
-    stunden="Interval in Stunden (1-48, Standard: 16)"
+    stunden="Interval in Stunden (1-48)",
+    minuten="Zusaetzliche Minuten (0-59)"
 )
 @app_commands.choices(quelle=[
     app_commands.Choice(name="Reddit (Empfohlen)", value="reddit"),
@@ -3949,10 +3950,12 @@ async def memessetup_command(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
     quelle: app_commands.Choice[str],
-    stunden: int = 16
+    stunden: int = 0,
+    minuten: int = 5
 ):
-    if stunden < 1 or stunden > 48:
-        await interaction.response.send_message("Ungueltig! Erlaubt: 1-48 Stunden", ephemeral=True)
+    total_minutes = (stunden * 60) + minuten
+    if total_minutes < 1 or total_minutes > 2880:
+        await interaction.response.send_message("Ungueltig! Min: 1 Minute, Max: 48 Stunden", ephemeral=True)
         return
     
     config = load_memes_config()
@@ -3962,18 +3965,22 @@ async def memessetup_command(
         "enabled": True,
         "channel_id": channel.id,
         "source": quelle.value,
-        "interval_hours": stunden,
+        "interval_minutes": total_minutes,
         "subreddit": "memes",
         "imgur_tag": "memes"
     }
     save_memes_config(config)
     
-    if not auto_memes_task.is_running():
-        auto_memes_task.start()
-    else:
+    if auto_memes_task.is_running():
         auto_memes_task.cancel()
-        auto_memes_task.change_interval(hours=stunden)
-        auto_memes_task.start()
+    
+    auto_memes_task.change_interval(minutes=total_minutes)
+    auto_memes_task.start()
+    
+    if total_minutes >= 60:
+        interval_text = f"{total_minutes // 60}h {total_minutes % 60}m"
+    else:
+        interval_text = f"{total_minutes} Minuten"
     
     source_names = {
         "reddit": "Reddit",
@@ -3987,16 +3994,20 @@ async def memessetup_command(
         f"**Auto-Memes eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
         f"**Quelle:** {source_names.get(quelle.value, quelle.value)}\n"
-        f"**Interval:** Alle {stunden} Stunden\n\n"
+        f"**Interval:** Alle {interval_text}\n\n"
         f"Der Bot postet jetzt automatisch Memes!"
     )
 
-@bot.tree.command(name="memesinterval", description="Auto-Memes Interval ändern")
+@bot.tree.command(name="memesinterval", description="Auto-Memes Interval aendern")
 @is_admin_or_owner()
-@app_commands.describe(stunden="Interval in Stunden (1-48)")
-async def memesinterval_command(interaction: discord.Interaction, stunden: int):
-    if stunden < 1 or stunden > 48:
-        await interaction.response.send_message("Ungültig! Erlaubt: 1-48 Stunden", ephemeral=True)
+@app_commands.describe(
+    stunden="Interval in Stunden (0-48)",
+    minuten="Zusaetzliche Minuten (0-59)"
+)
+async def memesinterval_command(interaction: discord.Interaction, stunden: int = 0, minuten: int = 5):
+    total_minutes = (stunden * 60) + minuten
+    if total_minutes < 1 or total_minutes > 2880:
+        await interaction.response.send_message("Ungueltig! Min: 1 Minute, Max: 48 Stunden", ephemeral=True)
         return
     
     config = load_memes_config()
@@ -4006,14 +4017,19 @@ async def memesinterval_command(interaction: discord.Interaction, stunden: int):
         await interaction.response.send_message("Noch nicht eingerichtet! Benutze /memessetup", ephemeral=True)
         return
     
-    config[guild_str]["interval_hours"] = stunden
+    config[guild_str]["interval_minutes"] = total_minutes
     save_memes_config(config)
     
     auto_memes_task.cancel()
-    auto_memes_task.change_interval(hours=stunden)
+    auto_memes_task.change_interval(minutes=total_minutes)
     auto_memes_task.start()
     
-    await interaction.response.send_message(f"**Interval geändert auf alle {stunden} Stunden!**")
+    if total_minutes >= 60:
+        interval_text = f"{total_minutes // 60}h {total_minutes % 60}m"
+    else:
+        interval_text = f"{total_minutes} Minuten"
+    
+    await interaction.response.send_message(f"**Interval geaendert auf alle {interval_text}!**")
 
 @bot.tree.command(name="memestoggle", description="Auto-Memes ein/ausschalten")
 @is_admin_or_owner()
