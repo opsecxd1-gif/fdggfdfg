@@ -1540,18 +1540,6 @@ async def on_interaction(interaction: discord.Interaction):
             except discord.Forbidden:
                 await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
-@bot.event
-async def on_ready():
-    pass
-
-@bot.event
-async def on_message(message):
-    pass
-
-@bot.event
-async def on_voice_state_update(member, before, after):
-    pass
-
 # =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
 # =====================================
@@ -2691,14 +2679,9 @@ async def update_live_leaderboard():
         except:
             pass
 
-@bot.event
-async def on_ready_level():
-    if not update_live_leaderboard.is_running():
-        update_live_leaderboard.start()
 
-# Override on_ready to include level system
-original_on_ready = bot.get_event("on_ready")
-
+# =====================================
+# LEVEL SYSTEM
 @bot.event
 async def on_ready():
     print(f"Bot eingeloggt als {bot.user}")
@@ -2713,9 +2696,6 @@ async def on_ready():
     
     if not update_live_leaderboard.is_running():
         update_live_leaderboard.start()
-
-# Override on_message to include level system
-original_on_message = bot.get_event("on_message")
 
 @bot.event
 async def on_message(message):
@@ -2791,7 +2771,6 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # Override on_voice_state_update to include level system
-original_on_voice_state_update = bot.get_event("on_voice_state_update")
 
 @bot.event
 async def on_voice_state_update(member, before, after):
