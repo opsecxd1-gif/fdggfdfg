@@ -4837,6 +4837,30 @@ async def frageskip_command(interaction: discord.Interaction):
         f"**Frage uebersprungen!** Neue Frage gesendet in {channel.mention}"
     )
 
+@bot.tree.command(name="fixvoice", description="Aktiviert Sprechen fuer alle in allen Voice-Channels (kein Push-to-Talk noetig)")
+@is_admin_or_owner()
+async def fixvoice_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    fixed = 0
+    failed = 0
+    for channel in interaction.guild.voice_channels:
+        try:
+            overwrites = channel.overwrites_for(interaction.guild.default_role)
+            overwrites.speak = True
+            overwrites.connect = True
+            await channel.set_permissions(interaction.guild.default_role, overwrite=overwrites)
+            fixed += 1
+        except discord.Forbidden:
+            failed += 1
+        except Exception:
+            failed += 1
+    await interaction.followup.send(
+        f"**Voice-Permissions gefixt!**\n"
+        f"**{fixed}** Channels aktualisiert\n"
+        f"**{failed}** fehlgeschlagen\n\n"
+        f"Alle koennen jetzt frei sprechen (kein Push-to-Talk noetig)."
+    )
+
 # =====================================
 # MAIN / ON_READY (Tasks starten)
 # =====================================
