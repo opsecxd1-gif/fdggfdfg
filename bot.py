@@ -3708,15 +3708,88 @@ async def on_ready():
     except Exception as e:
         print(f"Sync fehlgeschlagen: {e}")
     
+    global tiktok_mode
+    try:
+        tiktok_mode = load_tiktok_mode()
+    except Exception as e:
+        print(f"[on_ready] TikTok Mode Fehler: {e}")
+    
+    global automod_config
+    try:
+        automod_config = load_automod_config()
+    except Exception as e:
+        print(f"[on_ready] Automod Config Fehler: {e}")
+    
+    global voice_channel_owners, voice_channel_settings
+    try:
+        voice_channel_owners = load_voice_owners()
+        voice_channel_settings = load_voice_settings_file()
+        print(f"[on_ready] Voice Owners geladen: {len(voice_channel_owners)} Channels")
+    except Exception as e:
+        print(f"[on_ready] Voice Owners Fehler: {e}")
+    
+    try:
+        if not update_live_leaderboard.is_running():
+            update_live_leaderboard.start()
+            print("[on_ready] Leaderboard gestartet")
+    except Exception as e:
+        print(f"[on_ready] Leaderboard Fehler: {e}")
+    
+    try:
+        if not auto_save_data.is_running():
+            auto_save_data.start()
+            print("[on_ready] AutoSave gestartet")
+    except Exception as e:
+        print(f"[on_ready] AutoSave Fehler: {e}")
+    
+    try:
+        if not membercount_refresh.is_running():
+            membercount_refresh.start()
+            print("[on_ready] MemberCount Refresh gestartet")
+    except Exception as e:
+        print(f"[on_ready] MemberCount Refresh Fehler: {e}")
+    
+    try:
+        if not watchdog_task.is_running():
+            watchdog_task.start()
+            print("[on_ready] Watchdog gestartet")
+    except Exception as e:
+        print(f"[on_ready] Watchdog Fehler: {e}")
+    
+    try:
+        memes_config = load_memes_config()
+        for guild_str, settings in memes_config.items():
+            if settings.get("enabled", False):
+                if not auto_memes_task.is_running():
+                    interval_minutes = settings.get("interval_minutes", 60)
+                    auto_memes_task.change_interval(minutes=interval_minutes)
+                    auto_memes_task.start()
+                    print(f"[on_ready] Memes Task gestartet ({interval_minutes} Min)")
+                    break
+    except Exception as e:
+        print(f"[on_ready] Memes Task Fehler: {e}")
+    
+    try:
+        fragen_config = load_fragen_config()
+        for guild_str, settings in fragen_config.items():
+            if settings.get("enabled", False):
+                if not frage_des_tages_task.is_running():
+                    frage_des_tages_task.start()
+                    print("[on_ready] Frage Task gestartet")
+                    break
+    except Exception as e:
+        print(f"[on_ready] Frage Task Fehler: {e}")
+    
     global recovery
     try:
         recovery = RecoveryManager(bot)
         await recovery.startup_sequence()
     except Exception as e:
-        print(f"[Recovery] KRITISCH: {e}")
+        print(f"[Recovery] Fehler: {e}")
+        import traceback
         traceback.print_exc()
     
-    print(f"[on_ready] Bot bereit! Uptime-Zaehler gestartet.")
+    print(f"[on_ready] ALLE SYSTEME AKTIV!")
 
 @tasks.loop(minutes=30)
 async def auto_save_data():
