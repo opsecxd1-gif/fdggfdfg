@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from discord import ui
 import json
+import sys
 import re
 import os
 import asyncio
@@ -3700,75 +3701,22 @@ async def update_live_leaderboard():
 @bot.event
 async def on_ready():
     print(f"Bot eingeloggt als {bot.user}")
+    
     try:
         synced = await bot.tree.sync()
         print(f"{len(synced)} Commands synchronisiert")
     except Exception as e:
         print(f"Sync fehlgeschlagen: {e}")
     
-    global tiktok_mode
+    global recovery
     try:
-        tiktok_mode = load_tiktok_mode()
+        recovery = RecoveryManager(bot)
+        await recovery.startup_sequence()
     except Exception as e:
-        print(f"[on_ready] TikTok Mode Fehler: {e}")
+        print(f"[Recovery] KRITISCH: {e}")
+        traceback.print_exc()
     
-    global automod_config
-    try:
-        automod_config = load_automod_config()
-    except Exception as e:
-        print(f"[on_ready] Automod Config Fehler: {e}")
-    
-    global voice_channel_owners, voice_channel_settings
-    try:
-        voice_channel_owners = load_voice_owners()
-        voice_channel_settings = load_voice_settings_file()
-        print(f"[on_ready] Voice Owners geladen: {len(voice_channel_owners)} Channels")
-    except Exception as e:
-        print(f"[on_ready] Voice Owners Fehler: {e}")
-    
-    try:
-        if not update_live_leaderboard.is_running():
-            update_live_leaderboard.start()
-    except Exception as e:
-        print(f"[on_ready] Leaderboard Task Fehler: {e}")
-    
-    try:
-        memes_config = load_memes_config()
-        for guild_str, settings in memes_config.items():
-            if settings.get("enabled", False):
-                if not auto_memes_task.is_running():
-                    interval_minutes = settings.get("interval_minutes", 60)
-                    auto_memes_task.change_interval(minutes=interval_minutes)
-                    auto_memes_task.start()
-                    print(f"[Memes] Task gestartet mit {interval_minutes} Min Interval")
-                    break
-    except Exception as e:
-        print(f"[on_ready] Memes Task Fehler: {e}")
-    
-    try:
-        fragen_config = load_fragen_config()
-        for guild_str, settings in fragen_config.items():
-            if settings.get("enabled", False):
-                if not frage_des_tages_task.is_running():
-                    frage_des_tages_task.start()
-                    print(f"[Frage] Task gestartet")
-                    break
-    except Exception as e:
-        print(f"[on_ready] Frage Task Fehler: {e}")
-    
-    try:
-        if not auto_save_data.is_running():
-            auto_save_data.start()
-    except Exception as e:
-        print(f"[on_ready] AutoSave Task Fehler: {e}")
-    
-    try:
-        if not membercount_refresh.is_running():
-            membercount_refresh.start()
-    except Exception as e:
-        print(f"[on_ready] MemberCount Refresh Fehler: {e}")
-    
-    print(f"[on_ready] Alle Tasks initialisiert!")
+    print(f"[on_ready] Bot bereit! Uptime-Zaehler gestartet.")
 
 @tasks.loop(minutes=30)
 async def auto_save_data():
@@ -5256,14 +5204,170 @@ async def membercountremove_command(interaction: discord.Interaction):
         await interaction.response.send_message("Kein Member-Count Channel eingerichtet.", ephemeral=True)
 
 # =====================================
+# BOT STATUS COMMAND
+# =====================================
+
+@bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
+@is_admin_or_owner()
+async def botstatus_command(interaction: discord.Interaction):
+    global recovery
+    
+    embed = discord.Embed(
+        title="Bot System Status",
+        color=discord.Color.green()
+    )
+    
+    uptime = recovery.get_uptime() if recovery else "unbekannt"
+    embed.add_field(name="Uptime", value=uptime, inline=True)
+    
+    tasks_status = []
+    try:
+        tasks_status.append(f"Auto-Memes: {'LAEUFT' if auto_memes_task.is_running() else 'STOPP'}")
+    except:
+        tasks_status.append("Auto-Memes: FEHLER")
+    try:
+        tasks_status.append(f"Frage des Tages: {'LAEUFT' if frage_des_tages_task.is_running() else 'STOPP'}")
+    except:
+        tasks_status.append("Frage des Tages: FEHLER")
+    try:
+        tasks_status.append(f"AutoSave: {'LAEUFT' if auto_save_data.is_running() else 'STOPP'}")
+    except:
+        tasks_status.append("AutoSave: FEHLER")
+    try:
+        tasks_status.append(f"MemberCount: {'LAEUFT' if membercount_refresh.is_running() else 'STOPP'}")
+    except:
+        tasks_status.append("MemberCount: FEHLER")
+    try:
+        tasks_status.append(f"Watchdog: {'LAEUFT' if watchdog_task.is_running() else 'STOPP'}")
+    except:
+        tasks_status.append("Watchdog: FEHLER")
+    try:
+        tasks_status.append(f"Leaderboard: {'LAEUFT' if update_live_leaderboard.is_running() else 'STOPP'}")
+    except:
+        tasks_status.append("Leaderboard: FEHLER")
+    embed.add_field(name="Tasks", value="\n".join(tasks_status), inline=False)
+    
+    memes_config = load_memes_config()
+    active_memes = sum(1 for s in memes_config.values() if s.get("enabled"))
+    embed.add_field(name="Memes Channels", value=f"{active_memes} aktiv", inline=True)
+    
+    fragen_config = load_fragen_config()
+    active_fragen = sum(1 for s in fragen_config.values() if s.get("enabled"))
+    embed.add_field(name="Frage Channels", value=f"{active_fragen} aktiv", inline=True)
+    
+    embed.add_field(name="Voice Owners", value=f"{len(voice_channel_owners)} Channels", inline=True)
+    
+    mc_config = load_membercount_config()
+    embed.add_field(name="MemberCount", value=f"{len(mc_config)} Channel(s)", inline=True)
+    
+    embed.set_footer(text=f"Bot: {bot.user.name} | Server: {interaction.guild.name}")
+    
+    await interaction.response.send_message(embed=embed)
+
+# =====================================
+# WATCHDOG + RECOVERY SYSTEM
+# =====================================
+
+recovery = None
+
+@tasks.loop(seconds=60)
+async def watchdog_task():
+    global recovery
+    if not recovery:
+        return
+    try:
+        recovery.heartbeat()
+        
+        config = load_memes_config()
+        for guild_str, settings in config.items():
+            if settings.get("enabled"):
+                ch_id = settings.get("channel_id")
+                if ch_id:
+                    channel = bot.get_channel(ch_id)
+                    if not channel:
+                        config[guild_str]["enabled"] = False
+                        save_memes_config(config)
+                        print(f"[Watchdog] Memes Channel {ch_id} verschwunden - deaktiviert")
+        
+        mc_config = load_membercount_config()
+        for guild_str, settings in mc_config.items():
+            ch_id = settings.get("channel_id")
+            if ch_id:
+                channel = bot.get_channel(ch_id)
+                if not channel:
+                    print(f"[Watchdog] MemberCount Channel {ch_id} verschwunden!")
+        
+        voice_channels = list(voice_channel_owners.keys())
+        for ch_id in voice_channels:
+            channel = bot.get_channel(ch_id)
+            if not channel:
+                voice_channel_owners.pop(ch_id, None)
+                voice_channel_settings.pop(ch_id, None)
+        
+        print(f"[Watchdog] Health Check OK - Uptime: {recovery.get_uptime()}")
+        
+    except Exception as e:
+        print(f"[Watchdog] Fehler: {e}")
+
+@watchdog_task.before_loop
+async def before_watchdog():
+    await bot.wait_until_ready()
+
+async def safe_api_call(coro_func, *args, max_retries=3, **kwargs):
+    for attempt in range(max_retries):
+        try:
+            return await coro_func(*args, **kwargs)
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = e.retry_after if hasattr(e, 'retry_after') else (2 ** attempt)
+                print(f"[RateLimit] Warte {retry_after}s (Attempt {attempt+1}/{max_retries})")
+                await asyncio.sleep(retry_after)
+            else:
+                raise
+        except asyncio.TimeoutError:
+            print(f"[Timeout] Attempt {attempt+1}/{max_retries}")
+            await asyncio.sleep(2 ** attempt)
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(2 ** attempt)
+    return None
+
+def setup_exception_handlers():
+    loop = asyncio.get_event_loop()
+    
+    def exception_handler(loop, context):
+        exception = context.get("exception")
+        msg = context.get("message", "Unbekannter Fehler")
+        print(f"[ExceptionHandler] {msg}: {exception}")
+    
+    loop.set_exception_handler(exception_handler)
+    
+    original_run = bot.run
+    def safe_run(token):
+        try:
+            original_run(token)
+        except Exception as e:
+            print(f"[SafeRun] Bot-Fehler: {e}")
+            traceback.print_exc()
+    
+    bot.run = safe_run
+
+# =====================================
 # MAIN / ON_READY (Tasks starten)
 # =====================================
+
+import traceback
+from recovery import RecoveryManager
 
 if __name__ == "__main__":
     TOKEN = os.getenv("DISCORD_TOKEN")
     if not TOKEN:
         print("FEHLER: DISCORD_TOKEN nicht gesetzt!")
         exit(1)
+    
+    setup_exception_handlers()
+    
     while True:
         try:
             print("[BOT] Starte Bot...")
@@ -5273,5 +5377,6 @@ if __name__ == "__main__":
             break
         except Exception as e:
             print(f"[BOT] CRASH: {e}")
-            print("[BOT] Neustart in 5 Sekunden...")
-            time.sleep(5)
+            traceback.print_exc()
+            print("[BOT] Neustart in 10 Sekunden...")
+            time.sleep(10)
