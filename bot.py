@@ -682,9 +682,14 @@ async def _download_via_quickvids(url):
 async def _download_file_from_url(download_url, filename_prefix="tiktok"):
     """Laedt eine Datei von einer direkten URL herunter"""
     TIKTOK_DOWNLOAD_DIR.mkdir(exist_ok=True)
-    final_path = str(TIKTOK_DOWNLOAD_DIR / f'{filename_prefix}.mp4')
+    unique_id = f"{filename_prefix}_{int(asyncio.get_event_loop().time() * 1000)}"
+    final_path = str(TIKTOK_DOWNLOAD_DIR / f'{unique_id}.mp4')
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Referer': 'https://www.tiktok.com/',
+    }
     async with aiohttp.ClientSession() as session:
-        async with session.get(download_url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+        async with session.get(download_url, headers=headers, timeout=aiohttp.ClientTimeout(total=60), allow_redirects=True) as resp:
             if resp.status != 200:
                 raise Exception(f"Download failed: HTTP {resp.status}")
             with open(final_path, 'wb') as f:
@@ -705,7 +710,7 @@ async def _convert_to_h264(input_path):
         print(f"[TikTok] FFmpeg nicht gefunden, überspringe Conversion")
         return input_path
     
-    output_path = str(TIKTOK_DOWNLOAD_DIR / 'tiktok_h264.mp4')
+    output_path = input_path.replace('.mp4', '_h264.mp4')
     convert_cmd = [
         ffmpeg_path, '-y', '-i', input_path,
         '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
@@ -4005,11 +4010,11 @@ async def on_message(message):
                         file_size = os.path.getsize(filename)
                         print(f"[TikTok] Sending file: {file_size} bytes")
                         
-                        if file_size > 8 * 1024 * 1024:
+                        if file_size > 25 * 1024 * 1024:
                             await message.remove_reaction("⏳", bot.user)
                             await message.add_reaction("❌")
                             await message.reply(
-                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 8MB.",
+                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 25MB.",
                                 mention_author=False
                             )
                             os.remove(filename)
