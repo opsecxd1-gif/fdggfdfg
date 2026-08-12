@@ -2501,6 +2501,8 @@ async def before_membercount_refresh():
 # =====================================
 
 VOICE_SETUP_FILE = DATA_DIR / "voice_setup.json"
+VOICE_OWNERS_FILE = DATA_DIR / "voice_owners.json"
+VOICE_SETTINGS_FILE = DATA_DIR / "voice_settings.json"
 voice_channel_owners = {}
 voice_channel_settings = {}
 
@@ -2513,6 +2515,28 @@ def load_voice_setup():
 def save_voice_setup(data):
     with open(VOICE_SETUP_FILE, "w") as f:
         json.dump(data, f, indent=2)
+
+def load_voice_owners():
+    if VOICE_OWNERS_FILE.exists():
+        with open(VOICE_OWNERS_FILE, "r") as f:
+            data = json.load(f)
+            return {int(k): int(v) for k, v in data.items()}
+    return {}
+
+def save_voice_owners(data):
+    with open(VOICE_OWNERS_FILE, "w") as f:
+        json.dump({str(k): v for k, v in data.items()}, f, indent=2)
+
+def load_voice_settings_file():
+    if VOICE_SETTINGS_FILE.exists():
+        with open(VOICE_SETTINGS_FILE, "r") as f:
+            data = json.load(f)
+            return {int(k): v for k, v in data.items()}
+    return {}
+
+def save_voice_settings_file(data):
+    with open(VOICE_SETTINGS_FILE, "w") as f:
+        json.dump({str(k): v for k, v in data.items()}, f, indent=2)
 
 class VoiceChannelView(discord.ui.View):
     def __init__(self, owner_id: int, channel_id: int):
@@ -2540,6 +2564,7 @@ class VoiceChannelView(discord.ui.View):
         
         settings["private"] = not is_private
         voice_channel_settings[self.channel_id] = settings
+        save_voice_settings_file(voice_channel_settings)
         
         button.label = "Public" if not is_private else "Private"
         button.emoji = "🌍" if not is_private else "🔒"
@@ -2567,6 +2592,7 @@ class VoiceChannelView(discord.ui.View):
         
         settings["hidden"] = not is_hidden
         voice_channel_settings[self.channel_id] = settings
+        save_voice_settings_file(voice_channel_settings)
         
         button.label = "Show" if not is_hidden else "Hide"
         
@@ -2719,6 +2745,7 @@ class OwnerSelect(discord.ui.Select):
             return
         
         voice_channel_owners[self.channel_id] = target_id
+        save_voice_owners(voice_channel_owners)
         
         overwrites = channel.overwrites_for(target_member)
         overwrites.update(
@@ -3051,6 +3078,7 @@ async def vc_changeowner(interaction: discord.Interaction, user_id: str):
         return
     
     voice_channel_owners[old_channel_id] = target_id
+    save_voice_owners(voice_channel_owners)
     
     overwrites = old_owner_channel.overwrites_for(target_member)
     overwrites.update(
@@ -3690,6 +3718,14 @@ async def on_ready():
     except Exception as e:
         print(f"[on_ready] Automod Config Fehler: {e}")
     
+    global voice_channel_owners, voice_channel_settings
+    try:
+        voice_channel_owners = load_voice_owners()
+        voice_channel_settings = load_voice_settings_file()
+        print(f"[on_ready] Voice Owners geladen: {len(voice_channel_owners)} Channels")
+    except Exception as e:
+        print(f"[on_ready] Voice Owners Fehler: {e}")
+    
     try:
         if not update_live_leaderboard.is_running():
             update_live_leaderboard.start()
@@ -3911,6 +3947,8 @@ async def on_voice_state_update(member, before, after):
                 
                 voice_channel_owners[new_channel.id] = member.id
                 voice_channel_settings[new_channel.id] = {"private": False, "hidden": False}
+                save_voice_owners(voice_channel_owners)
+                save_voice_settings_file(voice_channel_settings)
                 
                 try:
                     await member.move_to(new_channel)
@@ -3929,6 +3967,8 @@ async def on_voice_state_update(member, before, after):
                 if len(channel.members) == 0:
                     voice_channel_owners.pop(channel.id, None)
                     voice_channel_settings.pop(channel.id, None)
+                    save_voice_owners(voice_channel_owners)
+                    save_voice_settings_file(voice_channel_settings)
                     try:
                         await channel.delete(reason="Channel leer")
                     except Exception as e:
@@ -3936,6 +3976,7 @@ async def on_voice_state_update(member, before, after):
                 elif voice_channel_owners.get(channel.id) == member.id:
                     new_owner = channel.members[0]
                     voice_channel_owners[channel.id] = new_owner.id
+                    save_voice_owners(voice_channel_owners)
                     
                     try:
                         old_overwrites = channel.overwrites_for(member)
