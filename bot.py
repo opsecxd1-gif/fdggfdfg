@@ -3645,30 +3645,54 @@ async def on_ready():
         print(f"Sync fehlgeschlagen: {e}")
     
     global tiktok_mode
-    tiktok_mode = load_tiktok_mode()
+    try:
+        tiktok_mode = load_tiktok_mode()
+    except Exception as e:
+        print(f"[on_ready] TikTok Mode Fehler: {e}")
     
     global automod_config
-    automod_config = load_automod_config()
+    try:
+        automod_config = load_automod_config()
+    except Exception as e:
+        print(f"[on_ready] Automod Config Fehler: {e}")
     
-    if not update_live_leaderboard.is_running():
-        update_live_leaderboard.start()
+    try:
+        if not update_live_leaderboard.is_running():
+            update_live_leaderboard.start()
+    except Exception as e:
+        print(f"[on_ready] Leaderboard Task Fehler: {e}")
     
-    memes_config = load_memes_config()
-    for guild_str, settings in memes_config.items():
-        if settings.get("enabled", False):
-            if not auto_memes_task.is_running():
-                auto_memes_task.start()
-                break
+    try:
+        memes_config = load_memes_config()
+        for guild_str, settings in memes_config.items():
+            if settings.get("enabled", False):
+                if not auto_memes_task.is_running():
+                    interval_minutes = settings.get("interval_minutes", 60)
+                    auto_memes_task.change_interval(minutes=interval_minutes)
+                    auto_memes_task.start()
+                    print(f"[Memes] Task gestartet mit {interval_minutes} Min Interval")
+                    break
+    except Exception as e:
+        print(f"[on_ready] Memes Task Fehler: {e}")
     
-    fragen_config = load_fragen_config()
-    for guild_str, settings in fragen_config.items():
-        if settings.get("enabled", False):
-            if not frage_des_tages_task.is_running():
-                frage_des_tages_task.start()
-                break
+    try:
+        fragen_config = load_fragen_config()
+        for guild_str, settings in fragen_config.items():
+            if settings.get("enabled", False):
+                if not frage_des_tages_task.is_running():
+                    frage_des_tages_task.start()
+                    print(f"[Frage] Task gestartet")
+                    break
+    except Exception as e:
+        print(f"[on_ready] Frage Task Fehler: {e}")
     
-    if not auto_save_data.is_running():
-        auto_save_data.start()
+    try:
+        if not auto_save_data.is_running():
+            auto_save_data.start()
+    except Exception as e:
+        print(f"[on_ready] AutoSave Task Fehler: {e}")
+    
+    print(f"[on_ready] Alle Tasks initialisiert!")
 
 @tasks.loop(minutes=30)
 async def auto_save_data():
@@ -4076,19 +4100,32 @@ async def auto_memes_task():
                 if not sent_any:
                     print(f"[Memes] Kein Video gesendet fuer {guild.name}!")
             else:
+                sent_urls = set(settings.get("sent_meme_urls", []))
+                max_history = 100
+                
                 meme_url, video_id = await get_meme_for_guild(guild.id)
                 if meme_url:
-                    try:
-                        embed = discord.Embed(
-                            title="Auto-Meme",
-                            color=discord.Color.random()
-                        )
-                        embed.set_image(url=meme_url)
-                        embed.set_footer(text=f"Quelle: {source.upper()}")
-                        await channel.send(embed=embed)
-                        print(f"[Memes] Gesendet in {channel.name} ({guild.name})")
-                    except Exception as e:
-                        print(f"[Memes] Fehler beim Senden: {e}")
+                    if meme_url in sent_urls:
+                        meme_url, video_id = await get_meme_for_guild(guild.id)
+                    if meme_url:
+                        try:
+                            embed = discord.Embed(
+                                title="Auto-Meme",
+                                color=discord.Color.random()
+                            )
+                            embed.set_image(url=meme_url)
+                            embed.set_footer(text=f"Quelle: {source.upper()}")
+                            await channel.send(embed=embed)
+                            print(f"[Memes] Gesendet in {channel.name} ({guild.name})")
+                            sent_urls.add(meme_url)
+                            if len(sent_urls) > max_history:
+                                sent_urls = set(list(sent_urls)[-max_history:])
+                            settings["sent_meme_urls"] = list(sent_urls)
+                            save_memes_config(config)
+                        except Exception as e:
+                            print(f"[Memes] Fehler beim Senden: {e}")
+                    else:
+                        print(f"[Memes] Kein neues Memé gefunden fuer {guild.name}")
     except Exception as e:
         print(f"[Memes] CRITICAL Fehler in auto_memes_task: {e}")
 
@@ -4403,7 +4440,10 @@ async def memesstatus_command(interaction: discord.Interaction):
         embed.add_field(name="Liste", value=f"{len(liste)} Memes", inline=True)
     elif settings.get("source") == "interpol":
         sent_ids = settings.get("sent_video_ids", [])
-        embed.add_field(name="Gesendet", value=f"{len(sent_ids)} Videos", inline=True)
+        embed.add_field(name="Gesendet (Videos)", value=f"{len(sent_ids)} Videos", inline=True)
+    elif settings.get("source") in ("reddit", "imgur", "liste", "gemischt"):
+        sent_urls = settings.get("sent_meme_urls", [])
+        embed.add_field(name="Gesendet (Memes)", value=f"{len(sent_urls)} Memes", inline=True)
     
     await interaction.response.send_message(embed=embed)
 
@@ -4419,9 +4459,11 @@ async def memesreset_command(interaction: discord.Interaction):
     
     old_count = len(config[guild_str].get("sent_video_ids", []))
     config[guild_str]["sent_video_ids"] = []
+    old_meme_count = len(config[guild_str].get("sent_meme_urls", []))
+    config[guild_str]["sent_meme_urls"] = []
     save_memes_config(config)
     
-    await interaction.response.send_message(f"**History resetet!** {old_count} gesendete Videos vergessen. Alle Videos werden jetzt wieder gesendet.")
+    await interaction.response.send_message(f"**History resetet!** {old_count} gesendete Videos + {old_meme_count} gesendete Memes vergessen. Alles wird jetzt wieder gesendet.")
 
 @bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufügen")
 @is_admin_or_owner()
