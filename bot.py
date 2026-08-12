@@ -4066,19 +4066,12 @@ async def auto_memes_task():
                 
                 if videos:
                     random.shuffle(videos)
-                    for chosen in videos[:3]:
-                        meme_url = chosen["url"]
-                        video_id = chosen["id"]
-                        video_size = chosen.get("size", 0)
-                        
-                        if video_size > MAX_VIDEO_SIZE:
-                            if video_id:
-                                if "sent_video_ids" not in settings:
-                                    settings["sent_video_ids"] = []
-                                settings["sent_video_ids"].append(video_id)
-                                config_changed = True
-                            continue
-                        
+                    chosen = videos[0]
+                    meme_url = chosen["url"]
+                    video_id = chosen["id"]
+                    video_size = chosen.get("size", 0)
+                    
+                    if video_size <= MAX_VIDEO_SIZE:
                         try:
                             async with aiohttp.ClientSession() as session:
                                 async with session.get(meme_url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
@@ -4097,21 +4090,16 @@ async def auto_memes_task():
                                             await channel.send(embed=embed, file=video_file)
                                             print(f"[Memes] #{video_id} gesendet in {channel.name}")
                                             sent_any = True
-                                        if video_id:
-                                            if "sent_video_ids" not in settings:
-                                                settings["sent_video_ids"] = []
-                                            settings["sent_video_ids"].append(video_id)
-                                            config_changed = True
-                                    else:
-                                        if video_id:
-                                            if "sent_video_ids" not in settings:
-                                                settings["sent_video_ids"] = []
-                                            settings["sent_video_ids"].append(video_id)
-                                            config_changed = True
                         except asyncio.TimeoutError:
                             print(f"[Memes] Timeout #{video_id}")
                         except Exception as e:
                             print(f"[Memes] Fehler #{video_id}: {e}")
+                    
+                    if video_id:
+                        if "sent_video_ids" not in settings:
+                            settings["sent_video_ids"] = []
+                        settings["sent_video_ids"].append(video_id)
+                        config_changed = True
                 else:
                     print(f"[Memes] Keine Videos fuer {guild.name}")
                 
