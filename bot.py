@@ -2477,6 +2477,18 @@ async def on_interaction(interaction: discord.Interaction):
                 await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
 # =====================================
+# MEMBER COUNT AUTO-UPDATE
+# =====================================
+
+@bot.event
+async def on_member_join(member):
+    await update_member_count_channels()
+
+@bot.event
+async def on_member_remove(member):
+    await update_member_count_channels()
+
+# =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
 # =====================================
 
@@ -5078,6 +5090,112 @@ async def automod_command(interaction: discord.Interaction, aktion: app_commands
         desc = "❌ **Automod deaktiviert!**"
     
     await interaction.response.send_message(desc)
+
+# =====================================
+# MEMBER COUNT CHANNEL SYSTEM
+# =====================================
+
+MEMBERCOUNT_CONFIG_FILE = DATA_DIR / "membercount_config.json"
+
+def load_membercount_config():
+    if MEMBERCOUNT_CONFIG_FILE.exists():
+        with open(MEMBERCOUNT_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_membercount_config(data):
+    with open(MEMBERCOUNT_CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+async def update_member_count_channels():
+    config = load_membercount_config()
+    for guild_str, settings in config.items():
+        channel_id = settings.get("channel_id")
+        if not channel_id:
+            continue
+        channel = bot.get_channel(channel_id)
+        if not channel:
+            continue
+        guild = channel.guild
+        if not guild:
+            continue
+        member_count = guild.member_count
+        prefix = settings.get("prefix", "Members")
+        new_name = f"{prefix}: {member_count}"
+        if channel.name != new_name:
+            try:
+                await channel.edit(name=new_name)
+                print(f"[MemberCount] {channel.name} -> {new_name}")
+            except discord.Forbidden:
+                print(f"[MemberCount] Keine Berechtigung fuer {channel.name}")
+            except Exception as e:
+                print(f"[MemberCount] Fehler: {e}")
+
+@bot.tree.command(name="membercountsetup", description="Voice-Channel fuer Member-Anzahl einrichten")
+@is_admin_or_owner()
+@app_commands.describe(
+    channel="Voice-Channel der die Anzahl anzeigen soll",
+    prefix="Text vor der Zahl (z.B. Members, Mitglieder, Users)"
+)
+async def membercountsetup_command(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel,
+    prefix: str = "Members"
+):
+    if not isinstance(channel, discord.VoiceChannel):
+        await interaction.response.send_message("Das muss ein **Voice-Channel** sein!", ephemeral=True)
+        return
+    
+    config = load_membercount_config()
+    config[str(interaction.guild_id)] = {
+        "channel_id": channel.id,
+        "prefix": prefix
+    }
+    save_membercount_config(config)
+    
+    member_count = interaction.guild.member_count
+    new_name = f"{prefix}: {member_count}"
+    try:
+        await channel.edit(name=new_name)
+    except:
+        pass
+    
+    await interaction.response.send_message(
+        f"**Member-Count Channel eingerichtet!**\n\n"
+        f"**Channel:** {channel.mention}\n"
+        f"**Anzeige:** {new_name}\n\n"
+        f"Updated sich automatisch bei Join/Leave!"
+    )
+
+@bot.tree.command(name="membercount", description="Member-Anzahl Channel sofort updaten")
+@is_admin_or_owner()
+async def membercount_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    await update_member_count_channels()
+    config = load_membercount_config()
+    guild_str = str(interaction.guild_id)
+    if guild_str in config:
+        channel = bot.get_channel(config[guild_str].get("channel_id", 0))
+        member_count = interaction.guild.member_count
+        prefix = config[guild_str].get("prefix", "Members")
+        await interaction.followup.send(
+            f"**Updated!** {channel.mention if channel else 'Channel'}: {prefix}: {member_count}",
+            ephemeral=True
+        )
+    else:
+        await interaction.followup.send("Noch nicht eingerichtet! Benutze `/membercountsetup`", ephemeral=True)
+
+@bot.tree.command(name="membercountremove", description="Member-Count Channel entfernen")
+@is_admin_or_owner()
+async def membercountremove_command(interaction: discord.Interaction):
+    config = load_membercount_config()
+    guild_str = str(interaction.guild_id)
+    if guild_str in config:
+        del config[guild_str]
+        save_membercount_config(config)
+        await interaction.response.send_message("Member-Count Channel entfernt!")
+    else:
+        await interaction.response.send_message("Kein Member-Count Channel eingerichtet.", ephemeral=True)
 
 # =====================================
 # MAIN / ON_READY (Tasks starten)
