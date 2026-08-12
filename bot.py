@@ -697,6 +697,41 @@ async def _download_file_from_url(download_url, filename_prefix="tiktok"):
     print(f"[TikTok] Downloaded file: {final_path} ({file_size} bytes)")
     return final_path
 
+async def _convert_to_h264(input_path):
+    """Konvertiert Video zu h264 fuer Discord PC-Kompatibilitaet"""
+    import shutil
+    ffmpeg_path = shutil.which('ffmpeg')
+    if not ffmpeg_path:
+        print(f"[TikTok] FFmpeg nicht gefunden, überspringe Conversion")
+        return input_path
+    
+    output_path = str(TIKTOK_DOWNLOAD_DIR / 'tiktok_h264.mp4')
+    convert_cmd = [
+        ffmpeg_path, '-y', '-i', input_path,
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+        '-c:a', 'aac', '-b:a', '96k',
+        '-movflags', '+faststart',
+        '-pix_fmt', 'yuv420p',
+        output_path
+    ]
+    print(f"[TikTok] Converting to h264...")
+    proc = await asyncio.create_subprocess_exec(
+        *convert_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode == 0 and os.path.exists(output_path):
+        final_size = os.path.getsize(output_path)
+        print(f"[TikTok] h264 Conversion OK: {final_size} bytes")
+        if input_path != output_path and os.path.exists(input_path):
+            os.remove(input_path)
+        return output_path
+    else:
+        stderr_text = stderr.decode()[-500:] if stderr else "no stderr"
+        print(f"[TikTok] h264 Conversion FAILED (code {proc.returncode}): {stderr_text}")
+        return input_path
+
 async def _try_download_with_mode(url, mode):
     """Versucht einen Download mit dem gegebenen Mode"""
     if mode == "clyppy":
@@ -710,6 +745,7 @@ async def _try_download_with_mode(url, mode):
     else:
         raise Exception(f"Unknown mode: {mode}")
     filename = await _download_file_from_url(download_url)
+    filename = await _convert_to_h264(filename)
     return filename, title
 
 async def _try_ytdlp_fallback(url):
@@ -746,6 +782,7 @@ async def _try_ytdlp_fallback(url):
         if file_size < 1000:
             os.remove(filename)
             raise Exception(f"yt-dlp file too small ({file_size} bytes)")
+        filename = await _convert_to_h264(filename)
         return filename, info.get('title', 'TikTok Video')
 
 async def download_tiktok_video(url, mode="clyppy"):
@@ -3950,7 +3987,10 @@ async def on_message(message):
         try:
             await message.edit(suppress=True)
         except:
-            pass
+            try:
+                await message.delete()
+            except:
+                pass
         
         mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
         
