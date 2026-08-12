@@ -710,31 +710,71 @@ async def _convert_to_h264(input_path):
         print(f"[TikTok] FFmpeg nicht gefunden, überspringe Conversion")
         return input_path
     
+    probe_cmd = [
+        ffmpeg_path, '-i', input_path,
+        '-f', 'null', '-t', '0', '-'
+    ]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *probe_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await proc.communicate()
+        probe_text = stderr.decode(errors='ignore')
+        if 'Video: h264' in probe_text or 'Video: avc1' in probe_text:
+            print(f"[TikTok] Already h264, skipping conversion")
+            return input_path
+        codec_info = ""
+        for line in probe_text.split('\n'):
+            if 'Video:' in line:
+                codec_info = line.strip()
+                break
+        print(f"[TikTok] Detected codec: {codec_info}")
+    except:
+        pass
+    
     output_path = input_path.replace('.mp4', '_h264.mp4')
     convert_cmd = [
         ffmpeg_path, '-y', '-i', input_path,
-        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
-        '-c:a', 'aac', '-b:a', '96k',
+        '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+        '-c:a', 'aac', '-b:a', '128k',
         '-movflags', '+faststart',
         '-pix_fmt', 'yuv420p',
+        '-vf', "scale='trunc(iw/2)*2:trunc(ih/2)*2'",
+        '-avoid_negative_ts', 'make_zero',
+        '-max_muxing_queue_size', '1024',
         output_path
     ]
-    print(f"[TikTok] Converting to h264...")
-    proc = await asyncio.create_subprocess_exec(
-        *convert_cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await proc.communicate()
-    if proc.returncode == 0 and os.path.exists(output_path):
+    print(f"[TikTok] Converting to h264: {input_path} -> {output_path}")
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *convert_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+    except asyncio.TimeoutError:
+        print(f"[TikTok] FFmpeg conversion timed out after 120s")
+        try:
+            proc.kill()
+        except:
+            pass
+        return input_path
+    except Exception as e:
+        print(f"[TikTok] FFmpeg process error: {e}")
+        return input_path
+    
+    if proc.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
         final_size = os.path.getsize(output_path)
         print(f"[TikTok] h264 Conversion OK: {final_size} bytes")
         if input_path != output_path and os.path.exists(input_path):
             os.remove(input_path)
         return output_path
     else:
-        stderr_text = stderr.decode()[-500:] if stderr else "no stderr"
-        print(f"[TikTok] h264 Conversion FAILED (code {proc.returncode}): {stderr_text}")
+        stderr_text = stderr.decode(errors='ignore')[-800:] if stderr else "no stderr"
+        print(f"[TikTok] h264 Conversion FAILED (code {proc.returncode})")
+        print(f"[TikTok] FFmpeg stderr: {stderr_text}")
         return input_path
 
 async def _try_download_with_mode(url, mode):
