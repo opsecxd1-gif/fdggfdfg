@@ -163,44 +163,51 @@ async def fetch_imgur_memes(tag="memes", page=1):
 async def fetch_interpol_videos(limit=50, exclude_ids=None):
     all_videos = []
     cursor = None
-    max_pages = 100
+    max_pages = 30
     page = 0
     max_size_mb = 8
     try:
         async with aiohttp.ClientSession() as session:
             while page < max_pages:
-                url = f"https://interpol.cc/api/videos?pageSize=50"
-                if cursor:
-                    url += f"&cursor={cursor}"
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    if resp.status != 200:
-                        print(f"[Interpol] API Status {resp.status} auf Seite {page}")
-                        break
-                    data = await resp.json()
-                    items = data.get("items", [])
-                    cursor = data.get("nextCursor")
-                    for item in items:
-                        if item.get("transcodeStatus") != "Completed":
-                            continue
-                        video_id = item.get("id")
-                        if exclude_ids and video_id in exclude_ids:
-                            continue
-                        file_size = item.get("fileSizeBytes", 0)
-                        if file_size > max_size_mb * 1024 * 1024:
-                            continue
-                        download_url = item.get("downloadUrl", "")
-                        if download_url:
-                            if download_url.startswith("/"):
-                                download_url = "https://interpol.cc" + download_url
-                            all_videos.append({
-                                "url": download_url,
-                                "title": item.get("title", "Interpol Video"),
-                                "id": video_id,
-                                "size": file_size
-                            })
-                    page += 1
-                    if not cursor:
-                        break
+                try:
+                    url = f"https://interpol.cc/api/videos?pageSize=50"
+                    if cursor:
+                        url += f"&cursor={cursor}"
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as resp:
+                        if resp.status != 200:
+                            print(f"[Interpol] API Status {resp.status} auf Seite {page}")
+                            break
+                        data = await resp.json()
+                        items = data.get("items", [])
+                        cursor = data.get("nextCursor")
+                        for item in items:
+                            if item.get("transcodeStatus") != "Completed":
+                                continue
+                            video_id = item.get("id")
+                            if exclude_ids and video_id in exclude_ids:
+                                continue
+                            file_size = item.get("fileSizeBytes", 0)
+                            if file_size > max_size_mb * 1024 * 1024:
+                                continue
+                            download_url = item.get("downloadUrl", "")
+                            if download_url:
+                                if download_url.startswith("/"):
+                                    download_url = "https://interpol.cc" + download_url
+                                all_videos.append({
+                                    "url": download_url,
+                                    "title": item.get("title", "Interpol Video"),
+                                    "id": video_id,
+                                    "size": file_size
+                                })
+                        page += 1
+                        if not cursor:
+                            break
+                except asyncio.TimeoutError:
+                    print(f"[Interpol] Timeout auf Seite {page}, breche ab")
+                    break
+                except Exception as e:
+                    print(f"[Interpol] Fehler auf Seite {page}: {e}")
+                    break
             print(f"[Interpol] {len(all_videos)} Videos geladen ({page} Seiten)")
     except Exception as e:
         print(f"[Memes] Interpol API Fehler: {e}")
@@ -4038,29 +4045,33 @@ async def auto_memes_task():
             
             if source == "interpol":
                 config_changed = False
-                VIDEOS_PER_LOOP = 3
                 MAX_VIDEO_SIZE = 8 * 1024 * 1024
                 sent_any = False
-                sent_count = 0
                 
-                videos = await fetch_interpol_videos(exclude_ids=exclude_ids)
+                try:
+                    videos = await fetch_interpol_videos(exclude_ids=exclude_ids)
+                except Exception as e:
+                    print(f"[Memes] Interpol API Fehler fuer {guild.name}: {e}")
+                    videos = []
+                
                 if not videos and exclude_ids:
-                    print(f"[Memes] Alle {len(exclude_ids)} Videos bereits gesendet - Reset fuer {guild.name}")
+                    print(f"[Memes] Alle Videos gesendet - Reset fuer {guild.name}")
                     settings["sent_video_ids"] = []
                     save_memes_config(config)
-                    videos = await fetch_interpol_videos()
+                    try:
+                        videos = await fetch_interpol_videos()
+                    except Exception as e:
+                        print(f"[Memes] Reset-Fetch Fehler: {e}")
+                        videos = []
                 
                 if videos:
                     random.shuffle(videos)
-                    for chosen in videos:
-                        if sent_count >= VIDEOS_PER_LOOP:
-                            break
+                    for chosen in videos[:3]:
                         meme_url = chosen["url"]
                         video_id = chosen["id"]
                         video_size = chosen.get("size", 0)
                         
                         if video_size > MAX_VIDEO_SIZE:
-                            print(f"[Memes] Video {video_id} zu gross ({video_size//1024//1024}MB), skip")
                             if video_id:
                                 if "sent_video_ids" not in settings:
                                     settings["sent_video_ids"] = []
@@ -4084,37 +4095,28 @@ async def auto_memes_task():
                                             )
                                             embed.set_footer(text="Quelle: INTERPOL.CC")
                                             await channel.send(embed=embed, file=video_file)
-                                            print(f"[Memes] Interpol Video #{video_id} gesendet ({len(video_data)//1024//1024}MB) in {channel.name}")
+                                            print(f"[Memes] #{video_id} gesendet in {channel.name}")
                                             sent_any = True
-                                            sent_count += 1
-                                        else:
-                                            print(f"[Memes] Video #{video_id} nach Download zu gross ({len(video_data)//1024//1024}MB)")
-                                        
                                         if video_id:
                                             if "sent_video_ids" not in settings:
                                                 settings["sent_video_ids"] = []
                                             settings["sent_video_ids"].append(video_id)
                                             config_changed = True
                                     else:
-                                        print(f"[Memes] HTTP {resp.status} fuer Video #{video_id}")
                                         if video_id:
                                             if "sent_video_ids" not in settings:
                                                 settings["sent_video_ids"] = []
                                             settings["sent_video_ids"].append(video_id)
                                             config_changed = True
                         except asyncio.TimeoutError:
-                            print(f"[Memes] Timeout bei Video #{video_id}")
+                            print(f"[Memes] Timeout #{video_id}")
                         except Exception as e:
-                            print(f"[Memes] Fehler bei Video #{video_id}: {e}")
+                            print(f"[Memes] Fehler #{video_id}: {e}")
                 else:
-                    print(f"[Memes] Keine Videos von API fuer {guild.name}")
+                    print(f"[Memes] Keine Videos fuer {guild.name}")
                 
                 if config_changed:
                     save_memes_config(config)
-                
-                total_sent = len(settings.get("sent_video_ids", []))
-                remaining = len(videos) if videos else 0
-                print(f"[Memes] {sent_count} Videos gesendet, {total_sent} total gesendet, ~{remaining} in Queue")
             else:
                 sent_urls = set(settings.get("sent_meme_urls", []))
                 max_history = 100
@@ -5098,4 +5100,14 @@ if __name__ == "__main__":
     if not TOKEN:
         print("FEHLER: DISCORD_TOKEN nicht gesetzt!")
         exit(1)
-    bot.run(TOKEN)
+    while True:
+        try:
+            print("[BOT] Starte Bot...")
+            bot.run(TOKEN)
+        except KeyboardInterrupt:
+            print("[BOT] Manueller Abbruch")
+            break
+        except Exception as e:
+            print(f"[BOT] CRASH: {e}")
+            print("[BOT] Neustart in 5 Sekunden...")
+            time.sleep(5)
