@@ -596,100 +596,191 @@ def is_tiktok_url(url):
             return True
     return False
 
+async def _download_via_clipx(url):
+    """Clyppy Mode: ClipX API (kein Key noetig)"""
+    api_url = f"https://clipx.zamdev.workers.dev/?url={url}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status != 200:
+                raise Exception(f"ClipX returned {resp.status}")
+            data = await resp.json()
+            if not data.get("success"):
+                raise Exception(f"ClipX error: {data.get('error', 'unknown')}")
+            download_url = data.get("data", {}).get("url")
+            title = data.get("data", {}).get("title", "TikTok Video")
+            if not download_url:
+                raise Exception("ClipX: no download URL")
+            return download_url, title
+
+async def _download_via_tdownv4(url):
+    """dlbot Mode: tdownv4 API (kein Key noetig)"""
+    api_url = f"https://tdownv4.sl-bjs.workers.dev/?down={url}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status != 200:
+                raise Exception(f"tdownv4 returned {resp.status}")
+            text = await resp.text()
+            import re as _re
+            match = _re.search(r'href="(https?://[^"]*\.mp4[^"]*)"', text)
+            if not match:
+                match = _re.search(r'(https?://[^"\']*\.mp4[^"\']*)', text)
+            if not match:
+                raise Exception("tdownv4: no MP4 link found in response")
+            download_url = match.group(1)
+            return download_url, "TikTok Video"
+
+async def _download_via_curlx(url):
+    """tikcord Mode: curl-x API (kein Key noetig)"""
+    api_url = "https://www.curl-x.com/api/extract"
+    payload = {"url": url}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(api_url, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status != 200:
+                raise Exception(f"curl-x returned {resp.status}")
+            data = await resp.json()
+            if data.get("error"):
+                raise Exception(f"curl-x error: {data['error']}")
+            items = data.get("media", data.get("data", []))
+            if isinstance(items, list):
+                for item in items:
+                    if item.get("type") == "video" or item.get("url", "").endswith(".mp4"):
+                        return item["url"], data.get("title", "TikTok Video")
+            download_url = data.get("download_url") or data.get("url")
+            title = data.get("title", "TikTok Video")
+            if not download_url:
+                raise Exception("curl-x: no download URL")
+            return download_url, title
+
+async def _download_via_quickvids(url):
+    """quickvids Mode: dtiktok API (kein Key noetig)"""
+    import re as _re
+    video_id_match = _re.search(r'/video/(\d+)', url)
+    if not video_id_match:
+        vm_match = _re.search(r'vm\.tiktok\.com/(\w+)', url)
+        if not vm_match:
+            raise Exception("quickvids: could not extract video ID")
+        short_code = vm_match.group(1)
+        resolve_url = f"https://vt.tiktok.com/{short_code}/"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(resolve_url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                final_url = str(resp.url)
+                video_id_match = _re.search(r'/video/(\d+)', final_url)
+                if not video_id_match:
+                    raise Exception("quickvids: could not resolve short URL")
+    video_id = video_id_match.group(1)
+    api_url = f"https://api.tikliveapi.com/download-video/?url=https://www.tiktok.com/video/{video_id}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status != 200:
+                raise Exception(f"quickvids returned {resp.status}")
+            data = await resp.json()
+            download_url = data.get("video_hd") or data.get("video")
+            if not download_url:
+                raise Exception("quickvids: no download URL")
+            return download_url, "TikTok Video"
+
+async def _download_file_from_url(download_url, filename_prefix="tiktok"):
+    """Laedt eine Datei von einer direkten URL herunter"""
+    TIKTOK_DOWNLOAD_DIR.mkdir(exist_ok=True)
+    final_path = str(TIKTOK_DOWNLOAD_DIR / f'{filename_prefix}.mp4')
+    async with aiohttp.ClientSession() as session:
+        async with session.get(download_url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+            if resp.status != 200:
+                raise Exception(f"Download failed: HTTP {resp.status}")
+            with open(final_path, 'wb') as f:
+                async for chunk in resp.content.iter_chunked(8192):
+                    f.write(chunk)
+    file_size = os.path.getsize(final_path)
+    if file_size < 1000:
+        os.remove(final_path)
+        raise Exception(f"File too small ({file_size} bytes), likely corrupt")
+    print(f"[TikTok] Downloaded file: {final_path} ({file_size} bytes)")
+    return final_path
+
+async def _try_download_with_mode(url, mode):
+    """Versucht einen Download mit dem gegebenen Mode"""
+    if mode == "clyppy":
+        download_url, title = await _download_via_clipx(url)
+    elif mode == "dlbot":
+        download_url, title = await _download_via_tdownv4(url)
+    elif mode == "tikcord":
+        download_url, title = await _download_via_curlx(url)
+    elif mode == "quickvids":
+        download_url, title = await _download_via_quickvids(url)
+    else:
+        raise Exception(f"Unknown mode: {mode}")
+    filename = await _download_file_from_url(download_url)
+    return filename, title
+
+async def _try_ytdlp_fallback(url):
+    """Letzter Fallback: yt-dlp"""
+    base_opts = {
+        'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
+        'quiet': False,
+        'no_warnings': False,
+        'extract_flat': False,
+        'concurrent_fragment_downloads': 4,
+        'fragment_retries': 10,
+        'retries': 10,
+        'socket_timeout': 60,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Referer': 'https://www.tiktok.com/',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
+        'format': 'best[vcodec*=h264]/bestvideo[vcodec*=h264]+bestaudio/best',
+        'merge_output_format': 'mp4',
+    }
+    with yt_dlp.YoutubeDL(base_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info)
+        if not os.path.exists(filename):
+            base = os.path.splitext(filename)[0]
+            for ext in ['.mp4', '.webm', '.mkv', '.mov']:
+                if os.path.exists(base + ext):
+                    filename = base + ext
+                    break
+        if not os.path.exists(filename):
+            raise Exception("File not found after yt-dlp download")
+        file_size = os.path.getsize(filename)
+        if file_size < 1000:
+            os.remove(filename)
+            raise Exception(f"yt-dlp file too small ({file_size} bytes)")
+        return filename, info.get('title', 'TikTok Video')
+
 async def download_tiktok_video(url, mode="clyppy"):
+    """TikTok Download mit API-Fallback-Kette:
+    1. Gewaehlter Mode (clyppy/dlbot/tikcord/quickvids)
+    2. Naechster Mode als Fallback
+    3. yt-dlp als letzter Fallback
+    """
+    mode_order = ["clyppy", "dlbot", "tikcord", "quickvids"]
+    if mode in mode_order:
+        mode_order.remove(mode)
+        mode_order.insert(0, mode)
+
+    print(f"[TikTok] Starting download: {url} (preferred mode: {mode})")
+
+    for current_mode in mode_order:
+        try:
+            print(f"[TikTok] Trying mode: {current_mode}")
+            filename, title = await _try_download_with_mode(url, current_mode)
+            print(f"[TikTok] SUCCESS with mode: {current_mode}")
+            return filename, title
+        except Exception as e:
+            print(f"[TikTok] Mode {current_mode} failed: {e}")
+            continue
+
+    print(f"[TikTok] All API modes failed, trying yt-dlp fallback...")
     try:
-        base_opts = {
-            'outtmpl': str(TIKTOK_DOWNLOAD_DIR / '%(id)s.%(ext)s'),
-            'quiet': False,
-            'no_warnings': False,
-            'extract_flat': False,
-            'concurrent_fragment_downloads': 4,
-            'fragment_retries': 10,
-            'retries': 10,
-            'socket_timeout': 60,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                'Referer': 'https://www.tiktok.com/',
-                'Accept-Language': 'en-US,en;q=0.9',
-            },
-            'format': 'best[vcodec*=h264]/bestvideo[vcodec*=h264]+bestaudio/best',
-            'merge_output_format': 'mp4',
-        }
-        
-        print(f"[TikTok] Starting download: {url} (mode: {mode})")
-        
-        with yt_dlp.YoutubeDL(base_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            
-            print(f"[TikTok] Expected filename: {filename}")
-            
-            if not os.path.exists(filename):
-                base = os.path.splitext(filename)[0]
-                for ext in ['.mp4', '.webm', '.mkv', '.mov', '.mp4']:
-                    if os.path.exists(base + ext):
-                        filename = base + ext
-                        break
-            
-            if not os.path.exists(filename):
-                print(f"[TikTok] File not found after download!")
-                return None, None
-            
-            file_size = os.path.getsize(filename)
-            print(f"[TikTok] Downloaded: {filename} ({file_size} bytes)")
-            
-            if file_size < 1000:
-                print(f"[TikTok] File too small, likely corrupt")
-                os.remove(filename)
-                return None, None
-            
-            final_path = str(TIKTOK_DOWNLOAD_DIR / 'tiktok_final.mp4')
-            
-            import shutil
-            ffmpeg_path = shutil.which('ffmpeg')
-            
-            if not ffmpeg_path:
-                print(f"[TikTok] FFmpeg NOT FOUND at all!")
-                return filename, info.get('title', 'TikTok Video')
-            
-            print(f"[TikTok] FFmpeg found at: {ffmpeg_path}")
-            
-            convert_cmd = [
-                ffmpeg_path, '-y', '-i', filename,
-                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
-                '-c:a', 'aac', '-b:a', '96k',
-                '-movflags', '+faststart',
-                '-pix_fmt', 'yuv420p',
-                final_path
-            ]
-            
-            print(f"[TikTok] Converting to h264...")
-            proc = await asyncio.create_subprocess_exec(
-                *convert_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await proc.communicate()
-            
-            if proc.returncode == 0 and os.path.exists(final_path):
-                final_size = os.path.getsize(final_path)
-                print(f"[TikTok] Converted OK: {final_path} ({final_size} bytes)")
-                
-                if filename != final_path and os.path.exists(filename):
-                    os.remove(filename)
-                return final_path, info.get('title', 'TikTok Video')
-            else:
-                stderr_text = stderr.decode()[-1000:] if stderr else "no stderr"
-                print(f"[TikTok] FFmpeg FAILED (code {proc.returncode})")
-                print(f"[TikTok] FFmpeg stderr: {stderr_text}")
-                
-                print(f"[TikTok] Sending original file anyway")
-                return filename, info.get('title', 'TikTok Video')
+        filename, title = await _try_ytdlp_fallback(url)
+        print(f"[TikTok] SUCCESS with yt-dlp fallback")
+        return filename, title
     except Exception as e:
-        import traceback
-        print(f"[TikTok] Download EXCEPTION: {e}")
-        print(f"[TikTok] Traceback: {traceback.format_exc()}")
-        return None, None
+        print(f"[TikTok] yt-dlp also failed: {e}")
+
+    print(f"[TikTok] ALL methods failed for: {url}")
+    return None, None
 
 @bot.tree.command(name="add", description="Füge GIF/Media-Links hinzu")
 @is_admin_or_owner()
@@ -941,9 +1032,9 @@ async def import_command(
                     if text_links:
                         await new_channel.send("\n".join(text_links))
                         text_links = []
-                    embed = discord.Embed()
+                    embed = discord.Embed(description=f"[Video anschauen]({url})")
                     embed.set_video(url=url)
-                    await new_channel.send(embed=embed)
+                    await new_channel.send(content=url, embed=embed)
                 else:
                     text_links.append(url)
             if text_links:
@@ -1030,9 +1121,9 @@ async def import2_command(
                     await channel.send("\n".join(text_links))
                     text_links = []
                 if embed_on:
-                    embed = discord.Embed()
+                    embed = discord.Embed(description=f"[Video anschauen]({url})")
                     embed.set_video(url=url)
-                    await channel.send(embed=embed)
+                    await channel.send(content=url, embed=embed)
                 else:
                     await channel.send(url)
             else:
@@ -1493,9 +1584,9 @@ async def send_next_batch(channel_id, channel):
                 if text_links:
                     await channel.send("\n".join(text_links))
                     text_links = []
-                embed = discord.Embed()
+                embed = discord.Embed(description=f"[Video anschauen]({url})")
                 embed.set_video(url=url)
-                await channel.send(embed=embed)
+                await channel.send(content=url, embed=embed)
             else:
                 text_links.append(url)
         if text_links:
