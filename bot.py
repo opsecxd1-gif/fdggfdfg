@@ -2488,6 +2488,14 @@ async def on_member_join(member):
 async def on_member_remove(member):
     await update_member_count_channels()
 
+@tasks.loop(minutes=5)
+async def membercount_refresh():
+    await update_member_count_channels()
+
+@membercount_refresh.before_loop
+async def before_membercount_refresh():
+    await bot.wait_until_ready()
+
 # =====================================
 # VOICE CHANNEL MANAGEMENT SYSTEM
 # =====================================
@@ -3717,6 +3725,12 @@ async def on_ready():
             auto_save_data.start()
     except Exception as e:
         print(f"[on_ready] AutoSave Task Fehler: {e}")
+    
+    try:
+        if not membercount_refresh.is_running():
+            membercount_refresh.start()
+    except Exception as e:
+        print(f"[on_ready] MemberCount Refresh Fehler: {e}")
     
     print(f"[on_ready] Alle Tasks initialisiert!")
 
@@ -5131,21 +5145,17 @@ async def update_member_count_channels():
             except Exception as e:
                 print(f"[MemberCount] Fehler: {e}")
 
-@bot.tree.command(name="membercountsetup", description="Voice-Channel fuer Member-Anzahl einrichten")
+@bot.tree.command(name="membercountsetup", description="Channel fuer Member-Anzahl einrichten (Voice oder Text)")
 @is_admin_or_owner()
 @app_commands.describe(
-    channel="Voice-Channel der die Anzahl anzeigen soll",
+    channel="Channel der die Anzahl anzeigen soll",
     prefix="Text vor der Zahl (z.B. Members, Mitglieder, Users)"
 )
 async def membercountsetup_command(
     interaction: discord.Interaction,
-    channel: discord.TextChannel,
+    channel: discord.VoiceChannel,
     prefix: str = "Members"
 ):
-    if not isinstance(channel, discord.VoiceChannel):
-        await interaction.response.send_message("Das muss ein **Voice-Channel** sein!", ephemeral=True)
-        return
-    
     config = load_membercount_config()
     config[str(interaction.guild_id)] = {
         "channel_id": channel.id,
@@ -5156,14 +5166,21 @@ async def membercountsetup_command(
     member_count = interaction.guild.member_count
     new_name = f"{prefix}: {member_count}"
     try:
-        await channel.edit(name=new_name)
-    except:
-        pass
+        await channel.edit(name=new_name, reason="Member-Count Setup")
+        success = True
+    except discord.Forbidden:
+        success = False
+        new_name = f"{prefix}: ???"
+    except Exception as e:
+        success = False
+        new_name = f"{prefix}: ???"
+    
+    status = f"Channel Name: **{new_name}**" if success else "⚠️ **Keine Berechtigung** - Bot braucht `Channel verwalten` Permission!"
     
     await interaction.response.send_message(
-        f"**Member-Count Channel eingerichtet!**\n\n"
+        f"**Member-Count eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
-        f"**Anzeige:** {new_name}\n\n"
+        f"{status}\n\n"
         f"Updated sich automatisch bei Join/Leave!"
     )
 
