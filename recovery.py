@@ -90,8 +90,112 @@ class RecoveryManager:
         await self._load_all_configs()
         await self._validate_channels()
         await self._reconcile_voice_state()
+        await self._check_missing_configs()
+        await self._create_config_snapshot()
         
         self.log("=== STARTUP SEQUENZ ABGESCHLOSSEN ===")
+
+    async def _check_missing_configs(self):
+        """Prüft ob kritische Config-Dateien fehlen und loggt Warnungen"""
+        self.log("Prüfe auf fehlende Configs...")
+        
+        critical_configs = {
+            "voice_setup.json": "Voice Setup (lobby/category)",
+            "voice_owners.json": "Voice Channel Owners",
+            "voice_settings.json": "Voice Channel Settings",
+            "memes_config.json": "Auto-Memes Config",
+            "fragen_config.json": "Frage des Tages Config",
+            "automod.json": "Automod Config",
+            "level_config.json": "Level System Config",
+            "membercount_config.json": "MemberCount Config",
+            "ticket_config.json": "Ticket System Config",
+        }
+        
+        missing = []
+        empty = []
+        
+        for filename, description in critical_configs.items():
+            filepath = DATA_DIR / filename
+            if not filepath.exists():
+                missing.append(f"  ❌ {filename} - {description}")
+                self.log(f"FEHLT: {filename} ({description})", "WARN")
+            elif filepath.stat().st_size < 5:  # leer oder nur {}
+                try:
+                    with open(filepath, "r") as f:
+                        data = json.load(f)
+                    if not data:
+                        empty.append(f"  ⚠️ {filename} - {description} (leer)")
+                        self.log(f"LEER: {filename} ({description}) - Konfiguration nötig!", "WARN")
+                except:
+                    pass
+        
+        if missing or empty:
+            self.log("=== CONFIG-STATUS ===")
+            for m in missing:
+                self.log(m)
+            for e in empty:
+                self.log(e)
+            self.log("Fehlende/leere Configs müssen per Discord-Commands neu eingerichtet werden:")
+            self.log("  /voicesetup - Voice-Channel-System")
+            self.log("  /memessetup - Auto-Memes")
+            self.log("  /fragesetup - Frage des Tages")
+            self.log("  /automod ein - Automod")
+            self.log("  /membercountsetup - Member-Count")
+            self.log("  /ticketsetup - Ticket-System")
+            self.log("  /toggleleveling - Level-System")
+        
+        self.health_status["config_check"] = f"{len(missing)} missing, {len(empty)} empty"
+
+    async def _create_config_snapshot(self):
+        """Erstellt einen Snapshot aller Configs für Recovery-Zwecke"""
+        self.log("Erstelle Config-Snapshot...")
+        
+        snapshot = {
+            "timestamp": datetime.now().isoformat(),
+            "guilds": {},
+            "voice_channels": len(self.bot.voice_channel_owners) if hasattr(self.bot, 'voice_channel_owners') else 0,
+            "configs_loaded": self.health_status.get("configs", "unknown"),
+        }
+        
+        # Guild-spezifische Configs sammeln
+        try:
+            memes_config = AtomicJSON.load(DATA_DIR / "memes_config.json")
+            fragen_config = AtomicJSON.load(DATA_DIR / "fragen_config.json")
+            
+            for guild in self.bot.guilds:
+                guild_str = str(guild.id)
+                guild_data = {
+                    "name": guild.name,
+                    "member_count": guild.member_count,
+                }
+                
+                if guild_str in memes_config:
+                    mc = memes_config[guild_str]
+                    guild_data["memes"] = {
+                        "enabled": mc.get("enabled", False),
+                        "channel": mc.get("channel_id"),
+                        "source": mc.get("source", "reddit")
+                    }
+                
+                if guild_str in fragen_config:
+                    fc = fragen_config[guild_str]
+                    guild_data["fragen"] = {
+                        "enabled": fc.get("enabled", False),
+                        "channel": fc.get("channel_id")
+                    }
+                
+                snapshot["guilds"][guild_str] = guild_data
+        except Exception as e:
+            self.log(f"Snapshot Guild-Data Fehler: {e}", "ERROR")
+        
+        # Snapshot speichern
+        snapshot_path = DATA_DIR / "last_startup_snapshot.json"
+        try:
+            with open(snapshot_path, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f, indent=2, ensure_ascii=False)
+            self.log(f"Config-Snapshot gespeichert: {snapshot_path}")
+        except Exception as e:
+            self.log(f"Snapshot Fehler: {e}", "ERROR")
 
     async def _load_all_configs(self):
         self.log("Lade alle Configs...")
@@ -130,9 +234,11 @@ class RecoveryManager:
                     if ch_id:
                         channel = self.bot.get_channel(ch_id)
                         if not channel:
-                            self.log(f"Memes Channel {ch_id} NICHT GEFUNDEN fuer Guild {guild_str}", "ERROR")
-                            memes_config[guild_str]["enabled"] = False
-                            AtomicJSON.save(DATA_DIR / "memes_config.json", memes_config)
+                            guild = self.bot.get_guild(int(guild_str))
+                            if guild:
+                                channel = guild.get_channel(ch_id)
+                        if not channel:
+                            self.log(f"Memes Channel {ch_id} Cache-Miss fuer Guild {guild_str} (nicht deaktiviert)", "WARN")
                         else:
                             self.log(f"Memes Channel {channel.name} OK", "OK")
         except Exception as e:
@@ -146,9 +252,11 @@ class RecoveryManager:
                     if ch_id:
                         channel = self.bot.get_channel(ch_id)
                         if not channel:
-                            self.log(f"Frage Channel {ch_id} NICHT GEFUNDEN", "ERROR")
-                            fragen_config[guild_str]["enabled"] = False
-                            AtomicJSON.save(DATA_DIR / "fragen_config.json", fragen_config)
+                            guild = self.bot.get_guild(int(guild_str))
+                            if guild:
+                                channel = guild.get_channel(ch_id)
+                        if not channel:
+                            self.log(f"Frage Channel {ch_id} Cache-Miss (nicht deaktiviert)", "WARN")
                         else:
                             self.log(f"Frage Channel {channel.name} OK", "OK")
         except Exception as e:
@@ -161,7 +269,11 @@ class RecoveryManager:
                 if ch_id:
                     channel = self.bot.get_channel(ch_id)
                     if not channel:
-                        self.log(f"MemberCount Channel {ch_id} NICHT GEFUNDEN", "ERROR")
+                        guild = self.bot.get_guild(int(guild_str))
+                        if guild:
+                            channel = guild.get_channel(ch_id)
+                    if not channel:
+                        self.log(f"MemberCount Channel {ch_id} Cache-Miss (nicht deaktiviert)", "WARN")
                     else:
                         self.log(f"MemberCount Channel {channel.name} OK", "OK")
         except Exception as e:

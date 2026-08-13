@@ -5480,6 +5480,10 @@ async def update_member_count_channels():
             continue
         channel = bot.get_channel(channel_id)
         if not channel:
+            guild = bot.get_guild(int(guild_str))
+            if guild:
+                channel = guild.get_channel(channel_id)
+        if not channel:
             continue
         guild = channel.guild
         if not guild:
@@ -5573,6 +5577,151 @@ async def membercountremove_command(interaction: discord.Interaction):
 # BOT STATUS COMMAND
 # =====================================
 
+@bot.tree.command(name="systemcheck", description="Prueft und repariert ALLE Bot-Systeme automatisch")
+@is_admin_or_owner()
+async def systemcheck_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    fixes = []
+    warnings = []
+
+    # --- 1. Tasks pruefen und neustarten ---
+    all_tasks = {
+        "Auto-Memes": auto_memes_task,
+        "Frage des Tages": frage_des_tages_task,
+        "AutoSave": auto_save_data,
+        "MemberCount": membercount_refresh,
+        "Watchdog": watchdog_task,
+        "Leaderboard": update_live_leaderboard,
+        "DailyBackup": daily_config_backup,
+        "HealthMonitor": health_monitor,
+    }
+    for name, task in all_tasks.items():
+        try:
+            if not task.is_running():
+                task.start()
+                fixes.append(f"**{name}** - Task neugestartet")
+        except Exception as e:
+            if "already running" in str(e).lower():
+                pass
+            else:
+                warnings.append(f"**{name}** - {e}")
+
+    # --- 2. Memes Config pruefen und reaktivieren ---
+    memes_config = load_memes_config()
+    memes_repaired = 0
+    for guild_str, settings in memes_config.items():
+        ch_id = settings.get("channel_id")
+        if not ch_id:
+            continue
+        channel = bot.get_channel(ch_id)
+        if not channel:
+            guild = bot.get_guild(int(guild_str))
+            if guild:
+                channel = guild.get_channel(ch_id)
+        if channel and not settings.get("enabled"):
+            memes_config[guild_str]["enabled"] = True
+            settings.pop("_cache_misses", None)
+            memes_repaired += 1
+            fixes.append(f"Memes fuer {guild.name if guild else guild_str} reaktiviert")
+        settings.pop("_cache_misses", None)
+    if memes_repaired > 0:
+        save_memes_config(memes_config)
+
+    # --- 3. Memes Task starten wenn Config enabled aber Task laeuft nicht ---
+    try:
+        if not auto_memes_task.is_running():
+            for guild_str, settings in memes_config.items():
+                if settings.get("enabled"):
+                    interval = settings.get("interval_minutes", 60)
+                    auto_memes_task.change_interval(minutes=interval)
+                    auto_memes_task.start()
+                    fixes.append(f"Auto-Memes Task gestartet ({interval} Min)")
+                    break
+    except Exception:
+        pass
+
+    # --- 4. Frage des Tages Task starten wenn noetig ---
+    try:
+        if not frage_des_tages_task.is_running():
+            fragen_config = load_fragen_config()
+            for guild_str, settings in fragen_config.items():
+                if settings.get("enabled"):
+                    interval = settings.get("interval_hours", 16)
+                    frage_des_tages_task.change_interval(hours=interval)
+                    frage_des_tages_task.start()
+                    fixes.append(f"Frage-Task gestartet ({interval}h)")
+                    break
+    except Exception:
+        pass
+
+    # --- 5. Member Count sofort updaten ---
+    try:
+        await update_member_count_channels()
+        mc_config = load_membercount_config()
+        fixes.append(f"Member Count updatet fuer {len(mc_config)} Channel(s)")
+    except Exception as e:
+        warnings.append(f"Member Count Update: {e}")
+
+    # --- 6. Voice Channels aufgeraeumt ---
+    cleaned = 0
+    voice_ids = list(voice_channel_owners.keys())
+    for ch_id in voice_ids:
+        channel = bot.get_channel(ch_id)
+        if not channel:
+            for guild in bot.guilds:
+                channel = guild.get_channel(ch_id)
+                if channel:
+                    break
+        if not channel:
+            voice_channel_owners.pop(ch_id, None)
+            voice_channel_settings.pop(ch_id, None)
+            cleaned += 1
+    if cleaned > 0:
+        save_voice_owners(voice_channel_owners)
+        save_voice_settings_file(voice_channel_settings)
+        fixes.append(f"{cleaned} Voice-Channel-Eintraege aufgeraeumt")
+
+    # --- 7. Configs sichern ---
+    try:
+        save_all_configs_to_disk()
+        fixes.append("Alle Configs auf Disk gesichert")
+    except Exception as e:
+        warnings.append(f"Config-Save: {e}")
+
+    # --- Embed bauen ---
+    embed = discord.Embed(
+        title="System Check abgeschlossen",
+        color=discord.Color.green() if not warnings else discord.Color.orange()
+    )
+
+    if fixes:
+        embed.add_field(
+            name=f"Repariert ({len(fixes)})",
+            value="\n".join(f" {f}" for f in fixes),
+            inline=False
+        )
+    if warnings:
+        embed.add_field(
+            name=f"Warnungen ({len(warnings)})",
+            value="\n".join(f" {w}" for w in warnings),
+            inline=False
+        )
+    if not fixes and not warnings:
+        embed.description = "Alles laeuft einwandfrei!"
+
+    # Task-Status am Ende
+    task_lines = []
+    for name, task in all_tasks.items():
+        try:
+            status = "LAEUFT" if task.is_running() else "STOPP"
+        except Exception:
+            status = "FEHLER"
+        task_lines.append(f"{name}: {status}")
+    embed.add_field(name="Task-Status", value="```" + "\n".join(task_lines) + "```", inline=False)
+
+    embed.set_footer(text=f"Bot: {bot.user.name} | {interaction.guild.name}")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
 @is_admin_or_owner()
 async def botstatus_command(interaction: discord.Interaction):
@@ -5654,9 +5803,22 @@ async def watchdog_task():
             if ch_id:
                 channel = bot.get_channel(ch_id)
                 if not channel:
-                    config[guild_str]["enabled"] = False
+                    guild = bot.get_guild(int(guild_str))
+                    if guild:
+                        channel = guild.get_channel(ch_id)
+                if not channel:
+                    misses = settings.get("_cache_misses", 0) + 1
+                    settings["_cache_misses"] = misses
                     save_memes_config(config)
-                    print(f"[Watchdog] Memes Channel {ch_id} verschwunden - deaktiviert")
+                    if misses >= 10:
+                        config[guild_str]["enabled"] = False
+                        settings.pop("_cache_misses", None)
+                        save_memes_config(config)
+                        print(f"[Watchdog] Memes Channel {ch_id} 10x nicht gefunden - deaktiviert")
+                    else:
+                        print(f"[Watchdog] Memes Channel {ch_id} Cache-Miss ({misses}/10)")
+                else:
+                    settings.pop("_cache_misses", None)
     
     mc_config = load_membercount_config()
     for guild_str, settings in mc_config.items():
@@ -5669,6 +5831,11 @@ async def watchdog_task():
     voice_channels = list(voice_channel_owners.keys())
     for ch_id in voice_channels:
         channel = bot.get_channel(ch_id)
+        if not channel:
+            for guild in bot.guilds:
+                channel = guild.get_channel(ch_id)
+                if channel:
+                    break
         if not channel:
             voice_channel_owners.pop(ch_id, None)
             voice_channel_settings.pop(ch_id, None)

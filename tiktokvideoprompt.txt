@@ -1,0 +1,24 @@
+Prompt / Antwort zum Fixen:
+Bitte fixe jetzt beides:
+1. TikTok-Download (Hauptproblem)
+In bot.py (ca. Zeile 599) benutzt download_tiktok_video ausschließlich yt-dlp. Die gespeicherten Modi (clyppy, dlbot, tikcord, quickvids) werden zwar in den Settings gespeichert, aber nie tatsächlich aufgerufen. Deshalb geht aktuell nichts mehr, weil TikTok yt-dlp blockiert.
+Was ich will:
+
+yt-dlp trotzdem als ersten Fallback behalten und updaten (pip install -U yt-dlp).
+Die 4 Modi richtig implementieren, damit sie auch wirklich benutzt werden.
+Reihenfolge sollte so sein:
+Gewählter Mode (clyppy / dlbot / tikcord / quickvids) zuerst
+Falls der Mode fehlschlägt → nächster Mode
+Als letzter Fallback → yt-dlp
+
+
+Bitte baue echte HTTP-Requests für die APIs ein (nicht nur yt-dlp). Falls du die genauen Endpoints von Clyppy / dlbot / TikCord / QuickVids nicht hast, nutze die gängigen öffentlichen/bekannten Endpoints oder frag mich nach den aktuellen URLs.
+2. Große Edits / Transformer-Edits (damit man sie am PC anschauen kann)
+Das letzte große Transformer-Edit ist zwar reingekommen, aber man kann es nicht vernünftig anschauen (besonders am PC).
+Bitte sorge dafür, dass:
+
+Große Edits und Transformer-Edits vollständig und lesbar ankommen
+Sie am PC normal viewbar sind (nicht nur als komprimierter/unsichtbarer Block)
+Falls nötig nutze eine bessere Darstellung (z. B. als Datei-Anhang, collapsible Code-Block, oder in einem Format das der Client richtig rendert)
+
+Implementiere die Fixes jetzt und zeig mir danach den geänderten Code der download_tiktok_video-Funktion + wie die Modes jetzt wirklich aufgerufen werden.

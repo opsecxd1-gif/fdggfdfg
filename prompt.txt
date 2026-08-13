@@ -1,0 +1,56 @@
+Du bist ein Senior Discord.js Entwickler + DevOps Engineer mit Fokus auf extrem robuste, self-healing Bots die 24/7 laufen müssen.
+
+Baue / refactore den bestehenden Discord Bot so um, dass er **praktisch unkaputtbar** wird. Ziel: Der Bot soll nach Crashes, Restarts, Deployments oder sogar nach komplettem Prozess-Kill automatisch und ohne menschlichen Eingriff wieder in den korrekten Zustand zurückkehren und alle Features weiterlaufen lassen.
+
+### Kern-Anforderungen (müssen alle erfüllt werden):
+
+1. **Join-to-Create Voice System**
+   - Persistente Speicherung der Owner-Daten in `voice_owners.json` (bereits vorhanden, aber absichern)
+   - Beim Starten des Bots müssen alle existierenden Join-to-Create Channels und deren Owner korrekt wiederhergestellt werden
+   - Wenn Channels gelöscht wurden oder Owner nicht mehr da sind → automatische Bereinigung
+   - Race-Conditions und doppelte Channel-Erstellung verhindern
+
+2. **Member-Count Channel**
+   - Zeigt nur die aktuelle Member-Anzahl (Format: `Members: 1234` oder ähnlich)
+   - Update alle 5 Minuten + sofort bei jedem GuildMemberAdd / GuildMemberRemove
+   - Channel-Name muss auch nach Restarts korrekt gesetzt werden
+   - Falls der Channel gelöscht wurde → automatisch neu erstellen und Config updaten
+
+3. **Memes Auto-Poster**
+   - Config muss in `data/` persistiert sein
+   - Alle 30 Minuten automatisch ins Git pushen (bereits vorhanden)
+   - Beim Start muss der Memes-Job aus der Config neu gestartet werden
+   - Falls der Ziel-Channel nicht mehr existiert → Job pausieren + Admin benachrichtigen (oder Config invalidieren)
+
+4. **Self-Healing & 24/7 Robustheit (das Wichtigste)**
+
+   Implementiere ein umfassendes Recovery-System:
+
+   - **Graceful Shutdown + Restart Recovery**: Beim Start muss der Bot den kompletten gespeicherten Zustand laden und alle Features (Voice Owners, Member Count, Memes Job) neu initialisieren.
+   - **Watchdog / Heartbeat**: Ein interner Heartbeat der alle X Sekunden prüft, ob kritische Systeme noch laufen. Wenn etwas hängt → automatischer Soft-Restart der betroffenen Komponente.
+   - **Uncaught Exception & Unhandled Rejection Handler**: Niemals den Prozess sterben lassen. Fehler loggen, betroffene Module neu initialisieren und weiterlaufen.
+   - **Process Manager Ready**: Der Bot muss sauber mit PM2 / Docker / systemd zusammenarbeiten (exit codes, SIGTERM Handling).
+   - **Config Validation on Startup**: Alle Configs (voicesetup, memessetup, membercountsetup) beim Start validieren. Fehlt etwas oder ist inkonsistent → möglichst auto-repairen oder klaren Status in die Logs schreiben.
+   - **Channel Existence Checks**: Periodisch prüfen ob die konfigurierten Channels (Member-Count, Memes, Join-to-Create Parent) noch existieren. Wenn nicht → versuchen neu zu erstellen oder Config entsprechend anpassen.
+   - **Rate Limit & Discord API Resilience**: Alle Discord API Calls mit Retry + Exponential Backoff absichern.
+   - **Logging**: Strukturiertes Logging (pino oder winston) mit klaren Levels. Kritische Recovery-Aktionen müssen immer geloggt werden.
+
+5. **Zusätzliche Hardening-Maßnahmen**
+   - Alle Timers und Intervalle müssen bei Restart sauber neu gesetzt werden (keine Memory Leaks durch alte Intervalle)
+   - File-System Operationen (JSON lesen/schreiben) müssen atomic und mit Lock/Error-Handling erfolgen
+   - Bot soll nach einem Crash innerhalb von maximal 10–15 Sekunden wieder voll funktionsfähig sein (sobald der Prozess wieder läuft)
+
+### Technische Vorgaben:
+- Discord.js v14
+- Node.js (moderne Version)
+- Persistenz über JSON-Dateien im `data/` Ordner
+- Saubere Trennung: Config Loader, Recovery Manager, Feature Module
+- Kein "es funktioniert meistens" – der Bot muss so gebaut sein, dass er sich selbst repariert
+
+### Vorgehen:
+1. Analysiere zuerst den aktuellen Code und identifiziere alle Stellen, die bei einem Crash/Restart verloren gehen können.
+2. Entwirf eine klare Recovery-Architektur (Startup Sequence + Runtime Watchdogs).
+3. Implementiere die Änderungen schrittweise und erkläre bei jedem größeren Schritt was du tust und warum.
+4. Am Ende zeige mir eine klare Startup-Sequenz und wie der Bot sich selbst heilt.
+
+Baue das System so, dass ich nach einem Deploy nur noch einmal die Setup-Commands ausführen muss und danach **nie wieder** manuell eingreifen muss – egal wie oft der Bot crasht oder neu gestartet wird.

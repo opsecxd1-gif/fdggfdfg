@@ -1,0 +1,119 @@
+fdggfdfg
+/
+Crashed
+2026-08-11 07:46 GMT+2
+Get Help
+Filter and search logs
+You reached the start of the range
+2026-08-11 07:46
+Starting Container
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+Traceback (most recent call last):
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+  File "/app/bot.py", line 1809, in <module>
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+  File "/app/bot.py", line 1809, in <module>
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    self.add_command(command, guild=guild, guilds=guilds)
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+Traceback (most recent call last):
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'add' already registered.
+Traceback (most recent call last):
+  File "/app/bot.py", line 1809, in <module>
+    @bot.tree.command(name="add", description="User zum Ticket hinzufuegen")
+     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 931, in decorator
+    self.add_command(command, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
