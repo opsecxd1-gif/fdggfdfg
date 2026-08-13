@@ -2662,7 +2662,8 @@ async def on_member_join(member):
 async def on_member_remove(member):
     await update_member_count_channels()
 
-@tasks.loop(minutes=5)
+@tasks.loop(seconds=30)
+@crash_resilient_task
 async def membercount_refresh():
     await update_member_count_channels()
 
@@ -3824,6 +3825,7 @@ async def setlevel_command(interaction: discord.Interaction, user: discord.Membe
     await interaction.response.send_message(f"Level von {user.mention} auf **{level}** gesetzt!")
 
 @tasks.loop(seconds=15)
+@crash_resilient_task
 async def update_live_leaderboard():
     lb_msgs = load_leaderboard_messages()
 
@@ -3930,6 +3932,20 @@ async def on_ready():
         print(f"[on_ready] Watchdog Fehler: {e}")
     
     try:
+        if not daily_config_backup.is_running():
+            daily_config_backup.start()
+            print("[on_ready] Daily Config Backup gestartet")
+    except Exception as e:
+        print(f"[on_ready] Daily Backup Fehler: {e}")
+    
+    try:
+        if not health_monitor.is_running():
+            health_monitor.start()
+            print("[on_ready] Health Monitor gestartet")
+    except Exception as e:
+        print(f"[on_ready] Health Monitor Fehler: {e}")
+    
+    try:
         memes_config = load_memes_config()
         for guild_str, settings in memes_config.items():
             if settings.get("enabled", False):
@@ -3964,43 +3980,138 @@ async def on_ready():
     
     print(f"[on_ready] ALLE SYSTEME AKTIV!")
 
-@tasks.loop(minutes=30)
-async def auto_save_data():
+def save_all_configs_to_disk():
+    """Speichert ALLE In-Memory-Configs auf Disk - vor jedem Git-Push"""
     try:
+        save_tiktok_mode(tiktok_mode)
+    except: pass
+    try:
+        save_automod_config(automod_config)
+    except: pass
+    try:
+        save_voice_owners(voice_channel_owners)
+    except: pass
+    try:
+        save_voice_settings_file(voice_channel_settings)
+    except: pass
+    try:
+        # Memes Config wird direkt bei Commands gespeichert, aber zur Sicherheit nochmal
+        pass
+    except: pass
+    try:
+        # Frag Config wird direkt bei Commands gespeichert
+        pass
+    except: pass
+    try:
+        save_reaction_roles(load_reaction_roles())
+    except: pass
+    try:
+        save_level_data(load_level_data())
+    except: pass
+    try:
+        save_level_config(load_level_config())
+    except: pass
+    try:
+        save_membercount_config(load_membercount_config())
+    except: pass
+    try:
+        save_ticket_config(load_ticket_config())
+    except: pass
+    try:
+        save_ticket_data(load_ticket_data())
+    except: pass
+    try:
+        save_frage_messages(load_frage_messages())
+    except: pass
+    try:
+        save_memes_votes(load_memes_votes())
+    except: pass
+    print("[ConfigSave] Alle In-Memory-Configs auf Disk geschrieben")
+
+@tasks.loop(minutes=5)
+@crash_resilient_task
+async def auto_save_data():
+    save_all_configs_to_disk()
+    
+    proc = await asyncio.create_subprocess_exec(
+        "git", "add", "data/",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await proc.communicate()
+    
+    proc = await asyncio.create_subprocess_exec(
+        "git", "diff", "--cached", "--quiet",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, _ = await proc.communicate()
+    
+    if proc.returncode != 0:
         proc = await asyncio.create_subprocess_exec(
-            "git", "add", "data/",
+            "git", "commit", "-m", "auto-save: data backup",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         await proc.communicate()
         
         proc = await asyncio.create_subprocess_exec(
-            "git", "diff", "--cached", "--quiet",
+            "git", "push",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, _ = await proc.communicate()
-        
-        if proc.returncode != 0:
-            proc = await asyncio.create_subprocess_exec(
-                "git", "commit", "-m", "auto-save: data backup",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc.communicate()
-            
-            proc = await asyncio.create_subprocess_exec(
-                "git", "push",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc.communicate()
-            print("[AutoSave] Data backup pushed")
-    except Exception as e:
-        print(f"[AutoSave] Fehler: {e}")
+        await proc.communicate()
+        print("[AutoSave] Data backup pushed")
 
 @auto_save_data.before_loop
 async def before_auto_save():
+    await bot.wait_until_ready()
+
+# =====================================
+# DAILY CONFIG BACKUP (zusätzlich zu auto_save)
+# =====================================
+
+@tasks.loop(hours=24)
+@crash_resilient_task
+async def daily_config_backup():
+    """Tägliches Config-Backup mit Timestamp"""
+    from datetime import datetime as _dt
+    timestamp = _dt.now().strftime("%Y-%m-%d_%H-%M")
+    backup_dir = DATA_DIR / "backups"
+    backup_dir.mkdir(exist_ok=True)
+    
+    config_files = [
+        "tiktok_mode.json", "automod.json", "voice_owners.json",
+        "voice_settings.json", "voice_setup.json", "memes_config.json",
+        "fragen_config.json", "fragen_messages.json", "fragen_custom.json",
+        "reaction_roles.json", "memes_votes.json", "levels.json",
+        "level_config.json", "membercount_config.json",
+        "ticket_config.json", "tickets.json"
+    ]
+    
+    saved = 0
+    for fname in config_files:
+        src = DATA_DIR / fname
+        if src.exists():
+            dst = backup_dir / f"{fname.replace('.json', '')}_{timestamp}.json"
+            try:
+                import shutil
+                shutil.copy2(src, dst)
+                saved += 1
+            except: pass
+    
+    # Alte Backups löschen (nur letzte 7 behalten pro Datei)
+    for fname in config_files:
+        base = fname.replace('.json', '')
+        backups = sorted(backup_dir.glob(f"{base}_*.json"))
+        if len(backups) > 7:
+            for old in backups[:-7]:
+                old.unlink(missing_ok=True)
+    
+    print(f"[DailyBackup] {saved} Configs gesichert ({timestamp})")
+
+@daily_config_backup.before_loop
+async def before_daily_backup():
     await bot.wait_until_ready()
 
 @bot.event
@@ -4284,6 +4395,7 @@ async def _compress_video(video_data, target_size_mb=20):
         return None
 
 @tasks.loop(minutes=60)
+@crash_resilient_task
 async def auto_memes_task():
     try:
         config = load_memes_config()
@@ -4810,6 +4922,7 @@ async def memesload_command(interaction: discord.Interaction, datei: discord.Att
 # =====================================
 
 @tasks.loop(hours=16)
+@crash_resilient_task
 async def frage_des_tages_task():
     config = load_fragen_config()
     for guild in bot.guilds:
@@ -5371,7 +5484,11 @@ async def update_member_count_channels():
         guild = channel.guild
         if not guild:
             continue
-        member_count = guild.member_count
+        try:
+            fresh_guild = await bot.fetch_guild(guild.id)
+            member_count = fresh_guild.member_count
+        except Exception:
+            member_count = guild.member_count
         prefix = settings.get("prefix", "Members")
         new_name = f"{prefix}: {member_count}"
         if channel.name != new_name:
@@ -5520,43 +5637,43 @@ async def botstatus_command(interaction: discord.Interaction):
 recovery = None
 
 @tasks.loop(seconds=60)
+@crash_resilient_task
 async def watchdog_task():
     global recovery
     if not recovery:
         return
-    try:
-        recovery.heartbeat()
-        
-        config = load_memes_config()
-        for guild_str, settings in config.items():
-            if settings.get("enabled"):
-                ch_id = settings.get("channel_id")
-                if ch_id:
-                    channel = bot.get_channel(ch_id)
-                    if not channel:
-                        config[guild_str]["enabled"] = False
-                        save_memes_config(config)
-                        print(f"[Watchdog] Memes Channel {ch_id} verschwunden - deaktiviert")
-        
-        mc_config = load_membercount_config()
-        for guild_str, settings in mc_config.items():
+    recovery.heartbeat()
+    
+    # Vor jedem Watchdog-Check Configs sichern
+    save_all_configs_to_disk()
+    
+    config = load_memes_config()
+    for guild_str, settings in config.items():
+        if settings.get("enabled"):
             ch_id = settings.get("channel_id")
             if ch_id:
                 channel = bot.get_channel(ch_id)
                 if not channel:
-                    print(f"[Watchdog] MemberCount Channel {ch_id} verschwunden!")
-        
-        voice_channels = list(voice_channel_owners.keys())
-        for ch_id in voice_channels:
+                    config[guild_str]["enabled"] = False
+                    save_memes_config(config)
+                    print(f"[Watchdog] Memes Channel {ch_id} verschwunden - deaktiviert")
+    
+    mc_config = load_membercount_config()
+    for guild_str, settings in mc_config.items():
+        ch_id = settings.get("channel_id")
+        if ch_id:
             channel = bot.get_channel(ch_id)
             if not channel:
-                voice_channel_owners.pop(ch_id, None)
-                voice_channel_settings.pop(ch_id, None)
-        
-        print(f"[Watchdog] Health Check OK - Uptime: {recovery.get_uptime()}")
-        
-    except Exception as e:
-        print(f"[Watchdog] Fehler: {e}")
+                print(f"[Watchdog] MemberCount Channel {ch_id} verschwunden!")
+    
+    voice_channels = list(voice_channel_owners.keys())
+    for ch_id in voice_channels:
+        channel = bot.get_channel(ch_id)
+        if not channel:
+            voice_channel_owners.pop(ch_id, None)
+            voice_channel_settings.pop(ch_id, None)
+    
+    print(f"[Watchdog] Health Check OK - Uptime: {recovery.get_uptime()}")
 
 @watchdog_task.before_loop
 async def before_watchdog():
@@ -5585,13 +5702,153 @@ async def safe_api_call(coro_func, *args, max_retries=3, **kwargs):
 def setup_exception_handlers():
     loop = asyncio.get_event_loop()
     
-    def exception_handler(loop, context):
+    # ==========================================
+    # 1. GLOBAL UNHANDLED EXCEPTION HANDLER
+    #    (fängt ALLE unerwarteten Fehler ab)
+    # ==========================================
+    def global_exception_handler(loop, context):
         exception = context.get("exception")
         msg = context.get("message", "Unbekannter Fehler")
-        print(f"[ExceptionHandler] {msg}: {exception}")
+        
+        error_detail = f"{msg}"
+        if exception:
+            error_detail = f"{type(exception).__name__}: {exception}"
+        
+        print(f"\n{'='*60}")
+        print(f"[UNHANDLED] {msg}")
+        if exception:
+            print(f"[UNHANDLED] Typ: {error_detail}")
+            traceback.print_exception(type(exception), exception, exception.__traceback__)
+        print(f"{'='*60}")
+        
+        # Webhook senden
+        try:
+            tb = traceback.format_exc() if exception else msg
+            asyncio.ensure_future(send_error_webhook(
+                "AsyncIO Unhandled Exception",
+                f"{error_detail}\n\n{tb}",
+                "global_exception_handler"
+            ))
+        except: pass
+        
+        # Configs sofort sichern
+        try:
+            save_all_configs_to_disk()
+            print("[UNHANDLED] Configs gespeichert")
+        except Exception as save_err:
+            print(f"[UNHANDLED] Config-Save fehlgeschlagen: {save_err}")
+        
+        # Versuch Git-Push
+        try:
+            import subprocess
+            subprocess.run(["git", "add", "data/"], capture_output=True, timeout=10)
+            result = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True, timeout=10)
+            if result.returncode != 0:
+                subprocess.run(["git", "commit", "-m", "crash: unhandled exception backup"], 
+                             capture_output=True, timeout=15)
+                subprocess.run(["git", "push"], capture_output=True, timeout=30)
+                print("[UNHANDLED] Git-Push nach Crash erfolgreich")
+        except Exception as git_err:
+            print(f"[UNHANDLED] Git-Push fehlgeschlagen: {git_err}")
     
-    loop.set_exception_handler(exception_handler)
+    loop.set_exception_handler(global_exception_handler)
     
+    # ==========================================
+    # 2. SYS.EXCEPTHOOK (Python-Level Errors)
+    #    Fängt Fehler ab die aus dem Loop fallen
+    # ==========================================
+    import sys
+    
+    _original_excepthook = sys.excepthook
+    
+    def enhanced_excepthook(exc_type, exc_value, exc_tb):
+        if exc_type is KeyboardInterrupt:
+            _original_excepthook(exc_type, exc_value, exc_tb)
+            return
+        
+        tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        
+        print(f"\n{'='*60}")
+        print(f"[SYS_EXCEPTHOOK] Unhandled Python Exception")
+        print(f"[SYS_EXCEPTHOOK] Typ: {exc_type.__name__}: {exc_value}")
+        if exc_tb:
+            traceback.print_exception(exc_type, exc_value, exc_tb)
+        print(f"{'='*60}")
+        
+        # Webhook senden
+        try:
+            asyncio.ensure_future(send_error_webhook(
+                "Python Unhandled Exception",
+                f"{exc_type.__name__}: {exc_value}\n\n{tb_str}",
+                "sys.excepthook"
+            ))
+        except: pass
+        
+        # Configs sichern
+        try:
+            save_all_configs_to_disk()
+        except: pass
+        
+        # Git-Push
+        try:
+            import subprocess
+            subprocess.run(["git", "add", "data/"], capture_output=True, timeout=10)
+            result = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True, timeout=10)
+            if result.returncode != 0:
+                subprocess.run(["git", "commit", "-m", "crash: excepthook backup"], 
+                             capture_output=True, timeout=15)
+                subprocess.run(["git", "push"], capture_output=True, timeout=30)
+        except: pass
+        
+        # Original Handler aufrufen
+        _original_excepthook(exc_type, exc_value, exc_tb)
+    
+    sys.excepthook = enhanced_excepthook
+    
+    # ==========================================
+    # 3. ASYNCIO TASKS: Unguarded Exceptions
+    #    Tasks die unerwartete Exceptions werfen
+    # ==========================================
+    original_create_task = loop.create_task
+    
+    def tracked_create_task(coro, *, name=None, **kwargs):
+        task = original_create_task(coro, name=name, **kwargs)
+        
+        def task_exception_handler(t):
+            if t.cancelled():
+                return
+            exc = t.exception()
+            if exc:
+                task_name = name or getattr(coro, '__name__', str(coro))
+                tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+                
+                print(f"\n{'='*60}")
+                print(f"[TASK_CRASH] Task '{task_name}' abgestürzt!")
+                print(f"[TASK_CRASH] {type(exc).__name__}: {exc}")
+                traceback.print_exception(type(exc), exc, exc.__traceback__)
+                print(f"{'='*60}")
+                
+                # Webhook senden
+                try:
+                    asyncio.ensure_future(send_error_webhook(
+                        f"Task Crash: {task_name}",
+                        f"{type(exc).__name__}: {exc}\n\n{tb_str}"
+                    ))
+                except: pass
+                
+                # Configs sichern
+                try:
+                    save_all_configs_to_disk()
+                except: pass
+        
+        task.add_done_callback(task_exception_handler)
+        return task
+    
+    loop.create_task = tracked_create_task
+    
+    # ==========================================
+    # 4. SAFE RUN WRAPPER
+    # ==========================================
     original_run = bot.run
     def safe_run(token):
         try:
@@ -5601,6 +5858,187 @@ def setup_exception_handlers():
             traceback.print_exc()
     
     bot.run = safe_run
+
+# =====================================
+# CRASH-RESILIENCE: Graceful Shutdown
+# =====================================
+
+import signal
+
+_shutdown_requested = False
+
+async def graceful_shutdown(sig_name):
+    """Sauberes Herunterfahren bei SIGTERM/SIGINT"""
+    global _shutdown_requested
+    if _shutdown_requested:
+        return
+    _shutdown_requested = True
+    
+    print(f"\n[Shutdown] {sig_name} empfangen - fahre sauber herunter...")
+    
+    # 1. Tasks stoppen
+    try:
+        tasks_to_stop = []
+        for task_name in ["auto_save_data", "update_live_leaderboard", 
+                          "auto_memes_task", "frage_des_tages_task",
+                          "membercount_refresh", "watchdog_task", "daily_config_backup"]:
+            try:
+                task_obj = globals().get(task_name)
+                if task_obj and hasattr(task_obj, 'is_running') and task_obj.is_running():
+                    tasks_to_stop.append((task_name, task_obj))
+            except: pass
+        
+        for name, task in tasks_to_stop:
+            try:
+                task.cancel()
+                print(f"[Shutdown] Task {name} gestoppt")
+            except: pass
+        
+        # Warte kurz damit Tasks aufräumen können
+        if tasks_to_stop:
+            await asyncio.sleep(2)
+    except: pass
+    
+    # 2. Alle Configs sofort speichern
+    try:
+        save_all_configs_to_disk()
+        print("[Shutdown] Alle Configs gespeichert")
+    except: pass
+    
+    # 3. Git-Push wenn möglich
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git", "add", "data/",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+        
+        proc = await asyncio.create_subprocess_exec(
+            "git", "diff", "--cached", "--quiet",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await proc.communicate()
+        
+        if proc.returncode != 0:
+            proc = await asyncio.create_subprocess_exec(
+                "git", "commit", "-m", "shutdown: auto-save before exit",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            
+            proc = await asyncio.create_subprocess_exec(
+                "git", "push",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            print("[Shutdown] Git-Push erfolgreich")
+    except: pass
+    
+    # 4. Bot schließen
+    try:
+        await bot.close()
+        print("[Shutdown] Bot geschlossen")
+    except: pass
+
+def handle_signal(sig_name):
+    """Signal-Handler (wird in thread aufgerufen)"""
+    print(f"\n[Signal] {sig_name} empfangen")
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        asyncio.ensure_future(graceful_shutdown(sig_name))
+
+# =====================================
+# CRASH-RESILIENCE: Webhook Error Logger
+# =====================================
+
+import aiohttp
+
+# Hier deine Error-Webhook URL eintragen (oder None lassen um zu deaktivieren)
+ERROR_WEBHOOK_URL = None  # z.B. "https://discord.com/api/webhooks/..."
+
+async def send_error_webhook(title, error_info, context=""):
+    """Sendet Error-Embed an Discord Webhook (optional)"""
+    if not ERROR_WEBHOOK_URL:
+        return
+    
+    try:
+        embed = {
+            "title": f"🔴 {title}",
+            "description": f"```{error_info[:1800]}```",
+            "color": 0xFF0000,
+            "fields": [],
+            "timestamp": __import__('datetime').datetime.utcnow().isoformat()
+        }
+        if context:
+            embed["fields"].append({"name": "Context", "value": context[:1024], "inline": False})
+        
+        async with aiohttp.ClientSession() as session:
+            await session.post(ERROR_WEBHOOK_URL, json={"embeds": [embed]})
+    except:
+        pass
+
+# =====================================
+# CRASH-RESILIENCE: Task Error Wrapper
+# =====================================
+
+def crash_resilient_task(task_func):
+    """Wrapper der Tasks vor Absturz schützt"""
+    async def wrapper(*args, **kwargs):
+        try:
+            return await task_func(*args, **kwargs)
+        except asyncio.CancelledError:
+            raise  # CancelledError weiterleiten (wichtig für graceful shutdown)
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(f"[TaskCrash] {task_func.__name__} Fehler: {e}")
+            traceback.print_exc()
+            # Webhook senden bei kritischen Tasks
+            critical_tasks = ["auto_save_data", "watchdog_task", "health_monitor", "daily_config_backup"]
+            if task_func.__name__ in critical_tasks:
+                asyncio.create_task(send_error_webhook(
+                    f"Task Crash: {task_func.__name__}",
+                    f"{type(e).__name__}: {e}\n\n{tb}"
+                ))
+            # Nicht weiterwerfen - Task soll weiterlaufen
+            return None
+    wrapper.__name__ = task_func.__name__
+    return wrapper
+
+# =====================================
+# CRASH-RESILIENCE: Health-Check
+# =====================================
+
+import psutil
+
+@tasks.loop(minutes=2)
+@crash_resilient_task
+async def health_monitor():
+    """Überwacht Speicher und Performance"""
+    try:
+        process = psutil.Process()
+        mem_mb = process.memory_info().rss / 1024 / 1024
+        cpu_pct = process.cpu_percent(interval=1)
+        
+        # Warnung bei hohem Speicher
+        if mem_mb > 400:
+            print(f"[Health] WARN: Speicher hoch: {mem_mb:.0f}MB")
+        
+        # Bei kritischem Speicher: Configs sofort sichern
+        if mem_mb > 500:
+            print(f"[Health] KRITISCH: {mem_mb:.0f}MB - sichere Configs!")
+            try:
+                save_all_configs_to_disk()
+            except: pass
+        
+        # Status alle 10 Minuten loggen
+        if health_monitor.current_loop % 5 == 0:
+            print(f"[Health] OK - Memory: {mem_mb:.0f}MB, CPU: {cpu_pct:.1f}%")
+    except:
+        pass
+
+@health_monitor.before_loop
+async def before_health_monitor():
+    await bot.wait_until_ready()
 
 # =====================================
 # MAIN / ON_READY (Tasks starten)
@@ -5616,6 +6054,14 @@ if __name__ == "__main__":
         exit(1)
     
     setup_exception_handlers()
+    
+    # Signal-Handler registrieren (funktioniert nur im Hauptthread)
+    try:
+        signal.signal(signal.SIGTERM, lambda s, f: handle_signal("SIGTERM"))
+        signal.signal(signal.SIGINT, lambda s, f: handle_signal("SIGINT"))
+        print("[BOT] Signal-Handler registriert (SIGTERM/SIGINT)")
+    except Exception as e:
+        print(f"[BOT] Signal-Handler Fehler: {e}")
     
     while True:
         try:
