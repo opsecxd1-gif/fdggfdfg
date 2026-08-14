@@ -5912,31 +5912,20 @@ async def serverlist_command(
 # ROLLEN RECHTE ENTZIEHEN (GIF/BILDER/STICKER)
 # =====================================
 
-@bot.tree.command(name="striproles", description="Entzieht allen Rollen UNTER 'Maske' die Rechte fuer GIFs, Bilder und externe Sticker")
+@bot.tree.command(name="striproles", description="Entzieht ALLEN Rollen die Rechte fuer GIFs, Bilder und externe Sticker")
 @is_admin_or_owner()
 async def striproles_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
 
-    maske_role = discord.utils.get(interaction.guild.roles, name="Maske")
-    if not maske_role:
-        await interaction.followup.send("Rolle 'Maske' nicht gefunden!", ephemeral=True)
-        return
-
     bot_top_role = interaction.guild.me.top_role
-    print(f"[STRIPROLES] Maske: {maske_role.name} (Pos {maske_role.position}), Bot Top: {bot_top_role.name} (Pos {bot_top_role.position})")
-    print(f"[STRIPROLES] Alle Rollen: {[(r.name, r.position) for r in interaction.guild.roles]}")
+    print(f"[STRIPROLES] Bot Top: {bot_top_role.name} (Pos {bot_top_role.position})")
 
     updated = []
     skipped = []
 
     roles_to_edit = []
     for role in interaction.guild.roles:
-        if role == interaction.guild.default_role:
-            continue
-        if role.position >= maske_role.position:
-            skipped.append(f"{role.name} (Ã¼ber Maske)")
-            continue
-        if role.position >= bot_top_role.position:
+        if role.position >= bot_top_role.position and role != interaction.guild.default_role:
             skipped.append(f"{role.name} (Bot zu niedrig)")
             continue
         if role.managed:
@@ -5947,6 +5936,7 @@ async def striproles_command(interaction: discord.Interaction):
         new_perms = old_perms.copy()
         new_perms.attach_files = False
         new_perms.use_external_stickers = False
+        new_perms.use_external_emojis = False
 
         if old_perms == new_perms:
             skipped.append(f"{role.name} (bereits gesetzt)")
@@ -5990,18 +5980,13 @@ async def striproles_command(interaction: discord.Interaction):
             value=", ".join(skipped),
             inline=False
         )
-    embed.set_footer(text=f"Alle Rollen unter '{maske_role.name}' â€” GIFs, Bilder, externe Sticker deaktiviert")
+    embed.set_footer(text="ALLE Rollen - Bilder, GIFs, externe Sticker/Emojis deaktiviert")
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-@bot.tree.command(name="unstriproles", description="Gibt allen Rollen die GIF/Bilder/Sticker Rechte zurueck")
+@bot.tree.command(name="unstriproles", description="Gibt ALLEN Rollen die GIF/Bilder/Sticker Rechte zurueck")
 @is_admin_or_owner()
 async def unstriproles_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-
-    maske_role = discord.utils.get(interaction.guild.roles, name="Maske")
-    if not maske_role:
-        await interaction.followup.send("Rolle 'Maske' nicht gefunden!", ephemeral=True)
-        return
 
     bot_top_role = interaction.guild.me.top_role
 
@@ -6010,11 +5995,7 @@ async def unstriproles_command(interaction: discord.Interaction):
 
     roles_to_edit = []
     for role in interaction.guild.roles:
-        if role == interaction.guild.default_role:
-            continue
-        if role.position >= maske_role.position:
-            continue
-        if role.position >= bot_top_role.position:
+        if role.position >= bot_top_role.position and role != interaction.guild.default_role:
             skipped.append(f"{role.name} (Bot zu niedrig)")
             continue
         if role.managed:
@@ -6025,6 +6006,7 @@ async def unstriproles_command(interaction: discord.Interaction):
         new_perms = old_perms.copy()
         new_perms.attach_files = True
         new_perms.use_external_stickers = True
+        new_perms.use_external_emojis = True
 
         if old_perms == new_perms:
             skipped.append(f"{role.name} (bereits gesetzt)")
