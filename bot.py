@@ -1,4 +1,4 @@
-import discord
+﻿import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 from discord import ui
@@ -54,7 +54,7 @@ async def send_error_webhook(title, error_info, context=""):
         return
     try:
         embed = {
-            "title": f"🔴 {title}",
+            "title": f"ðŸ”´ {title}",
             "description": f"```{error_info[:1800]}```",
             "color": 0xFF0000,
             "fields": [],
@@ -345,143 +345,143 @@ FRAGEN_MESSAGES_FILE = DATA_DIR / "fragen_messages.json"
 
 DEFAULT_FRAGEN = [
     # === VIRAL WOULD YOU RATHER (140+ Glamour / TikTok / Discord Viral) ===
-    {"frage": "Stinkende Füße oder schlechten Atem?", "emoji": "👃", "optionen": ["Stinkende Füße", "Schlechter Atem"]},
-    {"frage": "Telepathisch kommunizieren oder jede Sprache der Welt kennen?", "emoji": "🗣️", "optionen": ["Telepathie", "Alle Sprachen"]},
-    {"frage": "Einem Außerirdischen oder Big Foot begegnen?", "emoji": "👽", "optionen": ["Alien", "Big Foot"]},
-    {"frage": "Unkontrolliert in Gesang ausbrechen oder unerwartet die Stimme verlieren?", "emoji": "🎤", "optionen": ["Immer singen", "Stimme verlieren"]},
-    {"frage": "Von jeder Oberfläche abprallen oder nie wieder springen können?", "emoji": "🤸", "optionen": ["Abprallen", "Nie springen"]},
-    {"frage": "Ein Gespräch mit deinem vergangenen oder zukünftigen Ich?", "emoji": "⏳", "optionen": ["Vergangenes Ich", "Zukünftiges Ich"]},
-    {"frage": "Ständig Kopfschmerzen oder ständig Juckreiz?", "emoji": "🤕", "optionen": ["Kopfschmerzen", "Juckreiz"]},
-    {"frage": "Wissen was deine Haustiere denken oder dass sie dich verstehen?", "emoji": "🐾", "optionen": ["Ihre Gedanken wissen", "Sie verstehen mich"]},
-    {"frage": "Nur noch schreien oder nur noch flüstern?", "emoji": "🔊", "optionen": ["Nur schreien", "Nur flüstern"]},
-    {"frage": "Wie ein Fisch aussehen oder wie ein Fisch riechen?", "emoji": "🐟", "optionen": ["Wie ein Fisch aussehen", "Wie ein Fisch riechen"]},
-    {"frage": "Auf YouTube oder TikTok berühmt werden?", "emoji": "📱", "optionen": ["YouTube", "TikTok"]},
-    {"frage": "In einer alten Stadt oder im Wald verirren?", "emoji": "🌲", "optionen": ["Alte Stadt", "Wald"]},
-    {"frage": "Von einem Zombie oder einem Löwen gejagt werden?", "emoji": "🧟", "optionen": ["Zombie", "Löwe"]},
-    {"frage": "Nur 7 Finger oder nur 7 Zehen haben?", "emoji": "🖐️", "optionen": ["7 Finger", "7 Zehen"]},
-    {"frage": "Alles was du isst ist zu süß oder nicht süß genug?", "emoji": "🍬", "optionen": ["Zu süß", "Nicht süß genug"]},
-    {"frage": "Deinen Körper gegen den deines Ex oder deiner Oma tauschen?", "emoji": "交换", "optionen": ["Ex-Körper", "Oma-Körper"]},
-    {"frage": "Nur einen einzigen Film oder nur das gleiche Essen für immer?", "emoji": "🎬", "optionen": ["Nur 1 Film", "Nur 1 Essen"]},
-    {"frage": "Eine Menge mittelmäßiger Freunde oder einen wirklich treuen Hund?", "emoji": "🐕", "optionen": ["Viele mittelmäßige Freunde", "1 treuer Hund"]},
-    {"frage": "Eine Woche nur Burger oder eine Woche nur Eiscreme?", "emoji": "🍔", "optionen": ["Nur Burger", "Nur Eiscreme"]},
-    {"frage": "Superkräfte von Iron Man oder Batman?", "emoji": "🦸", "optionen": ["Iron Man", "Batman"]},
-    {"frage": "In einer Welt mit ständigem Schnee oder ständigem Regen?", "emoji": "🌧️", "optionen": ["Immer Schnee", "Immer Regen"]},
-    {"frage": "Feuer oder Wasser kontrollieren können?", "emoji": "🔥", "optionen": ["Feuer", "Wasser"]},
-    {"frage": "In einer Welt ohne Musik oder ohne Filme?", "emoji": "🎵", "optionen": ["Keine Musik", "Keine Filme"]},
-    {"frage": "Das Leben einer Friends-Figur oder Game of Thrones-Charakters?", "emoji": "📺", "optionen": ["Friends", "Game of Thrones"]},
-    {"frage": "Überall behaart oder nirgends behaart?", "emoji": "🦍", "optionen": ["Überall behaart", "Nirgends behaart"]},
-    {"frage": "Kalte Pizza oder heißen Joghurt zum Frühstück?", "emoji": "🍕", "optionen": ["Kalte Pizza", "Heißer Joghurt"]},
-    {"frage": "Eine Woche ohne Zähneputzen oder zwei Wochen ohne Duschen?", "emoji": "🚿", "optionen": ["Nie Zähneputzen", "Nie Duschen"]},
-    {"frage": "Fotografisches Gedächtnis oder perfektes Gehör?", "emoji": "📷", "optionen": ["Fotografisch", "Perfektes Gehör"]},
-    {"frage": "Bei einer Dating-Show oder Survival-Show mitmachen?", "emoji": "🏝️", "optionen": ["Dating-Show", "Survival-Show"]},
-    {"frage": "Deinen Lieblingssong für immer in Dauerschleife oder nie wieder Musik?", "emoji": "🎶", "optionen": ["Dauerschleife", "Nie wieder Musik"]},
-    {"frage": "Teleportieren können oder ein Privatflugzeug?", "emoji": "✈️", "optionen": ["Teleportieren", "Privatflugzeug"]},
-    {"frage": "Immer schwitzen oder immer frieren?", "emoji": "🥵", "optionen": ["Immer schwitzen", "Immer frieren"]},
-    {"frage": "Einen neuen Planeten entdecken oder einen versunkenen Schatz finden?", "emoji": "🪐", "optionen": ["Neuer Planet", "Versunkener Schatz"]},
-    {"frage": "Gelegentlich zaubern oder Superhelden-Kräfte für immer?", "emoji": "🧙", "optionen": ["Gelegentlich zaubern", "Superkräfte"]},
-    {"frage": "Auf einem Boot oder in einem Baumhaus leben?", "emoji": "⛵", "optionen": ["Boot", "Baumhaus"]},
-    {"frage": "Für immer superschräge Träume oder nie wieder träumen?", "emoji": "🌙", "optionen": ["Schräge Träume", "Nie träumen"]},
-    {"frage": "Alles was du dir wünschst in die Realität umsetzen oder Gedanken lesen?", "emoji": "💭", "optionen": ["Wünsche erfüllen", "Gedanken lesen"]},
-    {"frage": "Ein Jahr lang jeden Tag die gleiche Farbe tragen oder immer die gleiche Frisur?", "emoji": "👕", "optionen": ["Gleiche Farbe", "Gleiche Frisur"]},
-    {"frage": "Mit Stöckelschuhen am Strand oder Sandalen auf schlammigem Festival?", "emoji": "👡", "optionen": ["Stöckelschuhe am Strand", "Sandalen im Schlamm"]},
-    {"frage": "Den Rest deines Lebens nur drinnen oder nur draußen?", "emoji": "🏡", "optionen": ["Nur drinnen", "Nur draußen"]},
-    {"frage": "Für immer auf das Frühstück oder auf das Abendessen verzichten?", "emoji": "🍳", "optionen": ["Kein Frühstück", "Kein Abendessen"]},
-    {"frage": "Einen ganzen Tag im Sitzen oder im Stehen verbringen?", "emoji": "🪑", "optionen": ["Im Sitzen", "Im Stehen"]},
-    {"frage": "Ein Leben mit 1000 Jahren oder zehn Leben mit jeweils 100 Jahren?", "emoji": "🕰️", "optionen": ["1x 1000 Jahre", "10x 100 Jahre"]},
-    {"frage": "Das Internet oder deine Krankenversicherung aufgeben?", "emoji": "🌐", "optionen": ["Internet aufgeben", "Krankenversicherung"]},
-    {"frage": "Einen Film über deinen peinlichsten Moment oder Kollegen deine Handy-Bilder zeigen?", "emoji": "📱", "optionen": ["Film drehen", "Bilder zeigen"]},
-    {"frage": "Superschnell oder unmenschlich stark?", "emoji": "💨", "optionen": ["Schnell", "Stark"]},
-    {"frage": "Attraktiver oder intelligenter sein?", "emoji": "💅", "optionen": ["Attraktiv", "Intelligent"]},
-    {"frage": "Einen schicken Abend im Restaurant oder Filmabend zu Hause?", "emoji": "🍽️", "optionen": ["Restaurant", "Zu Hause"]},
-    {"frage": "Die meiste Zeit mit der gleichen Person oder mit vielen verschiedenen?", "emoji": "👫", "optionen": ["Gleiche Person", "Verschiedene Menschen"]},
-    {"frage": "Das perfekte Geschenk machen oder bekommen?", "emoji": "🎁", "optionen": ["Machen", "Bekommen"]},
-    {"frage": "Alles wissen was im Kopf deines Partners vorgeht oder einen Tag in seiner Haut?", "emoji": "🧠", "optionen": ["Gedanken wissen", "In seiner Haut"]},
-    {"frage": "Das beste Date aller Zeiten oder eine Reihe guter Dates?", "emoji": "💘", "optionen": ["Bestes Date", "Reihe guter Dates"]},
-    {"frage": "Für den Rest deines Lebens nur noch texten oder nur noch anrufen?", "emoji": "💬", "optionen": ["Nur texten", "Nur anrufen"]},
-    {"frage": "Einen Tag in der Unterwäsche deines Partners oder in seinen Schuhen?", "emoji": "👟", "optionen": ["Unterwäsche", "Schuhe"]},
-    {"frage": "Ständig überrascht werden oder immer wissen was auf dich zukommt?", "emoji": "🎁", "optionen": ["Überrascht", "Immer wissen"]},
-    {"frage": "Deinen Geist für immer jung oder deinen Körper für immer jung?", "emoji": "🧬", "optionen": ["Geist jung", "Körper jung"]},
-    {"frage": "Nur noch mit älteren oder jüngeren Menschen Zeit verbringen?", "emoji": "👴", "optionen": ["Ältere", "Jüngere"]},
-    {"frage": "Als Säugetier oder als Insekt wiedergeboren werden?", "emoji": "🐛", "optionen": ["Säugetier", "Insekt"]},
-    {"frage": "Eine Hochzeit oder eine riesige Geburtstagsparty planen?", "emoji": "💒", "optionen": ["Hochzeit", "Geburtstagsparty"]},
-    {"frage": "Immer die lauteste oder die leiseste Person im Raum sein?", "emoji": "📢", "optionen": ["Lauteste", "Leiseste"]},
-    {"frage": "Immer zu spät oder immer zu früh kommen?", "emoji": "⏰", "optionen": ["Zu spät", "Zu früh"]},
-    {"frage": "Den schlimmsten oder den schönsten Moment deines Lebens vergessen?", "emoji": "💭", "optionen": ["Schlimmsten vergessen", "Schönsten vergessen"]},
-    {"frage": "Für den Rest deines Lebens 20 oder 40 sein?", "emoji": "🎂", "optionen": ["20", "40"]},
-    {"frage": "Jeden Tag einen Kuss oder jeden Tag eine Umarmung?", "emoji": "💋", "optionen": ["Kuss", "Umarmung"]},
-    {"frage": "Alles Geld oder all die Liebe die du dir wünschst?", "emoji": "❤️", "optionen": ["Geld", "Liebe"]},
-    {"frage": "Ein Jahr Fernbeziehung oder einen Monat garnicht reden?", "emoji": "📞", "optionen": ["Fernbeziehung", "Nicht reden"]},
-    {"frage": "Die Person deiner Träume heiraten oder die Karriere deiner Träume machen?", "emoji": "💍", "optionen": ["Heiraten", "Karriere"]},
-    {"frage": "Wissen wie du stirbst oder wann du stirbst?", "emoji": "💀", "optionen": ["Wie", "Wann"]},
-    {"frage": "Für immer in einer Großstadt oder Kleinstadt leben?", "emoji": "🏙️", "optionen": ["Großstadt", "Kleinstadt"]},
-    {"frage": "Ganz auf soziale Medien verzichten oder als Influencer:in Geld verdienen?", "emoji": "📲", "optionen": ["Keine sozialen Medien", "Influencer"]},
-    {"frage": "Eine Tiefsee- oder Weltraum-Reise machen?", "emoji": "🚀", "optionen": ["Tiefsee", "Weltraum"]},
-    {"frage": "Jedes Jahr an demselben Strand Urlaub machen oder jedes Jahr einen neuen Ort entdecken?", "emoji": "🏖️", "optionen": ["Gleicher Strand", "Neuer Ort"]},
-    {"frage": "Für immer umsonst reisen oder dein Traumhaus umsonst kaufen?", "emoji": "🏠", "optionen": ["Umsonst reisen", "Traumhaus"]},
-    {"frage": "Fliegen oder unter Wasser atmen können?", "emoji": "🦅", "optionen": ["Fliegen", "Unter Wasser atmen"]},
-    {"frage": "Nachts im Meer schwimmen obwohl ein Hai in der Nähe ist oder in einem Spukhaus übernachten?", "emoji": "🦈", "optionen": ["Hai-Meer", "Spukhaus"]},
-    {"frage": "Sechs Monate Frühling oder sechs Monate Winter?", "emoji": "🌸", "optionen": ["Frühling", "Winter"]},
-    {"frage": "Ein Jahr lang auf Desserts verzichten oder jeden Tag einen Löffel Wasabi essen?", "emoji": "🍣", "optionen": ["Keine Desserts", "Täglich Wasabi"]},
-    {"frage": "Jede Nacht um 21:30 einschlafen oder erst um 3:30?", "emoji": "😴", "optionen": ["21:30", "3:30"]},
-    {"frage": "Deinen Schwarm küssen nach einer Woche ohne Zähneputzen oder wissen dass du ihn ein Jahr lang nicht küssen kannst?", "emoji": "💋", "optionen": ["Nach Zähneputzen", "1 Jahr warten"]},
-    {"frage": "Im nächsten Leben als Hund oder als Katze?", "emoji": "🐕", "optionen": ["Hund", "Katze"]},
-    {"frage": "Fotografisches Gedächtnis oder Gedanken lesen können?", "emoji": "🧠", "optionen": ["Fotografisch", "Gedanken lesen"]},
-    {"frage": "Für immer Frühstück zum Abendessen oder Abendessen zum Frühstück?", "emoji": "🍳", "optionen": ["Frühstück→Abend", "Abend→Frühstück"]},
-    {"frage": "Für immer auf das Fahrrad verzichten oder nie wieder fliegen?", "emoji": "🚲", "optionen": ["Kein Fahrrad", "Nie fliegen"]},
-    {"frage": "Einen Monat den Fitnessplan von The Rock befolgen oder ein Tattoo von Pete Davidson nachstechen lassen?", "emoji": "💪", "optionen": ["Rock-Fitness", "Tattoo nachstechen"]},
-    {"frage": "Für immer nur noch Horrorfilme oder nur noch Liebes-Komödien?", "emoji": "👻", "optionen": ["Horrorfilme", "Liebes-Komödien"]},
-    {"frage": "Alleine auf einer unbewohnten Insel oder in einer Wohnung mit 6 Mitbewohnern?", "emoji": "🏝️", "optionen": ["Alleine Insel", "6 Mitbewohner"]},
-    {"frage": "Gut singen und schlecht tanzen oder schlecht singen und gut tanzen?", "emoji": "💃", "optionen": ["Gut singen", "Gut tanzen"]},
-    {"frage": "Alles zurücknehmen können was du sagst oder jedes Gespräch über dich mithören?", "emoji": "🗣️", "optionen": ["Zurücknehmen", "Mithören"]},
-    {"frage": "Statist in einem Oscar-Film oder Hauptdarsteller in einem Goldene-Palme-Flop?", "emoji": "🏆", "optionen": ["Statist Oscar", "Hauptdarsteller Flop"]},
-    {"frage": "Ein Jahr lang auf Kaffee oder auf Brot verzichten?", "emoji": "☕", "optionen": ["Kein Kaffee", "Kein Brot"]},
-    {"frage": "Dafür bekannt immer ehrlich oder immer nett zu sein?", "emoji": "😊", "optionen": ["Ehrlich", "Nett"]},
-    {"frage": "15 Stunden am Tag schlafen oder nur 2 Stunden pro Nacht?", "emoji": "😴", "optionen": ["15h schlafen", "2h pro Nacht"]},
-    {"frage": "Für immer nur noch denselben Song hören oder nur noch denselben Film sehen?", "emoji": "🎵", "optionen": ["Gleicher Song", "Gleicher Film"]},
-    {"frage": "Einen Pool im Garten oder direkt am Meer wohnen?", "emoji": "🏊", "optionen": ["Pool", "Meer"]},
-    {"frage": "Deinen gesamten Suchverlauf veröffentlichen oder die Namen aller Personen in die du verknallt warst?", "emoji": "🔍", "optionen": ["Suchverlauf", "Verknalltheiten"]},
-    {"frage": "150 erste Dates in einem Jahr oder automatisch ein Jahr mit der nächsten Person?", "emoji": "💑", "optionen": ["150 Dates", "1 Jahr automatisch"]},
-    {"frage": "Einen besten Freund aber keine Bekannten oder große Gruppe aber keinen besten Freund?", "emoji": "🤝", "optionen": ["1 bester Freund", "Viele Bekannte"]},
-    {"frage": "Mit Aalen schwimmen oder in einer Fledermaus-Höhle schlafen?", "emoji": "🦇", "optionen": ["Aale", "Fledermaus-Höhle"]},
-    {"frage": "Mitten im Date eine Magenverstimmung bekommen oder zum Doppel-Date mit den Eltern?", "emoji": "🤢", "optionen": ["Magen im Date", "Doppel-Date Eltern"]},
-    {"frage": "Als klügste oder lustigste Person im Raum bekannt sein?", "emoji": "🤓", "optionen": ["Klugste", "Lustigste"]},
-    {"frage": "24 Stunden mit deinem Ex in einem Zimmer oder mit jemandem dessen Meinung das Gegenteil ist?", "emoji": "🚪", "optionen": ["Ex im Zimmer", "Gegenteil"]},
-    {"frage": "Morgen eine Million oder in 10 Jahren 10 Millionen?", "emoji": "💶", "optionen": ["1 Mio jetzt", "10 Mio in 10 Jahren"]},
-    {"frage": "Jedes Jahr in eine neue Stadt ziehen oder für immer in deiner jetzigen Stadt?", "emoji": "🏠", "optionen": ["Jedes Jahr neu", "Für immer hier"]},
-    {"frage": "Mit deinem Lieblingskünstler auf Tournee oder mit deinem Lieblingsschauspieler über den roten Teppich?", "emoji": "🎤", "optionen": ["Tournee", "Roter Teppich"]},
-    {"frage": "Jedes Foto auf dem Handy zeigen oder jede SMS dieser Woche laut vorlesen?", "emoji": "📱", "optionen": ["Fotos zeigen", "SMS vorlesen"]},
-    {"frage": "Wissen wie ein Flugzeug fliegt oder wie man seine eigenen Klamotten näht?", "emoji": "✈️", "optionen": ["Flugzeug", "Klamotten nähen"]},
-    {"frage": "Ein Zölibatsgelübde oder ein Schweigegelübde ablegen?", "emoji": "🤫", "optionen": ["Zölibat", "Schweigen"]},
-    {"frage": "Für immer den Sonnenuntergang oder den Sonnenaufgang beobachten?", "emoji": "🌅", "optionen": ["Untergang", "Aufgang"]},
-    {"frage": "Über Nacht in einem Vergnügungspark oder Einkaufszentrum eingesperrt?", "emoji": "🎢", "optionen": ["Vergnügungspark", "Einkaufszentrum"]},
-    {"frage": "Einmal im Jahr First Class oder mehrere billige Rucksack-Reisen?", "emoji": "🧳", "optionen": ["First Class", "Rucksack"]},
-    {"frage": "Für einen strengen Chef arbeiten den du magst oder für einen lockeren der dich nervt?", "emoji": "👔", "optionen": ["Strenger Chef (mag ich)", "Lockerer (nervt)"]},
-    {"frage": "Ein Bestseller-Buch veröffentlichen oder einen Oscar-prämierten Film drehen?", "emoji": "📖", "optionen": ["Bestseller", "Oscar-Film"]},
-    {"frage": "Für immer overdressed oder für immer underdressed?", "emoji": "👔", "optionen": ["Overdressed", "Underdressed"]},
-    {"frage": "Dein Haustier könnte mit dir reden oder ewig leben?", "emoji": "🐾", "optionen": ["Reden", "Ewig leben"]},
-    {"frage": "Ein Jahr lang nur Wiederholungen von Friends oder The Office sehen?", "emoji": "📺", "optionen": ["Friends", "The Office"]},
-    {"frage": "Den ganzen Tag Spinat zwischen den Zähnen haben oder Klopapier am Schuh kleben?", "emoji": "😬", "optionen": ["Spinat zwischen Zähnen", "Klopapier am Schuh"]},
-    {"frage": "Noch einmal die Grundschulzeit erleben oder wissen wie deine Rente sein wird?", "emoji": "📚", "optionen": ["Grundschule", "Rente wissen"]},
-    {"frage": "Von Außerirdischen entführt werden oder auf einer einsamen Insel stranden?", "emoji": "🛸", "optionen": ["Entführt", "Insel"]},
-    {"frage": "Nur noch Literatur aus dem 19. Jahrhundert oder nur noch Comics lesen?", "emoji": "📚", "optionen": ["19. Jahrhundert", "Comics"]},
-    {"frage": "Im Römischen Reich oder im Mittelalter leben?", "emoji": "⚔️", "optionen": ["Römisches Reich", "Mittelalter"]},
-    {"frage": "Jemand der in traurigen Momenten zwangshaft lacht oder weint wenn jemand einen Witz macht?", "emoji": "😂", "optionen": ["Zwanghaft lachen", "Bei Witzen weinen"]},
-    {"frage": "Zu Lebzeiten ins Weltall fliegen oder dafür sorgen dass Milliardäre nie ins All dürfen?", "emoji": "🚀", "optionen": ["Selber ins All", "Milliardäre blockieren"]},
-    {"frage": "Wie Minnie Maus reden wenn du wütend bist oder lachen wie Spongebob?", "emoji": "😤", "optionen": ["Minnie Maus", "Spongebob"]},
-    {"frage": "Jeden Tag eine neue Sprache oder jeden Tag ein neues Instrument lernen?", "emoji": "🎹", "optionen": ["Sprache", "Instrument"]},
-    {"frage": "Nie wieder Süßigkeiten oder nie wieder salzige Snacks?", "emoji": "🍫", "optionen": ["Keine Süßigkeiten", "Keine salzigen Snacks"]},
-    {"frage": "Dein Gedächtnis verlieren oder nie wieder neue Erinnerungen machen können?", "emoji": "💭", "optionen": ["Gedächtnis verlieren", "Keine neuen Erinnerungen"]},
-    {"frage": "Jeden Tag im Regen tanzen oder jeden Tag im Schlamm laufen?", "emoji": "🌧️", "optionen": ["Im Regen tanzen", "Im Schlamm laufen"]},
-    {"frage": "Deinen Geburtstag vergessen oder den deiner besten Freunde?", "emoji": "🎂", "optionen": ["Meinen vergessen", "Freunde vergessen"]},
-    {"frage": "Einen Monat ohne Handy oder einen Monat ohne Freunde?", "emoji": "📱", "optionen": ["Ohne Handy", "Ohne Freunde"]},
-    {"frage": "In einer Welt ohne Haustiere oder ohne Pflanzen?", "emoji": "🌿", "optionen": ["Keine Haustiere", "Keine Pflanzen"]},
-    {"frage": "Eine Zeitmaschine für Vergangenheit oder Zukunft?", "emoji": "⏳", "optionen": ["Vergangenheit", "Zukunft"]},
-    {"frage": "Nur noch Nachrichten auf Papier schreiben oder nur noch per Sprachnachricht?", "emoji": "📝", "optionen": ["Papier", "Sprachnachricht"]},
-    {"frage": "Immer sofort einschlafen wenn du das Handy weglegst oder nie wieder ohne Smartphone einschlafen?", "emoji": "😴", "optionen": ["Sofort einschlafen", "Smartphone zum Schlafen"]},
-    {"frage": "Dein ganzes Leben immer laut denken oder nie wieder sprechen können?", "emoji": "🧠", "optionen": ["Laut denken", "Nie sprechen"]},
-    {"frage": "Für immer in einer Stadt bleiben die du liebst oder ständig unterwegs sein?", "emoji": "🌍", "optionen": ["Bleiben", "Unterwegs"]},
-    {"frage": "Ein geheimes Doppelleben oder dein ganzes Leben öffentlich?", "emoji": "🎭", "optionen": ["Doppelleben", "Öffentlich"]},
-    {"frage": "Nie verletzt werden oder nie jemand anderen verletzen?", "emoji": "🛡️", "optionen": ["Nie verletzt", "Nie verletzen"]},
+    {"frage": "Stinkende FÃ¼ÃŸe oder schlechten Atem?", "emoji": "ðŸ‘ƒ", "optionen": ["Stinkende FÃ¼ÃŸe", "Schlechter Atem"]},
+    {"frage": "Telepathisch kommunizieren oder jede Sprache der Welt kennen?", "emoji": "ðŸ—£ï¸", "optionen": ["Telepathie", "Alle Sprachen"]},
+    {"frage": "Einem AuÃŸerirdischen oder Big Foot begegnen?", "emoji": "ðŸ‘½", "optionen": ["Alien", "Big Foot"]},
+    {"frage": "Unkontrolliert in Gesang ausbrechen oder unerwartet die Stimme verlieren?", "emoji": "ðŸŽ¤", "optionen": ["Immer singen", "Stimme verlieren"]},
+    {"frage": "Von jeder OberflÃ¤che abprallen oder nie wieder springen kÃ¶nnen?", "emoji": "ðŸ¤¸", "optionen": ["Abprallen", "Nie springen"]},
+    {"frage": "Ein GesprÃ¤ch mit deinem vergangenen oder zukÃ¼nftigen Ich?", "emoji": "â³", "optionen": ["Vergangenes Ich", "ZukÃ¼nftiges Ich"]},
+    {"frage": "StÃ¤ndig Kopfschmerzen oder stÃ¤ndig Juckreiz?", "emoji": "ðŸ¤•", "optionen": ["Kopfschmerzen", "Juckreiz"]},
+    {"frage": "Wissen was deine Haustiere denken oder dass sie dich verstehen?", "emoji": "ðŸ¾", "optionen": ["Ihre Gedanken wissen", "Sie verstehen mich"]},
+    {"frage": "Nur noch schreien oder nur noch flÃ¼stern?", "emoji": "ðŸ”Š", "optionen": ["Nur schreien", "Nur flÃ¼stern"]},
+    {"frage": "Wie ein Fisch aussehen oder wie ein Fisch riechen?", "emoji": "ðŸŸ", "optionen": ["Wie ein Fisch aussehen", "Wie ein Fisch riechen"]},
+    {"frage": "Auf YouTube oder TikTok berÃ¼hmt werden?", "emoji": "ðŸ“±", "optionen": ["YouTube", "TikTok"]},
+    {"frage": "In einer alten Stadt oder im Wald verirren?", "emoji": "ðŸŒ²", "optionen": ["Alte Stadt", "Wald"]},
+    {"frage": "Von einem Zombie oder einem LÃ¶wen gejagt werden?", "emoji": "ðŸ§Ÿ", "optionen": ["Zombie", "LÃ¶we"]},
+    {"frage": "Nur 7 Finger oder nur 7 Zehen haben?", "emoji": "ðŸ–ï¸", "optionen": ["7 Finger", "7 Zehen"]},
+    {"frage": "Alles was du isst ist zu sÃ¼ÃŸ oder nicht sÃ¼ÃŸ genug?", "emoji": "ðŸ¬", "optionen": ["Zu sÃ¼ÃŸ", "Nicht sÃ¼ÃŸ genug"]},
+    {"frage": "Deinen KÃ¶rper gegen den deines Ex oder deiner Oma tauschen?", "emoji": "äº¤æ¢", "optionen": ["Ex-KÃ¶rper", "Oma-KÃ¶rper"]},
+    {"frage": "Nur einen einzigen Film oder nur das gleiche Essen fÃ¼r immer?", "emoji": "ðŸŽ¬", "optionen": ["Nur 1 Film", "Nur 1 Essen"]},
+    {"frage": "Eine Menge mittelmÃ¤ÃŸiger Freunde oder einen wirklich treuen Hund?", "emoji": "ðŸ•", "optionen": ["Viele mittelmÃ¤ÃŸige Freunde", "1 treuer Hund"]},
+    {"frage": "Eine Woche nur Burger oder eine Woche nur Eiscreme?", "emoji": "ðŸ”", "optionen": ["Nur Burger", "Nur Eiscreme"]},
+    {"frage": "SuperkrÃ¤fte von Iron Man oder Batman?", "emoji": "ðŸ¦¸", "optionen": ["Iron Man", "Batman"]},
+    {"frage": "In einer Welt mit stÃ¤ndigem Schnee oder stÃ¤ndigem Regen?", "emoji": "ðŸŒ§ï¸", "optionen": ["Immer Schnee", "Immer Regen"]},
+    {"frage": "Feuer oder Wasser kontrollieren kÃ¶nnen?", "emoji": "ðŸ”¥", "optionen": ["Feuer", "Wasser"]},
+    {"frage": "In einer Welt ohne Musik oder ohne Filme?", "emoji": "ðŸŽµ", "optionen": ["Keine Musik", "Keine Filme"]},
+    {"frage": "Das Leben einer Friends-Figur oder Game of Thrones-Charakters?", "emoji": "ðŸ“º", "optionen": ["Friends", "Game of Thrones"]},
+    {"frage": "Ãœberall behaart oder nirgends behaart?", "emoji": "ðŸ¦", "optionen": ["Ãœberall behaart", "Nirgends behaart"]},
+    {"frage": "Kalte Pizza oder heiÃŸen Joghurt zum FrÃ¼hstÃ¼ck?", "emoji": "ðŸ•", "optionen": ["Kalte Pizza", "HeiÃŸer Joghurt"]},
+    {"frage": "Eine Woche ohne ZÃ¤hneputzen oder zwei Wochen ohne Duschen?", "emoji": "ðŸš¿", "optionen": ["Nie ZÃ¤hneputzen", "Nie Duschen"]},
+    {"frage": "Fotografisches GedÃ¤chtnis oder perfektes GehÃ¶r?", "emoji": "ðŸ“·", "optionen": ["Fotografisch", "Perfektes GehÃ¶r"]},
+    {"frage": "Bei einer Dating-Show oder Survival-Show mitmachen?", "emoji": "ðŸï¸", "optionen": ["Dating-Show", "Survival-Show"]},
+    {"frage": "Deinen Lieblingssong fÃ¼r immer in Dauerschleife oder nie wieder Musik?", "emoji": "ðŸŽ¶", "optionen": ["Dauerschleife", "Nie wieder Musik"]},
+    {"frage": "Teleportieren kÃ¶nnen oder ein Privatflugzeug?", "emoji": "âœˆï¸", "optionen": ["Teleportieren", "Privatflugzeug"]},
+    {"frage": "Immer schwitzen oder immer frieren?", "emoji": "ðŸ¥µ", "optionen": ["Immer schwitzen", "Immer frieren"]},
+    {"frage": "Einen neuen Planeten entdecken oder einen versunkenen Schatz finden?", "emoji": "ðŸª", "optionen": ["Neuer Planet", "Versunkener Schatz"]},
+    {"frage": "Gelegentlich zaubern oder Superhelden-KrÃ¤fte fÃ¼r immer?", "emoji": "ðŸ§™", "optionen": ["Gelegentlich zaubern", "SuperkrÃ¤fte"]},
+    {"frage": "Auf einem Boot oder in einem Baumhaus leben?", "emoji": "â›µ", "optionen": ["Boot", "Baumhaus"]},
+    {"frage": "FÃ¼r immer superschrÃ¤ge TrÃ¤ume oder nie wieder trÃ¤umen?", "emoji": "ðŸŒ™", "optionen": ["SchrÃ¤ge TrÃ¤ume", "Nie trÃ¤umen"]},
+    {"frage": "Alles was du dir wÃ¼nschst in die RealitÃ¤t umsetzen oder Gedanken lesen?", "emoji": "ðŸ’­", "optionen": ["WÃ¼nsche erfÃ¼llen", "Gedanken lesen"]},
+    {"frage": "Ein Jahr lang jeden Tag die gleiche Farbe tragen oder immer die gleiche Frisur?", "emoji": "ðŸ‘•", "optionen": ["Gleiche Farbe", "Gleiche Frisur"]},
+    {"frage": "Mit StÃ¶ckelschuhen am Strand oder Sandalen auf schlammigem Festival?", "emoji": "ðŸ‘¡", "optionen": ["StÃ¶ckelschuhe am Strand", "Sandalen im Schlamm"]},
+    {"frage": "Den Rest deines Lebens nur drinnen oder nur drauÃŸen?", "emoji": "ðŸ¡", "optionen": ["Nur drinnen", "Nur drauÃŸen"]},
+    {"frage": "FÃ¼r immer auf das FrÃ¼hstÃ¼ck oder auf das Abendessen verzichten?", "emoji": "ðŸ³", "optionen": ["Kein FrÃ¼hstÃ¼ck", "Kein Abendessen"]},
+    {"frage": "Einen ganzen Tag im Sitzen oder im Stehen verbringen?", "emoji": "ðŸª‘", "optionen": ["Im Sitzen", "Im Stehen"]},
+    {"frage": "Ein Leben mit 1000 Jahren oder zehn Leben mit jeweils 100 Jahren?", "emoji": "ðŸ•°ï¸", "optionen": ["1x 1000 Jahre", "10x 100 Jahre"]},
+    {"frage": "Das Internet oder deine Krankenversicherung aufgeben?", "emoji": "ðŸŒ", "optionen": ["Internet aufgeben", "Krankenversicherung"]},
+    {"frage": "Einen Film Ã¼ber deinen peinlichsten Moment oder Kollegen deine Handy-Bilder zeigen?", "emoji": "ðŸ“±", "optionen": ["Film drehen", "Bilder zeigen"]},
+    {"frage": "Superschnell oder unmenschlich stark?", "emoji": "ðŸ’¨", "optionen": ["Schnell", "Stark"]},
+    {"frage": "Attraktiver oder intelligenter sein?", "emoji": "ðŸ’…", "optionen": ["Attraktiv", "Intelligent"]},
+    {"frage": "Einen schicken Abend im Restaurant oder Filmabend zu Hause?", "emoji": "ðŸ½ï¸", "optionen": ["Restaurant", "Zu Hause"]},
+    {"frage": "Die meiste Zeit mit der gleichen Person oder mit vielen verschiedenen?", "emoji": "ðŸ‘«", "optionen": ["Gleiche Person", "Verschiedene Menschen"]},
+    {"frage": "Das perfekte Geschenk machen oder bekommen?", "emoji": "ðŸŽ", "optionen": ["Machen", "Bekommen"]},
+    {"frage": "Alles wissen was im Kopf deines Partners vorgeht oder einen Tag in seiner Haut?", "emoji": "ðŸ§ ", "optionen": ["Gedanken wissen", "In seiner Haut"]},
+    {"frage": "Das beste Date aller Zeiten oder eine Reihe guter Dates?", "emoji": "ðŸ’˜", "optionen": ["Bestes Date", "Reihe guter Dates"]},
+    {"frage": "FÃ¼r den Rest deines Lebens nur noch texten oder nur noch anrufen?", "emoji": "ðŸ’¬", "optionen": ["Nur texten", "Nur anrufen"]},
+    {"frage": "Einen Tag in der UnterwÃ¤sche deines Partners oder in seinen Schuhen?", "emoji": "ðŸ‘Ÿ", "optionen": ["UnterwÃ¤sche", "Schuhe"]},
+    {"frage": "StÃ¤ndig Ã¼berrascht werden oder immer wissen was auf dich zukommt?", "emoji": "ðŸŽ", "optionen": ["Ãœberrascht", "Immer wissen"]},
+    {"frage": "Deinen Geist fÃ¼r immer jung oder deinen KÃ¶rper fÃ¼r immer jung?", "emoji": "ðŸ§¬", "optionen": ["Geist jung", "KÃ¶rper jung"]},
+    {"frage": "Nur noch mit Ã¤lteren oder jÃ¼ngeren Menschen Zeit verbringen?", "emoji": "ðŸ‘´", "optionen": ["Ã„ltere", "JÃ¼ngere"]},
+    {"frage": "Als SÃ¤ugetier oder als Insekt wiedergeboren werden?", "emoji": "ðŸ›", "optionen": ["SÃ¤ugetier", "Insekt"]},
+    {"frage": "Eine Hochzeit oder eine riesige Geburtstagsparty planen?", "emoji": "ðŸ’’", "optionen": ["Hochzeit", "Geburtstagsparty"]},
+    {"frage": "Immer die lauteste oder die leiseste Person im Raum sein?", "emoji": "ðŸ“¢", "optionen": ["Lauteste", "Leiseste"]},
+    {"frage": "Immer zu spÃ¤t oder immer zu frÃ¼h kommen?", "emoji": "â°", "optionen": ["Zu spÃ¤t", "Zu frÃ¼h"]},
+    {"frage": "Den schlimmsten oder den schÃ¶nsten Moment deines Lebens vergessen?", "emoji": "ðŸ’­", "optionen": ["Schlimmsten vergessen", "SchÃ¶nsten vergessen"]},
+    {"frage": "FÃ¼r den Rest deines Lebens 20 oder 40 sein?", "emoji": "ðŸŽ‚", "optionen": ["20", "40"]},
+    {"frage": "Jeden Tag einen Kuss oder jeden Tag eine Umarmung?", "emoji": "ðŸ’‹", "optionen": ["Kuss", "Umarmung"]},
+    {"frage": "Alles Geld oder all die Liebe die du dir wÃ¼nschst?", "emoji": "â¤ï¸", "optionen": ["Geld", "Liebe"]},
+    {"frage": "Ein Jahr Fernbeziehung oder einen Monat garnicht reden?", "emoji": "ðŸ“ž", "optionen": ["Fernbeziehung", "Nicht reden"]},
+    {"frage": "Die Person deiner TrÃ¤ume heiraten oder die Karriere deiner TrÃ¤ume machen?", "emoji": "ðŸ’", "optionen": ["Heiraten", "Karriere"]},
+    {"frage": "Wissen wie du stirbst oder wann du stirbst?", "emoji": "ðŸ’€", "optionen": ["Wie", "Wann"]},
+    {"frage": "FÃ¼r immer in einer GroÃŸstadt oder Kleinstadt leben?", "emoji": "ðŸ™ï¸", "optionen": ["GroÃŸstadt", "Kleinstadt"]},
+    {"frage": "Ganz auf soziale Medien verzichten oder als Influencer:in Geld verdienen?", "emoji": "ðŸ“²", "optionen": ["Keine sozialen Medien", "Influencer"]},
+    {"frage": "Eine Tiefsee- oder Weltraum-Reise machen?", "emoji": "ðŸš€", "optionen": ["Tiefsee", "Weltraum"]},
+    {"frage": "Jedes Jahr an demselben Strand Urlaub machen oder jedes Jahr einen neuen Ort entdecken?", "emoji": "ðŸ–ï¸", "optionen": ["Gleicher Strand", "Neuer Ort"]},
+    {"frage": "FÃ¼r immer umsonst reisen oder dein Traumhaus umsonst kaufen?", "emoji": "ðŸ ", "optionen": ["Umsonst reisen", "Traumhaus"]},
+    {"frage": "Fliegen oder unter Wasser atmen kÃ¶nnen?", "emoji": "ðŸ¦…", "optionen": ["Fliegen", "Unter Wasser atmen"]},
+    {"frage": "Nachts im Meer schwimmen obwohl ein Hai in der NÃ¤he ist oder in einem Spukhaus Ã¼bernachten?", "emoji": "ðŸ¦ˆ", "optionen": ["Hai-Meer", "Spukhaus"]},
+    {"frage": "Sechs Monate FrÃ¼hling oder sechs Monate Winter?", "emoji": "ðŸŒ¸", "optionen": ["FrÃ¼hling", "Winter"]},
+    {"frage": "Ein Jahr lang auf Desserts verzichten oder jeden Tag einen LÃ¶ffel Wasabi essen?", "emoji": "ðŸ£", "optionen": ["Keine Desserts", "TÃ¤glich Wasabi"]},
+    {"frage": "Jede Nacht um 21:30 einschlafen oder erst um 3:30?", "emoji": "ðŸ˜´", "optionen": ["21:30", "3:30"]},
+    {"frage": "Deinen Schwarm kÃ¼ssen nach einer Woche ohne ZÃ¤hneputzen oder wissen dass du ihn ein Jahr lang nicht kÃ¼ssen kannst?", "emoji": "ðŸ’‹", "optionen": ["Nach ZÃ¤hneputzen", "1 Jahr warten"]},
+    {"frage": "Im nÃ¤chsten Leben als Hund oder als Katze?", "emoji": "ðŸ•", "optionen": ["Hund", "Katze"]},
+    {"frage": "Fotografisches GedÃ¤chtnis oder Gedanken lesen kÃ¶nnen?", "emoji": "ðŸ§ ", "optionen": ["Fotografisch", "Gedanken lesen"]},
+    {"frage": "FÃ¼r immer FrÃ¼hstÃ¼ck zum Abendessen oder Abendessen zum FrÃ¼hstÃ¼ck?", "emoji": "ðŸ³", "optionen": ["FrÃ¼hstÃ¼ckâ†’Abend", "Abendâ†’FrÃ¼hstÃ¼ck"]},
+    {"frage": "FÃ¼r immer auf das Fahrrad verzichten oder nie wieder fliegen?", "emoji": "ðŸš²", "optionen": ["Kein Fahrrad", "Nie fliegen"]},
+    {"frage": "Einen Monat den Fitnessplan von The Rock befolgen oder ein Tattoo von Pete Davidson nachstechen lassen?", "emoji": "ðŸ’ª", "optionen": ["Rock-Fitness", "Tattoo nachstechen"]},
+    {"frage": "FÃ¼r immer nur noch Horrorfilme oder nur noch Liebes-KomÃ¶dien?", "emoji": "ðŸ‘»", "optionen": ["Horrorfilme", "Liebes-KomÃ¶dien"]},
+    {"frage": "Alleine auf einer unbewohnten Insel oder in einer Wohnung mit 6 Mitbewohnern?", "emoji": "ðŸï¸", "optionen": ["Alleine Insel", "6 Mitbewohner"]},
+    {"frage": "Gut singen und schlecht tanzen oder schlecht singen und gut tanzen?", "emoji": "ðŸ’ƒ", "optionen": ["Gut singen", "Gut tanzen"]},
+    {"frage": "Alles zurÃ¼cknehmen kÃ¶nnen was du sagst oder jedes GesprÃ¤ch Ã¼ber dich mithÃ¶ren?", "emoji": "ðŸ—£ï¸", "optionen": ["ZurÃ¼cknehmen", "MithÃ¶ren"]},
+    {"frage": "Statist in einem Oscar-Film oder Hauptdarsteller in einem Goldene-Palme-Flop?", "emoji": "ðŸ†", "optionen": ["Statist Oscar", "Hauptdarsteller Flop"]},
+    {"frage": "Ein Jahr lang auf Kaffee oder auf Brot verzichten?", "emoji": "â˜•", "optionen": ["Kein Kaffee", "Kein Brot"]},
+    {"frage": "DafÃ¼r bekannt immer ehrlich oder immer nett zu sein?", "emoji": "ðŸ˜Š", "optionen": ["Ehrlich", "Nett"]},
+    {"frage": "15 Stunden am Tag schlafen oder nur 2 Stunden pro Nacht?", "emoji": "ðŸ˜´", "optionen": ["15h schlafen", "2h pro Nacht"]},
+    {"frage": "FÃ¼r immer nur noch denselben Song hÃ¶ren oder nur noch denselben Film sehen?", "emoji": "ðŸŽµ", "optionen": ["Gleicher Song", "Gleicher Film"]},
+    {"frage": "Einen Pool im Garten oder direkt am Meer wohnen?", "emoji": "ðŸŠ", "optionen": ["Pool", "Meer"]},
+    {"frage": "Deinen gesamten Suchverlauf verÃ¶ffentlichen oder die Namen aller Personen in die du verknallt warst?", "emoji": "ðŸ”", "optionen": ["Suchverlauf", "Verknalltheiten"]},
+    {"frage": "150 erste Dates in einem Jahr oder automatisch ein Jahr mit der nÃ¤chsten Person?", "emoji": "ðŸ’‘", "optionen": ["150 Dates", "1 Jahr automatisch"]},
+    {"frage": "Einen besten Freund aber keine Bekannten oder groÃŸe Gruppe aber keinen besten Freund?", "emoji": "ðŸ¤", "optionen": ["1 bester Freund", "Viele Bekannte"]},
+    {"frage": "Mit Aalen schwimmen oder in einer Fledermaus-HÃ¶hle schlafen?", "emoji": "ðŸ¦‡", "optionen": ["Aale", "Fledermaus-HÃ¶hle"]},
+    {"frage": "Mitten im Date eine Magenverstimmung bekommen oder zum Doppel-Date mit den Eltern?", "emoji": "ðŸ¤¢", "optionen": ["Magen im Date", "Doppel-Date Eltern"]},
+    {"frage": "Als klÃ¼gste oder lustigste Person im Raum bekannt sein?", "emoji": "ðŸ¤“", "optionen": ["Klugste", "Lustigste"]},
+    {"frage": "24 Stunden mit deinem Ex in einem Zimmer oder mit jemandem dessen Meinung das Gegenteil ist?", "emoji": "ðŸšª", "optionen": ["Ex im Zimmer", "Gegenteil"]},
+    {"frage": "Morgen eine Million oder in 10 Jahren 10 Millionen?", "emoji": "ðŸ’¶", "optionen": ["1 Mio jetzt", "10 Mio in 10 Jahren"]},
+    {"frage": "Jedes Jahr in eine neue Stadt ziehen oder fÃ¼r immer in deiner jetzigen Stadt?", "emoji": "ðŸ ", "optionen": ["Jedes Jahr neu", "FÃ¼r immer hier"]},
+    {"frage": "Mit deinem LieblingskÃ¼nstler auf Tournee oder mit deinem Lieblingsschauspieler Ã¼ber den roten Teppich?", "emoji": "ðŸŽ¤", "optionen": ["Tournee", "Roter Teppich"]},
+    {"frage": "Jedes Foto auf dem Handy zeigen oder jede SMS dieser Woche laut vorlesen?", "emoji": "ðŸ“±", "optionen": ["Fotos zeigen", "SMS vorlesen"]},
+    {"frage": "Wissen wie ein Flugzeug fliegt oder wie man seine eigenen Klamotten nÃ¤ht?", "emoji": "âœˆï¸", "optionen": ["Flugzeug", "Klamotten nÃ¤hen"]},
+    {"frage": "Ein ZÃ¶libatsgelÃ¼bde oder ein SchweigegelÃ¼bde ablegen?", "emoji": "ðŸ¤«", "optionen": ["ZÃ¶libat", "Schweigen"]},
+    {"frage": "FÃ¼r immer den Sonnenuntergang oder den Sonnenaufgang beobachten?", "emoji": "ðŸŒ…", "optionen": ["Untergang", "Aufgang"]},
+    {"frage": "Ãœber Nacht in einem VergnÃ¼gungspark oder Einkaufszentrum eingesperrt?", "emoji": "ðŸŽ¢", "optionen": ["VergnÃ¼gungspark", "Einkaufszentrum"]},
+    {"frage": "Einmal im Jahr First Class oder mehrere billige Rucksack-Reisen?", "emoji": "ðŸ§³", "optionen": ["First Class", "Rucksack"]},
+    {"frage": "FÃ¼r einen strengen Chef arbeiten den du magst oder fÃ¼r einen lockeren der dich nervt?", "emoji": "ðŸ‘”", "optionen": ["Strenger Chef (mag ich)", "Lockerer (nervt)"]},
+    {"frage": "Ein Bestseller-Buch verÃ¶ffentlichen oder einen Oscar-prÃ¤mierten Film drehen?", "emoji": "ðŸ“–", "optionen": ["Bestseller", "Oscar-Film"]},
+    {"frage": "FÃ¼r immer overdressed oder fÃ¼r immer underdressed?", "emoji": "ðŸ‘”", "optionen": ["Overdressed", "Underdressed"]},
+    {"frage": "Dein Haustier kÃ¶nnte mit dir reden oder ewig leben?", "emoji": "ðŸ¾", "optionen": ["Reden", "Ewig leben"]},
+    {"frage": "Ein Jahr lang nur Wiederholungen von Friends oder The Office sehen?", "emoji": "ðŸ“º", "optionen": ["Friends", "The Office"]},
+    {"frage": "Den ganzen Tag Spinat zwischen den ZÃ¤hnen haben oder Klopapier am Schuh kleben?", "emoji": "ðŸ˜¬", "optionen": ["Spinat zwischen ZÃ¤hnen", "Klopapier am Schuh"]},
+    {"frage": "Noch einmal die Grundschulzeit erleben oder wissen wie deine Rente sein wird?", "emoji": "ðŸ“š", "optionen": ["Grundschule", "Rente wissen"]},
+    {"frage": "Von AuÃŸerirdischen entfÃ¼hrt werden oder auf einer einsamen Insel stranden?", "emoji": "ðŸ›¸", "optionen": ["EntfÃ¼hrt", "Insel"]},
+    {"frage": "Nur noch Literatur aus dem 19. Jahrhundert oder nur noch Comics lesen?", "emoji": "ðŸ“š", "optionen": ["19. Jahrhundert", "Comics"]},
+    {"frage": "Im RÃ¶mischen Reich oder im Mittelalter leben?", "emoji": "âš”ï¸", "optionen": ["RÃ¶misches Reich", "Mittelalter"]},
+    {"frage": "Jemand der in traurigen Momenten zwangshaft lacht oder weint wenn jemand einen Witz macht?", "emoji": "ðŸ˜‚", "optionen": ["Zwanghaft lachen", "Bei Witzen weinen"]},
+    {"frage": "Zu Lebzeiten ins Weltall fliegen oder dafÃ¼r sorgen dass MilliardÃ¤re nie ins All dÃ¼rfen?", "emoji": "ðŸš€", "optionen": ["Selber ins All", "MilliardÃ¤re blockieren"]},
+    {"frage": "Wie Minnie Maus reden wenn du wÃ¼tend bist oder lachen wie Spongebob?", "emoji": "ðŸ˜¤", "optionen": ["Minnie Maus", "Spongebob"]},
+    {"frage": "Jeden Tag eine neue Sprache oder jeden Tag ein neues Instrument lernen?", "emoji": "ðŸŽ¹", "optionen": ["Sprache", "Instrument"]},
+    {"frage": "Nie wieder SÃ¼ÃŸigkeiten oder nie wieder salzige Snacks?", "emoji": "ðŸ«", "optionen": ["Keine SÃ¼ÃŸigkeiten", "Keine salzigen Snacks"]},
+    {"frage": "Dein GedÃ¤chtnis verlieren oder nie wieder neue Erinnerungen machen kÃ¶nnen?", "emoji": "ðŸ’­", "optionen": ["GedÃ¤chtnis verlieren", "Keine neuen Erinnerungen"]},
+    {"frage": "Jeden Tag im Regen tanzen oder jeden Tag im Schlamm laufen?", "emoji": "ðŸŒ§ï¸", "optionen": ["Im Regen tanzen", "Im Schlamm laufen"]},
+    {"frage": "Deinen Geburtstag vergessen oder den deiner besten Freunde?", "emoji": "ðŸŽ‚", "optionen": ["Meinen vergessen", "Freunde vergessen"]},
+    {"frage": "Einen Monat ohne Handy oder einen Monat ohne Freunde?", "emoji": "ðŸ“±", "optionen": ["Ohne Handy", "Ohne Freunde"]},
+    {"frage": "In einer Welt ohne Haustiere oder ohne Pflanzen?", "emoji": "ðŸŒ¿", "optionen": ["Keine Haustiere", "Keine Pflanzen"]},
+    {"frage": "Eine Zeitmaschine fÃ¼r Vergangenheit oder Zukunft?", "emoji": "â³", "optionen": ["Vergangenheit", "Zukunft"]},
+    {"frage": "Nur noch Nachrichten auf Papier schreiben oder nur noch per Sprachnachricht?", "emoji": "ðŸ“", "optionen": ["Papier", "Sprachnachricht"]},
+    {"frage": "Immer sofort einschlafen wenn du das Handy weglegst oder nie wieder ohne Smartphone einschlafen?", "emoji": "ðŸ˜´", "optionen": ["Sofort einschlafen", "Smartphone zum Schlafen"]},
+    {"frage": "Dein ganzes Leben immer laut denken oder nie wieder sprechen kÃ¶nnen?", "emoji": "ðŸ§ ", "optionen": ["Laut denken", "Nie sprechen"]},
+    {"frage": "FÃ¼r immer in einer Stadt bleiben die du liebst oder stÃ¤ndig unterwegs sein?", "emoji": "ðŸŒ", "optionen": ["Bleiben", "Unterwegs"]},
+    {"frage": "Ein geheimes Doppelleben oder dein ganzes Leben Ã¶ffentlich?", "emoji": "ðŸŽ­", "optionen": ["Doppelleben", "Ã–ffentlich"]},
+    {"frage": "Nie verletzt werden oder nie jemand anderen verletzen?", "emoji": "ðŸ›¡ï¸", "optionen": ["Nie verletzt", "Nie verletzen"]},
 ]
 
 def load_fragen_config():
@@ -597,7 +597,7 @@ def is_admin_or_owner():
         required_role = discord.utils.get(interaction.user.roles, name=REQUIRED_ROLE_NAME)
         if required_role:
             return True
-        await interaction.response.send_message("Keine Berechtigung! Nur User mit der 976 Rolle können den Bot nutzen.", ephemeral=True)
+        await interaction.response.send_message("Keine Berechtigung! Nur User mit der 976 Rolle kÃ¶nnen den Bot nutzen.", ephemeral=True)
         return False
     return app_commands.check(predicate)
 
@@ -827,7 +827,7 @@ async def _convert_to_h264(input_path):
     import shutil
     ffmpeg_path = shutil.which('ffmpeg')
     if not ffmpeg_path:
-        print(f"[TikTok] FFmpeg nicht gefunden, überspringe Conversion")
+        print(f"[TikTok] FFmpeg nicht gefunden, Ã¼berspringe Conversion")
         return input_path
     
     probe_cmd = [
@@ -984,9 +984,9 @@ async def download_tiktok_video(url, mode="clyppy"):
     print(f"[TikTok] ALL methods failed for: {url}")
     return None, None
 
-@bot.tree.command(name="add", description="Füge GIF/Media-Links hinzu")
+@bot.tree.command(name="add", description="FÃ¼ge GIF/Media-Links hinzu")
 @is_admin_or_owner()
-@app_commands.describe(links="Links oder Discord-Chat-Export einfügen")
+@app_commands.describe(links="Links oder Discord-Chat-Export einfÃ¼gen")
 async def add_command(interaction: discord.Interaction, links: str):
     await interaction.response.defer()
     use_filter = filter_mode.get(interaction.guild_id, False)
@@ -1006,7 +1006,7 @@ async def add_command(interaction: discord.Interaction, links: str):
     combined = existing + new_links
     save_links(interaction.channel_id, combined)
     await interaction.followup.send(
-        f"**{len(new_links)} neue Links hinzugefügt!**\n"
+        f"**{len(new_links)} neue Links hinzugefÃ¼gt!**\n"
         f"Gesamt: {len(combined)} Links"
     )
 
@@ -1077,9 +1077,9 @@ async def stop_command(interaction: discord.Interaction):
         channel_status[interaction.channel_id]["running"] = False
         await interaction.response.send_message("Gestoppt.")
     else:
-        await interaction.response.send_message("Läuft gerade nicht.", ephemeral=True)
+        await interaction.response.send_message("LÃ¤uft gerade nicht.", ephemeral=True)
 
-@bot.tree.command(name="next", description="Sendet die nächsten 4 GIFs")
+@bot.tree.command(name="next", description="Sendet die nÃ¤chsten 4 GIFs")
 @is_admin_or_owner()
 async def next_command(interaction: discord.Interaction):
     links = load_links(interaction.channel_id)
@@ -1103,7 +1103,7 @@ async def status_command(interaction: discord.Interaction):
         idx = channel_status[interaction.channel_id]["index"]
         running = channel_status[interaction.channel_id]["running"]
     remaining = len(links) - idx
-    status_text = "Läuft" if running else "Gestoppt"
+    status_text = "LÃ¤uft" if running else "Gestoppt"
     embed_mode = "AN" if video_embed_mode.get(interaction.channel_id, False) else "AUS"
     await interaction.response.send_message(
         f"**Status:** {status_text}\n"
@@ -1114,7 +1114,7 @@ async def status_command(interaction: discord.Interaction):
         f"**Uebrig:** {remaining}"
     )
 
-@bot.tree.command(name="clear", description="Löscht die komplette Liste")
+@bot.tree.command(name="clear", description="LÃ¶scht die komplette Liste")
 @is_admin_or_owner()
 async def clear_command(interaction: discord.Interaction):
     path = get_data_file(interaction.channel_id)
@@ -1122,7 +1122,7 @@ async def clear_command(interaction: discord.Interaction):
         path.unlink()
     if interaction.channel_id in channel_status:
         del channel_status[interaction.channel_id]
-    await interaction.response.send_message("Liste gelöscht.")
+    await interaction.response.send_message("Liste gelÃ¶scht.")
 
 @bot.tree.command(name="embedvideos", description="Toggle: MP4/MOV als Inline-Video-Embed senden (statt Text-Link)")
 @is_admin_or_owner()
@@ -1130,7 +1130,7 @@ async def embedvideos_command(interaction: discord.Interaction):
     current = video_embed_mode.get(interaction.channel_id, False)
     video_embed_mode[interaction.channel_id] = not current
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     await interaction.response.send_message(
         f"{icon} **Video-Embed Mode:** {state}\n"
         f"{'MP4/MOV werden jetzt als Inline-Video gesendet.' if not current else 'MP4/MOV werden wieder als Text-Links gesendet.'}"
@@ -1166,18 +1166,18 @@ async def list_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="pos", description="Setzt die Position manuell (z.B. /pos 100)")
 @is_admin_or_owner()
-@app_commands.describe(position="Die gewünschte Startposition")
+@app_commands.describe(position="Die gewÃ¼nschte Startposition")
 async def pos_command(interaction: discord.Interaction, position: int):
     links = load_links(interaction.channel_id)
     if position < 0 or position >= len(links):
-        await interaction.response.send_message(f"Ungültige Position. Gültig: 0-{len(links)-1}", ephemeral=True)
+        await interaction.response.send_message(f"UngÃ¼ltige Position. GÃ¼ltig: 0-{len(links)-1}", ephemeral=True)
         return
     if interaction.channel_id not in channel_status:
         channel_status[interaction.channel_id] = {"index": 0, "running": False}
     channel_status[interaction.channel_id]["index"] = position
     await interaction.response.send_message(f"Position auf {position} gesetzt.")
 
-@bot.tree.command(name="import", description="Lädt bis zu 10 .txt Dateien hoch, erstellt pro Datei einen Channel")
+@bot.tree.command(name="import", description="LÃ¤dt bis zu 10 .txt Dateien hoch, erstellt pro Datei einen Channel")
 @is_admin_or_owner()
 @app_commands.describe(
     datei1="Datei 1", datei2="Datei 2", datei3="Datei 3", datei4="Datei 4", datei5="Datei 5",
@@ -1201,7 +1201,7 @@ async def import_command(
     results = []
     for file in files:
         if not file.filename.endswith('.txt'):
-            results.append(f"**{file.filename}** - Übersprungen (keine .txt)")
+            results.append(f"**{file.filename}** - Ãœbersprungen (keine .txt)")
             continue
         content = await file.read()
         text = content.decode('utf-8', errors='ignore')
@@ -1246,7 +1246,7 @@ async def import_command(
         results.append(f"**{new_channel.mention}** - {len(extracted)} Links")
     await interaction.followup.send("\n".join(results))
 
-@bot.tree.command(name="import2", description="Lädt .txt Dateien und sendet die Links direkt in diesen Channel")
+@bot.tree.command(name="import2", description="LÃ¤dt .txt Dateien und sendet die Links direkt in diesen Channel")
 @is_admin_or_owner()
 @app_commands.describe(
     datei1="Datei 1", datei2="Datei 2", datei3="Datei 3", datei4="Datei 4", datei5="Datei 5",
@@ -1275,7 +1275,7 @@ async def import2_command(
     
     for file in files:
         if not file.filename.endswith('.txt'):
-            results.append(f"**{file.filename}** - Übersprungen (keine .txt)")
+            results.append(f"**{file.filename}** - Ãœbersprungen (keine .txt)")
             continue
         content = await file.read()
         text = content.decode('utf-8', errors='ignore')
@@ -1343,14 +1343,14 @@ async def filtermode_command(interaction: discord.Interaction):
     current = filter_mode.get(interaction.guild_id, False)
     filter_mode[interaction.guild_id] = not current
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     
     if not current:
         desc = (
             f"{icon} **Filter-Modus:** {state}\n\n"
-            "Behält nur: GIF, MP4, MOV, AVI, MKV, WebM, PNG, JPG, WEBP, APNG, SVG\n"
+            "BehÃ¤lt nur: GIF, MP4, MOV, AVI, MKV, WebM, PNG, JPG, WEBP, APNG, SVG\n"
             "Entfernt: Alles andere (Text-Links, HTML-Reste, Tracking-Parameter)\n"
-            "Gilt für: `/import2`, `/add`, `/load`"
+            "Gilt fÃ¼r: `/import2`, `/add`, `/load`"
         )
     else:
         desc = f"{icon} **Filter-Modus:** {state}\n\nStandard-Filter aktiv."
@@ -1367,15 +1367,15 @@ async def nofiltermode_command(interaction: discord.Interaction):
         filter_mode[interaction.guild_id] = False
     
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     
     if not current:
         desc = (
             f"{icon} **NoFilter-Modus:** {state}\n\n"
             "Jede Zeile wird als Link genommen - KEIN Filter!\n"
             "Kein URL-Check, keine Deduplizierung, keine Bereinigung\n"
-            "Gilt für: `/import2`, `/add`, `/load`\n\n"
-            "**Achtung:** Sendet wirklich ALLES was mit http anfängt!"
+            "Gilt fÃ¼r: `/import2`, `/add`, `/load`\n\n"
+            "**Achtung:** Sendet wirklich ALLES was mit http anfÃ¤ngt!"
         )
     else:
         desc = f"{icon} **NoFilter-Modus:** {state}\n\nStandard-Filter aktiv."
@@ -1388,29 +1388,29 @@ class TiktokModeSelect(discord.ui.Select):
             discord.SelectOption(
                 label="Clyppy",
                 value="clyppy",
-                description="Empfohlen - Schnell & zuverlässig",
-                emoji="⭐"
+                description="Empfohlen - Schnell & zuverlÃ¤ssig",
+                emoji="â­"
             ),
             discord.SelectOption(
                 label="dlbot",
                 value="dlbot",
-                description="Hohe Qualität, MP4 Merge",
-                emoji="📥"
+                description="Hohe QualitÃ¤t, MP4 Merge",
+                emoji="ðŸ“¥"
             ),
             discord.SelectOption(
                 label="TikCord",
                 value="tikcord",
                 description="Alle Formate, flexibel",
-                emoji="🎵"
+                emoji="ðŸŽµ"
             ),
             discord.SelectOption(
                 label="QuickVids",
                 value="quickvids",
                 description="Schnell & simpel",
-                emoji="⚡"
+                emoji="âš¡"
             ),
         ]
-        super().__init__(placeholder="Wähle einen TikTok Downloader...", options=options)
+        super().__init__(placeholder="WÃ¤hle einen TikTok Downloader...", options=options)
     
     async def callback(self, interaction: discord.Interaction):
         mode = self.values[0]
@@ -1423,14 +1423,14 @@ class TiktokModeSelect(discord.ui.Select):
         tiktok_mode[interaction.guild_id] = {"enabled": True, "mode": mode}
         
         mode_names = {
-            "clyppy": "Clyppy (⭐ Empfohlen)",
-            "dlbot": "dlbot (📥 Hohe Qualität)",
-            "tikcord": "TikCord (🎵 Flexibel)",
-            "quickvids": "QuickVids (⚡ Schnell)"
+            "clyppy": "Clyppy (â­ Empfohlen)",
+            "dlbot": "dlbot (ðŸ“¥ Hohe QualitÃ¤t)",
+            "tikcord": "TikCord (ðŸŽµ Flexibel)",
+            "quickvids": "QuickVids (âš¡ Schnell)"
         }
         
         await interaction.response.send_message(
-            f"✅ **TikTok Auto-Download aktiviert!**\n\n"
+            f"âœ… **TikTok Auto-Download aktiviert!**\n\n"
             f"**Service:** {mode_names.get(mode, mode)}\n"
             f"**Status:** AN\n\n"
             f"Ab jetzt werden automatisch alle TikTok Links heruntergeladen und als Video gesendet!",
@@ -1442,17 +1442,17 @@ class TiktokModeView(discord.ui.View):
         super().__init__(timeout=60)
         self.add_item(TiktokModeSelect())
 
-@bot.tree.command(name="tiktokmode", description="TikTok Auto-Download: Wähle einen Service für automatische Downloads")
+@bot.tree.command(name="tiktokmode", description="TikTok Auto-Download: WÃ¤hle einen Service fÃ¼r automatische Downloads")
 @is_admin_or_owner()
 async def tiktokmode_command(interaction: discord.Interaction):
     view = TiktokModeView()
     await interaction.response.send_message(
         "**TikTok Auto-Download Konfiguration**\n\n"
-        "Wähle einen Service aus:\n\n"
-        "⭐ **Clyppy** - Empfohlen, schnell & zuverlässig\n"
-        "📥 **dlbot** - Hohe Qualität mit MP4 Merge\n"
-        "🎵 **TikCord** - Alle Formate, flexibel\n"
-        "⚡ **QuickVids** - Schnell & simpel\n\n"
+        "WÃ¤hle einen Service aus:\n\n"
+        "â­ **Clyppy** - Empfohlen, schnell & zuverlÃ¤ssig\n"
+        "ðŸ“¥ **dlbot** - Hohe QualitÃ¤t mit MP4 Merge\n"
+        "ðŸŽµ **TikCord** - Alle Formate, flexibel\n"
+        "âš¡ **QuickVids** - Schnell & simpel\n\n"
         "Sobald aktiviert, werden alle TikTok Links automatisch erkannt und heruntergeladen!",
         view=view,
         ephemeral=True
@@ -1471,7 +1471,7 @@ async def tiktoktoggle_command(interaction: discord.Interaction):
         tiktok_mode[interaction.guild_id] = tiktok_mode_data[guild_id_str]
         
         state = "AN" if not current else "AUS"
-        icon = "✅" if not current else "❌"
+        icon = "âœ…" if not current else "âŒ"
         
         if not current:
             mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
@@ -1490,7 +1490,7 @@ async def tiktoktoggle_command(interaction: discord.Interaction):
             desc = f"{icon} **TikTok Auto-Download:** {state}\n\nTikTok Links werden nicht mehr automatisch heruntergeladen."
     else:
         await interaction.response.send_message(
-            "Noch nicht konfiguriert! Benutze zuerst `/tiktokmode` um einen Service auszuwählen.",
+            "Noch nicht konfiguriert! Benutze zuerst `/tiktokmode` um einen Service auszuwÃ¤hlen.",
             ephemeral=True
         )
         return
@@ -1509,13 +1509,13 @@ async def tiktokstatus_command(interaction: discord.Interaction):
         mode = data.get("mode", "clyppy")
         
         mode_names = {
-            "clyppy": "Clyppy (⭐ Empfohlen)",
-            "dlbot": "dlbot (📥 Hohe Qualität)",
-            "tikcord": "TikCord (🎵 Flexibel)",
-            "quickvids": "QuickVids (⚡ Schnell)"
+            "clyppy": "Clyppy (â­ Empfohlen)",
+            "dlbot": "dlbot (ðŸ“¥ Hohe QualitÃ¤t)",
+            "tikcord": "TikCord (ðŸŽµ Flexibel)",
+            "quickvids": "QuickVids (âš¡ Schnell)"
         }
         
-        status = "✅ AN" if enabled else "❌ AUS"
+        status = "âœ… AN" if enabled else "âŒ AUS"
         
         await interaction.response.send_message(
             f"**TikTok Auto-Download Status**\n\n"
@@ -1525,11 +1525,11 @@ async def tiktokstatus_command(interaction: discord.Interaction):
         )
     else:
         await interaction.response.send_message(
-            "Noch nicht konfiguriert! Benutze `/tiktokmode` um einen Service auszuwählen.",
+            "Noch nicht konfiguriert! Benutze `/tiktokmode` um einen Service auszuwÃ¤hlen.",
             ephemeral=True
         )
 
-@bot.tree.command(name="clearchannels", description="Löscht alle vom Bot erstellten Channels")
+@bot.tree.command(name="clearchannels", description="LÃ¶scht alle vom Bot erstellten Channels")
 @is_admin_or_owner()
 async def clearchannels_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -1538,19 +1538,19 @@ async def clearchannels_command(interaction: discord.Interaction):
         channel = interaction.guild.get_channel(channel_id)
         if channel:
             try:
-                await channel.delete(reason=f"Gelöscht via /clearchannels von {interaction.user}")
+                await channel.delete(reason=f"GelÃ¶scht via /clearchannels von {interaction.user}")
                 deleted += 1
             except discord.Forbidden:
                 pass
         auto_channels.discard(channel_id)
     if deleted == 0:
-        await interaction.followup.send("Keine Bot-Channels zum Löschen gefunden.", ephemeral=True)
+        await interaction.followup.send("Keine Bot-Channels zum LÃ¶schen gefunden.", ephemeral=True)
     else:
-        await interaction.followup.send(f"**{deleted} Channel(s) gelöscht!**")
+        await interaction.followup.send(f"**{deleted} Channel(s) gelÃ¶scht!**")
 
 @bot.tree.command(name="permsync", description="Synchronisiert die Permissions aller Channels einer Kategorie mit der Kategorie")
 @is_admin_or_owner()
-@app_commands.describe(kategorie="Wähle eine Kategorie aus")
+@app_commands.describe(kategorie="WÃ¤hle eine Kategorie aus")
 async def permsync_command(interaction: discord.Interaction, kategorie: str):
     await interaction.response.defer(ephemeral=True)
     
@@ -1612,7 +1612,7 @@ async def hoistall_command(interaction: discord.Interaction):
                 skipped += 1
         else:
             skipped += 1
-    await interaction.followup.send(f"**{updated} Rollen aktualisiert!** ({skipped} übersprungen – bereits aktiv oder keine Berechtigung)")
+    await interaction.followup.send(f"**{updated} Rollen aktualisiert!** ({skipped} Ã¼bersprungen â€“ bereits aktiv oder keine Berechtigung)")
 
 @bot.tree.command(name="setavatar", description="Setzt das Bot-Profilbild (Bild reinziehen)")
 @is_admin_or_owner()
@@ -1625,13 +1625,13 @@ async def setavatar_command(interaction: discord.Interaction, bild: discord.Atta
         return
     image_data = await bild.read()
     if len(image_data) > 8 * 1024 * 1024:
-        await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
+        await interaction.followup.send("Bild ist zu groÃŸ (max 8MB)!", ephemeral=True)
         return
     try:
         await bot.user.edit(avatar=image_data)
-        await interaction.followup.send("Profilbild erfolgreich geändert!", ephemeral=True)
+        await interaction.followup.send("Profilbild erfolgreich geÃ¤ndert!", ephemeral=True)
     except discord.HTTPException as e:
-        await interaction.followup.send(f"Fehler beim Ändern: {e}", ephemeral=True)
+        await interaction.followup.send(f"Fehler beim Ã„ndern: {e}", ephemeral=True)
 
 @bot.tree.command(name="setbanner", description="Setzt das Bot-Bannerbild (Bild reinziehen)")
 @is_admin_or_owner()
@@ -1644,20 +1644,20 @@ async def setbanner_command(interaction: discord.Interaction, bild: discord.Atta
         return
     image_data = await bild.read()
     if len(image_data) > 10 * 1024 * 1024:
-        await interaction.followup.send("Bild ist zu groß (max 10MB)!", ephemeral=True)
+        await interaction.followup.send("Bild ist zu groÃŸ (max 10MB)!", ephemeral=True)
         return
     try:
         await bot.user.edit(banner=image_data)
-        await interaction.followup.send("Banner erfolgreich geändert!", ephemeral=True)
+        await interaction.followup.send("Banner erfolgreich geÃ¤ndert!", ephemeral=True)
     except discord.HTTPException as e:
-        await interaction.followup.send(f"Fehler beim Ändern: {e}\n\n**Hinweis:** Banner-Änderung funktioniert nur bei verifizierten Bots.", ephemeral=True)
+        await interaction.followup.send(f"Fehler beim Ã„ndern: {e}\n\n**Hinweis:** Banner-Ã„nderung funktioniert nur bei verifizierten Bots.", ephemeral=True)
 
 @bot.tree.command(name="reactionrole", description="Verwaltet Reaction-Roles (wie Carl-bot)")
 @is_admin_or_owner()
 @app_commands.describe(
     aktion="add, remove, list oder clear",
     message_id="Die ID der Nachricht",
-    emoji="Das Emoji (z.B. 😈 oder :name:)",
+    emoji="Das Emoji (z.B. ðŸ˜ˆ oder :name:)",
     rolle="Die Rolle (Name oder Mention)"
 )
 @app_commands.choices(aktion=[
@@ -1678,12 +1678,12 @@ async def reactionrole_command(
     
     if aktion.value == "list":
         if str(interaction.guild_id) not in reaction_roles:
-            await interaction.followup.send("Keine Reaction-Roles für diesen Server.", ephemeral=True)
+            await interaction.followup.send("Keine Reaction-Roles fÃ¼r diesen Server.", ephemeral=True)
             return
         
         guild_data = reaction_roles[str(interaction.guild_id)]
         if not guild_data:
-            await interaction.followup.send("Keine Reaction-Roles für diesen Server.", ephemeral=True)
+            await interaction.followup.send("Keine Reaction-Roles fÃ¼r diesen Server.", ephemeral=True)
             return
         
         lines = []
@@ -1694,7 +1694,7 @@ async def reactionrole_command(
             for emoji_key, role_id in data["roles"].items():
                 role = interaction.guild.get_role(role_id)
                 role_name = role.name if role else f"ID: {role_id}"
-                lines.append(f"  {emoji_key} → {role_name}")
+                lines.append(f"  {emoji_key} â†’ {role_name}")
             lines.append("")
         
         await interaction.followup.send("\n".join(lines)[:2000], ephemeral=True)
@@ -1711,7 +1711,7 @@ async def reactionrole_command(
             if not reaction_roles[guild_id_str]:
                 del reaction_roles[guild_id_str]
             save_reaction_roles(reaction_roles)
-            await interaction.followup.send(f"Alle Reaction-Roles für Nachricht {message_id} gelöscht.", ephemeral=True)
+            await interaction.followup.send(f"Alle Reaction-Roles fÃ¼r Nachricht {message_id} gelÃ¶scht.", ephemeral=True)
         else:
             await interaction.followup.send("Nachricht nicht gefunden.", ephemeral=True)
         return
@@ -1724,7 +1724,7 @@ async def reactionrole_command(
         channel = interaction.channel
         msg = await channel.fetch_message(int(message_id))
     except:
-        await interaction.followup.send("Nachricht nicht gefunden! ID prüfen.", ephemeral=True)
+        await interaction.followup.send("Nachricht nicht gefunden! ID prÃ¼fen.", ephemeral=True)
         return
     
     role = None
@@ -1742,7 +1742,7 @@ async def reactionrole_command(
         return
     
     if role.position >= interaction.guild.me.top_role.position:
-        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch für den Bot!", ephemeral=True)
+        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch fÃ¼r den Bot!", ephemeral=True)
         return
     
     if role.managed:
@@ -1752,7 +1752,7 @@ async def reactionrole_command(
     try:
         await msg.add_reaction(emoji)
     except:
-        await interaction.followup.send(f"Emoji **{emoji}** ungültig!", ephemeral=True)
+        await interaction.followup.send(f"Emoji **{emoji}** ungÃ¼ltig!", ephemeral=True)
         return
     
     guild_id_str = str(interaction.guild_id)
@@ -1767,7 +1767,7 @@ async def reactionrole_command(
     reaction_roles[guild_id_str][message_id]["roles"][emoji] = role.id
     save_reaction_roles(reaction_roles)
     
-    await interaction.followup.send(f"✅ {emoji} → **{role.name}** hinzugefügt!", ephemeral=True)
+    await interaction.followup.send(f"âœ… {emoji} â†’ **{role.name}** hinzugefÃ¼gt!", ephemeral=True)
 
 async def send_next_batch(channel_id, channel):
     links = load_links(channel_id)
@@ -1806,11 +1806,11 @@ async def send_next_batch(channel_id, channel):
         await asyncio.sleep(2)
         await send_next_batch(channel_id, channel)
 
-@bot.tree.command(name="reactionsetup", description="Sendet eine Webhook-Embed mit Button für Reaction-Roles")
+@bot.tree.command(name="reactionsetup", description="Sendet eine Webhook-Embed mit Button fÃ¼r Reaction-Roles")
 @is_admin_or_owner()
 @app_commands.describe(
     rolle="Die Rolle (Name)",
-    emoji="Das Emoji für den Button (z.B. 😈)",
+    emoji="Das Emoji fÃ¼r den Button (z.B. ðŸ˜ˆ)",
     farbe="Embed Farbe (hex, z.B. FF0000)",
     channel="Channel (Standard: aktueller Channel)"
 )
@@ -1844,7 +1844,7 @@ async def reactionsetup_command(
         return
     
     if role.position >= interaction.guild.me.top_role.position:
-        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch für den Bot!", ephemeral=True)
+        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch fÃ¼r den Bot!", ephemeral=True)
         return
     
     is_excluded = any(ex in role.name.lower() for ex in EXCLUDED_ROLE_NAMES)
@@ -1933,14 +1933,14 @@ async def rolle_autocomplete(interaction: discord.Interaction, current: str):
 
 USER_ROLE_KEYWORDS = [
     "maske", "tik-toker", "streamer", "ehrenuser", "e-girl", "hello kitty", 
-    "señorita", "marlboro", "sugar mommy", "casanova", "galatasaray", 
-    "smile", "gengar", "durstlöscher", "uchiha", "bunny", "sonic", "kitten", 
+    "seÃ±orita", "marlboro", "sugar mommy", "casanova", "galatasaray", 
+    "smile", "gengar", "durstlÃ¶scher", "uchiha", "bunny", "sonic", "kitten", 
     "emo", "rolex", "patrick", "prinzessin", "geistig", "beefer", "queen", 
     "barbie", "baby", "shiggy", "hustler", "saiyajin", "domina", "king", 
     "sadboy", "terrorist", "speedy", "ruffy", "spongebob", "engel", "uwu", 
     "habibi", "geist", "teufel", "cop", "smoker", "stoner", "alien", "senpai", 
-    "superman", "türsteher", "demon", "spiderman", "moncler", "godsent", "toxic", 
-    "npc", "ehrenmann", "ehrenfrau", "cute", "goofy", "og", "freund", "👑"
+    "superman", "tÃ¼rsteher", "demon", "spiderman", "moncler", "godsent", "toxic", 
+    "npc", "ehrenmann", "ehrenfrau", "cute", "goofy", "og", "freund", "ðŸ‘‘"
 ]
 
 EXCLUDED_ROLE_KEYWORDS = [
@@ -1950,11 +1950,11 @@ EXCLUDED_ROLE_KEYWORDS = [
     "no-xp", "sendmoji", "pic", "platzhalter", "supreme", "stammuser",
     "champion", "ultimativ", "titan", "prestige", "legende", "meister",
     "veteran", "elite", "platin", "silver", "treu", "aktiv", "noob",
-    "meme maker", "test", "pb master", "----", "——", "🔊", "🔞+",
-    "star", "★", "*"
+    "meme maker", "test", "pb master", "----", "â€”â€”", "ðŸ”Š", "ðŸ”ž+",
+    "star", "â˜…", "*"
 ]
 
-@bot.tree.command(name="masssetup", description="Erstellt Reaction-Role Buttons für ALLE User-Rollen automatisch")
+@bot.tree.command(name="masssetup", description="Erstellt Reaction-Role Buttons fÃ¼r ALLE User-Rollen automatisch")
 @is_admin_or_owner()
 @app_commands.describe(
     channel="Channel wo die Nachricht hinsoll"
@@ -1984,8 +1984,8 @@ async def masssetup_command(
         is_user_role = any(kw in role_name_lower for kw in USER_ROLE_KEYWORDS)
         
         if not is_user_role:
-            if role.hoist and not any(ex in role_name_lower for ex in ["----", "——", "rank", "level"]):
-                if role.color.value != 0 and role.name not in ["----", "——"]:
+            if role.hoist and not any(ex in role_name_lower for ex in ["----", "â€”â€”", "rank", "level"]):
+                if role.color.value != 0 and role.name not in ["----", "â€”â€”"]:
                     pass
                 else:
                     continue
@@ -2048,13 +2048,13 @@ async def masssetup_command(
         payload = {
             "content": "",
             "embeds": [{
-                "description": f"**Wähle deine Rollen:**\n\n" + "\n".join([f"• {r.name}" for r in chunk]),
+                "description": f"**WÃ¤hle deine Rollen:**\n\n" + "\n".join([f"â€¢ {r.name}" for r in chunk]),
                 "color": 0x5865F2,
                 "author": {
                     "name": f"User Rollen ({page_num}/{total_pages})"
                 },
                 "footer": {
-                    "text": f"Seite {page_num} von {total_pages} • {len(user_roles)} Rollen gesamt"
+                    "text": f"Seite {page_num} von {total_pages} â€¢ {len(user_roles)} Rollen gesamt"
                 }
             }],
             "components": components
@@ -2085,7 +2085,7 @@ async def masssetup_command(
     
     await interaction.followup.send(
         f"**Fertig!** {messages_sent} Nachrichten in {target_channel.mention}\n\n"
-        f"**{total_buttons} Buttons** für {len(user_roles)} User-Rollen erstellt!\n"
+        f"**{total_buttons} Buttons** fÃ¼r {len(user_roles)} User-Rollen erstellt!\n"
         f"Alle funktionieren sofort - Klick = Rolle toggle!",
         ephemeral=True
     )
@@ -2477,10 +2477,10 @@ async def ticketsetup_command(
             "Brauchst du Hilfe?\n"
             "Klicke auf den Button um ein Ticket zu erstellen!\n\n"
             "**Wann ein Ticket erstellen?**\n"
-            "• Allgemeine Fragen\n"
-            "• Probleme melden\n"
-            "• Beantragungen\n"
-            "• Beschwerden"
+            "â€¢ Allgemeine Fragen\n"
+            "â€¢ Probleme melden\n"
+            "â€¢ Beantragungen\n"
+            "â€¢ Beschwerden"
         ),
         color=discord.Color.blurple()
     )
@@ -2584,7 +2584,7 @@ async def on_member_update(before, after):
             continue
         if role.name.lower() in [r.lower() for r in PROTECTED_ROLE_NAMES]:
             protected_roles.append(role)
-        elif role.name.startswith(("★", "*", "⭐", "Level")):
+        elif role.name.startswith(("â˜…", "*", "â­", "Level")):
             protected_roles.append(role)
         else:
             normal_roles.append(role)
@@ -2592,7 +2592,7 @@ async def on_member_update(before, after):
     if len(normal_roles) > MAX_ROLES_FOR_MITGLIED:
         to_remove = normal_roles[MAX_ROLES_FOR_MITGLIED:]
         try:
-            await after.remove_roles(*to_remove, reason="Max 7 Rollen für Mitglieder")
+            await after.remove_roles(*to_remove, reason="Max 7 Rollen fÃ¼r Mitglieder")
         except discord.Forbidden:
             pass
 
@@ -2779,7 +2779,7 @@ async def on_interaction(interaction: discord.Interaction):
         else:
             try:
                 await member.add_roles(role, reason="Reaction Role Button")
-                await interaction.response.send_message(f"**{role.name}** hinzugefügt!", ephemeral=True)
+                await interaction.response.send_message(f"**{role.name}** hinzugefÃ¼gt!", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
@@ -2852,7 +2852,7 @@ class VoiceChannelView(discord.ui.View):
         self.owner_id = owner_id
         self.channel_id = channel_id
 
-    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="vc_private")
+    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="ðŸ”’", custom_id="vc_private")
     async def private_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2875,12 +2875,12 @@ class VoiceChannelView(discord.ui.View):
         save_voice_settings_file(voice_channel_settings)
         
         button.label = "Public" if not is_private else "Private"
-        button.emoji = "🌍" if not is_private else "🔒"
+        button.emoji = "ðŸŒ" if not is_private else "ðŸ”’"
         
-        status = "privat" if not is_private else "öffentlich"
+        status = "privat" if not is_private else "Ã¶ffentlich"
         await interaction.response.send_message(f"Channel ist jetzt {status}!", ephemeral=True)
 
-    @discord.ui.button(label="Hide", style=discord.ButtonStyle.secondary, emoji="👁️", custom_id="vc_hide")
+    @discord.ui.button(label="Hide", style=discord.ButtonStyle.secondary, emoji="ðŸ‘ï¸", custom_id="vc_hide")
     async def hide_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2907,7 +2907,7 @@ class VoiceChannelView(discord.ui.View):
         status = "versteckt" if not is_hidden else "sichtbar"
         await interaction.response.send_message(f"Channel ist jetzt {status}!", ephemeral=True)
 
-    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary, emoji="✏️", custom_id="vc_rename")
+    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary, emoji="âœï¸", custom_id="vc_rename")
     async def rename_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2915,7 +2915,7 @@ class VoiceChannelView(discord.ui.View):
         
         await interaction.response.send_modal(RenameModal(self.channel_id))
 
-    @discord.ui.button(label="Kick", style=discord.ButtonStyle.danger, emoji="👢", custom_id="vc_kick")
+    @discord.ui.button(label="Kick", style=discord.ButtonStyle.danger, emoji="ðŸ‘¢", custom_id="vc_kick")
     async def kick_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann Leute kicken!", ephemeral=True)
@@ -2932,9 +2932,9 @@ class VoiceChannelView(discord.ui.View):
             return
         
         view = KickSelectView(self.owner_id, self.channel_id, members_in_channel)
-        await interaction.response.send_message("Wähle wen du kicken möchtest:", view=view, ephemeral=True)
+        await interaction.response.send_message("WÃ¤hle wen du kicken mÃ¶chtest:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Ban", style=discord.ButtonStyle.danger, emoji="🚫", custom_id="vc_ban")
+    @discord.ui.button(label="Ban", style=discord.ButtonStyle.danger, emoji="ðŸš«", custom_id="vc_ban")
     async def ban_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2953,7 +2953,7 @@ class VoiceChannelView(discord.ui.View):
         view = BanSelectView(self.owner_id, self.channel_id, members_in_channel)
         await interaction.response.send_message("Wen bannen:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Invite", style=discord.ButtonStyle.success, emoji="🔗", custom_id="vc_invite")
+    @discord.ui.button(label="Invite", style=discord.ButtonStyle.success, emoji="ðŸ”—", custom_id="vc_invite")
     async def invite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2964,7 +2964,7 @@ class VoiceChannelView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Permit", style=discord.ButtonStyle.success, emoji="✅", custom_id="vc_permit")
+    @discord.ui.button(label="Permit", style=discord.ButtonStyle.success, emoji="âœ…", custom_id="vc_permit")
     async def permit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2978,7 +2978,7 @@ class VoiceChannelView(discord.ui.View):
         view = PermitSelectView(self.owner_id, self.channel_id)
         await interaction.response.send_message("Wem Zugriff geben:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Change Owner", style=discord.ButtonStyle.primary, emoji="👑", custom_id="vc_changeowner")
+    @discord.ui.button(label="Change Owner", style=discord.ButtonStyle.primary, emoji="ðŸ‘‘", custom_id="vc_changeowner")
     async def change_owner_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der aktuelle Besitzer kann das!", ephemeral=True)
@@ -2995,7 +2995,7 @@ class VoiceChannelView(discord.ui.View):
             return
         
         view = OwnerSelectView(self.owner_id, self.channel_id, members_in_channel)
-        await interaction.response.send_message("Wähle den neuen Besitzer:", view=view, ephemeral=True)
+        await interaction.response.send_message("WÃ¤hle den neuen Besitzer:", view=view, ephemeral=True)
 
 class RenameModal(discord.ui.Modal, title="Channel umbenennen"):
     new_name = discord.ui.TextInput(label="Neuer Name", placeholder="Mein Chat", max_length=50)
@@ -3025,11 +3025,11 @@ class OwnerSelect(discord.ui.Select):
             discord.SelectOption(
                 label=m.display_name,
                 value=str(m.id),
-                emoji="👑"
+                emoji="ðŸ‘‘"
             ) for m in members[:25]
         ]
         
-        super().__init__(placeholder="Wähle den neuen Besitzer...", options=options)
+        super().__init__(placeholder="WÃ¤hle den neuen Besitzer...", options=options)
     
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id:
@@ -3079,7 +3079,7 @@ class OwnerSelect(discord.ui.Select):
         embed, view = await create_voice_control_embed(target_member, channel)
         await channel.send(embed=embed, view=view)
         
-        await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
+        await interaction.response.send_message(f"Besitz an {target_member.display_name} Ã¼bertragen!", ephemeral=True)
 
 class OwnerSelectView(discord.ui.View):
     def __init__(self, owner_id: int, channel_id: int, members: list):
@@ -3095,11 +3095,11 @@ class KickSelect(discord.ui.Select):
             discord.SelectOption(
                 label=m.display_name,
                 value=str(m.id),
-                emoji="👢"
+                emoji="ðŸ‘¢"
             ) for m in members[:25]
         ]
         
-        super().__init__(placeholder="Wähle wen du kicken möchtest...", options=options)
+        super().__init__(placeholder="WÃ¤hle wen du kicken mÃ¶chtest...", options=options)
     
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id:
@@ -3138,7 +3138,7 @@ class BanSelect(discord.ui.Select):
             discord.SelectOption(
                 label=m.display_name,
                 value=str(m.id),
-                emoji="🚫"
+                emoji="ðŸš«"
             ) for m in members[:25]
         ]
         
@@ -3190,7 +3190,7 @@ class PermitSelect(discord.ui.Select):
             return
         
         await interaction.response.send_message(
-            "Schreib die User ID die du permiten möchtest (nur Zahlen):",
+            "Schreib die User ID die du permiten mÃ¶chtest (nur Zahlen):",
             ephemeral=True
         )
 
@@ -3204,7 +3204,7 @@ async def create_voice_control_embed(member, channel):
         title=f"{member.display_name}'s Private Chat",
         description=(
             f"Willkommen {member.mention}!\n"
-            f"Der Channel wird gelöscht wenn alle gehen."
+            f"Der Channel wird gelÃ¶scht wenn alle gehen."
         ),
         color=discord.Color.blue()
     )
@@ -3236,7 +3236,7 @@ async def voicesetup(interaction: discord.Interaction):
     }
     
     lobby = await guild.create_voice_channel(
-        "➕ Join to Create",
+        "âž• Join to Create",
         category=category,
         overwrites=lobby_overwrites
     )
@@ -3252,7 +3252,7 @@ async def voicesetup(interaction: discord.Interaction):
         title="Voice Channel System",
         description=(
             f"Betritt den {lobby.mention} Channel!\n"
-            f"Es wird automatisch ein privater Channel für dich erstellt.\n"
+            f"Es wird automatisch ein privater Channel fÃ¼r dich erstellt.\n"
             f"Du bekommst Buttons zum Verwalten deines Channels."
         ),
         color=discord.Color.green()
@@ -3264,7 +3264,7 @@ async def vc_kick(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
         return
     
     owner_channel = None
@@ -3297,7 +3297,7 @@ async def vc_ban(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
         return
     
     owner_channel = None
@@ -3329,7 +3329,7 @@ async def vc_permit(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
         return
     
     owner_channel = None
@@ -3356,12 +3356,12 @@ async def vc_permit(interaction: discord.Interaction, user_id: str):
     except discord.Forbidden:
         await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
-@bot.tree.command(name="vc_changeowner", description="Channel Besitz übertragen")
+@bot.tree.command(name="vc_changeowner", description="Channel Besitz Ã¼bertragen")
 async def vc_changeowner(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
+        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
         return
     
     old_owner_channel = None
@@ -3412,7 +3412,7 @@ async def vc_changeowner(interaction: discord.Interaction, user_id: str):
     embed, view = await create_voice_control_embed(target_member, old_owner_channel)
     await old_owner_channel.send(embed=embed, view=view)
     
-    await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
+    await interaction.response.send_message(f"Besitz an {target_member.display_name} Ã¼bertragen!", ephemeral=True)
 
 # =====================================
 # LEVEL SYSTEM
@@ -3658,7 +3658,7 @@ async def level_command(interaction: discord.Interaction, user: discord.Member =
 
     bar_length = 20
     filled = int(bar_length * progress / 100)
-    bar = "█" * filled + "░" * (bar_length - filled)
+    bar = "â–ˆ" * filled + "â–‘" * (bar_length - filled)
 
     embed = discord.Embed(
         title=f"Level von {target.display_name}",
@@ -3703,19 +3703,19 @@ def build_leaderboard_embeds(guild):
     msg_lines = []
     for i, (member, count) in enumerate(messages_ranking[:15]):
         medal = medals[i] if i < 3 else f"**{i+1}.**"
-        msg_lines.append(f"{medal} {member.mention} — **{count:,}** messages")
+        msg_lines.append(f"{medal} {member.mention} â€” **{count:,}** messages")
 
     voice_lines = []
     for i, (member, seconds) in enumerate(voice_ranking[:15]):
         medal = medals[i] if i < 3 else f"**{i+1}.**"
-        voice_lines.append(f"{medal} {member.mention} — **{format_time_short(seconds)}**")
+        voice_lines.append(f"{medal} {member.mention} â€” **{format_time_short(seconds)}**")
 
     top_msg_user = messages_ranking[0][0].mention if messages_ranking else "Keine Daten"
     top_voice_user = voice_ranking[0][0].display_name if voice_ranking else "Keine Daten"
 
     embed_messages = discord.Embed(
         title=f"{guild.name} Leaderboard",
-        description=f" Top Messages (Lifetime) — {top_msg_user}",
+        description=f" Top Messages (Lifetime) â€” {top_msg_user}",
         color=discord.Color.red()
     )
     embed_messages.description += "\n\n**Rankings**\n"
@@ -3726,7 +3726,7 @@ def build_leaderboard_embeds(guild):
 
     embed_voice = discord.Embed(
         title=f"{guild.name} Leaderboard",
-        description=f" Top Voice Time (Lifetime) — {top_voice_user}",
+        description=f" Top Voice Time (Lifetime) â€” {top_voice_user}",
         color=discord.Color.blue()
     )
     embed_voice.description += "\n\n**Rankings**\n"
@@ -3742,9 +3742,9 @@ async def leaderboard_command(interaction: discord.Interaction):
     embed_msg, embed_voice = build_leaderboard_embeds(interaction.guild)
     await interaction.response.send_message(embeds=[embed_msg, embed_voice])
 
-@bot.tree.command(name="setlevelchannel", description="Setzt den Channel für Level-Up Nachrichten")
+@bot.tree.command(name="setlevelchannel", description="Setzt den Channel fÃ¼r Level-Up Nachrichten")
 @is_admin_or_owner()
-@app_commands.describe(channel="Der Channel für Level-Up Nachrichten")
+@app_commands.describe(channel="Der Channel fÃ¼r Level-Up Nachrichten")
 async def setlevelchannel_command(interaction: discord.Interaction, channel: discord.TextChannel):
     config = load_level_config()
     guild_str = str(interaction.guild_id)
@@ -3756,7 +3756,7 @@ async def setlevelchannel_command(interaction: discord.Interaction, channel: dis
 
 @bot.tree.command(name="setleaderboard", description="Richtet das Live-Leaderboard in einem Channel ein")
 @is_admin_or_owner()
-@app_commands.describe(channel="Der Channel für das Leaderboard")
+@app_commands.describe(channel="Der Channel fÃ¼r das Leaderboard")
 async def setleaderboard_command(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer(ephemeral=True)
 
@@ -3838,7 +3838,7 @@ async def leaderboardrefresh_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="levelimage", description="Setzt ein Bild fuer einen bestimmten Levelaufstieg")
 @is_admin_or_owner()
-@app_commands.describe(level="Das Level (z.B. 5)", bild="Das Bild für diesen Level")
+@app_commands.describe(level="Das Level (z.B. 5)", bild="Das Bild fÃ¼r diesen Level")
 async def levelimage_command(interaction: discord.Interaction, level: int, bild: discord.Attachment):
     await interaction.response.defer(ephemeral=True)
 
@@ -3849,7 +3849,7 @@ async def levelimage_command(interaction: discord.Interaction, level: int, bild:
 
     image_data = await bild.read()
     if len(image_data) > 8 * 1024 * 1024:
-        await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
+        await interaction.followup.send("Bild ist zu groÃŸ (max 8MB)!", ephemeral=True)
         return
 
     filename = f"level_{level}.png"
@@ -3868,7 +3868,7 @@ async def levelimage_command(interaction: discord.Interaction, level: int, bild:
     config[guild_str]["level_images"][str(level)] = str(filepath)
     save_level_config(config)
 
-    await interaction.followup.send(f"Bild für Level **{level}** gespeichert!", ephemeral=True)
+    await interaction.followup.send(f"Bild fÃ¼r Level **{level}** gespeichert!", ephemeral=True)
 
 @bot.tree.command(name="noxpchannel", description="Toggle: Kein XP in diesem Channel")
 @is_admin_or_owner()
@@ -3883,11 +3883,11 @@ async def noxpchannel_command(interaction: discord.Interaction):
     if interaction.channel_id in no_xp_channels:
         no_xp_channels.remove(interaction.channel_id)
         state = "entfernt"
-        icon = "❌"
+        icon = "âŒ"
     else:
         no_xp_channels.append(interaction.channel_id)
-        state = "hinzugefügt"
-        icon = "✅"
+        state = "hinzugefÃ¼gt"
+        icon = "âœ…"
 
     config[guild_str]["no_xp_channels"] = no_xp_channels
     save_level_config(config)
@@ -3906,7 +3906,7 @@ async def toggleleveling_command(interaction: discord.Interaction):
     save_level_config(config)
 
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     await interaction.response.send_message(f"{icon} Level-System: **{state}**")
 
 @bot.tree.command(name="togglelevelimage", description="Toggle: Bilder bei Level-Up ein/ausschalten")
@@ -3922,10 +3922,10 @@ async def togglelevelimage_command(interaction: discord.Interaction):
     save_level_config(config)
 
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     await interaction.response.send_message(f"{icon} Level-Up Bilder: **{state}**")
 
-@bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurück")
+@bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurÃ¼ck")
 @is_admin_or_owner()
 async def resetlevels_command(interaction: discord.Interaction):
     data = load_level_data()
@@ -3933,7 +3933,7 @@ async def resetlevels_command(interaction: discord.Interaction):
     if guild_str in data:
         del data[guild_str]
         save_level_data(data)
-    await interaction.response.send_message("Alle Level-Daten für diesen Server zurückgesetzt!")
+    await interaction.response.send_message("Alle Level-Daten fÃ¼r diesen Server zurÃ¼ckgesetzt!")
 
 @bot.tree.command(name="setlevel", description="Setzt das Level eines Users manuell")
 @is_admin_or_owner()
@@ -4197,7 +4197,7 @@ async def auto_save_data():
             await proc.communicate()
             print("[AutoSave] Data backup pushed")
     except FileNotFoundError:
-        print("[AutoSave] git nicht verfuegbar - übersprungen")
+        print("[AutoSave] git nicht verfuegbar - Ã¼bersprungen")
     except Exception as e:
         print(f"[AutoSave] Fehler: {e}")
 
@@ -4206,13 +4206,13 @@ async def before_auto_save():
     await bot.wait_until_ready()
 
 # =====================================
-# DAILY CONFIG BACKUP (zusätzlich zu auto_save)
+# DAILY CONFIG BACKUP (zusÃ¤tzlich zu auto_save)
 # =====================================
 
 @tasks.loop(hours=24)
 @crash_resilient_task
 async def daily_config_backup():
-    """Tägliches Config-Backup mit Timestamp"""
+    """TÃ¤gliches Config-Backup mit Timestamp"""
     from datetime import datetime as _dt
     timestamp = _dt.now().strftime("%Y-%m-%d_%H-%M")
     backup_dir = DATA_DIR / "backups"
@@ -4238,7 +4238,7 @@ async def daily_config_backup():
                 saved += 1
             except: pass
     
-    # Alte Backups löschen (nur letzte 7 behalten pro Datei)
+    # Alte Backups lÃ¶schen (nur letzte 7 behalten pro Datei)
     for fname in config_files:
         base = fname.replace('.json', '')
         backups = sorted(backup_dir.glob(f"{base}_*.json"))
@@ -4291,7 +4291,7 @@ async def on_message(message):
         async with message.channel.typing():
             for url in tiktok_urls[:3]:
                 try:
-                    await message.add_reaction("⏳")
+                    await message.add_reaction("â³")
                     
                     filename, title = await download_tiktok_video(url, mode)
                     
@@ -4300,17 +4300,17 @@ async def on_message(message):
                         print(f"[TikTok] Sending file: {file_size} bytes")
                         
                         if file_size > 25 * 1024 * 1024:
-                            await message.remove_reaction("⏳", bot.user)
-                            await message.add_reaction("❌")
+                            await message.remove_reaction("â³", bot.user)
+                            await message.add_reaction("âŒ")
                             await message.reply(
-                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 25MB.",
+                                f"âŒ Video zu groÃŸ ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 25MB.",
                                 mention_author=False
                             )
                             os.remove(filename)
                             continue
                         
-                        await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("✅")
+                        await message.remove_reaction("â³", bot.user)
+                        await message.add_reaction("âœ…")
                         
                         discord_file = discord.File(filename, filename="tiktok.mp4")
                         await message.reply(
@@ -4320,14 +4320,14 @@ async def on_message(message):
                         
                         os.remove(filename)
                     else:
-                        await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("❌")
+                        await message.remove_reaction("â³", bot.user)
+                        await message.add_reaction("âŒ")
                         print(f"[TikTok] Download returned None for: {url}")
                 except Exception as e:
                     print(f"[TikTok] Exception in loop: {e}")
                     try:
-                        await message.remove_reaction("⏳", bot.user)
-                        await message.add_reaction("❌")
+                        await message.remove_reaction("â³", bot.user)
+                        await message.add_reaction("âŒ")
                     except:
                         pass
     
@@ -4650,7 +4650,7 @@ async def auto_memes_task():
                         except Exception as e:
                             print(f"[Memes] Fehler beim Senden: {e}")
                     else:
-                        print(f"[Memes] Kein neues Memé gefunden fuer {guild.name}")
+                        print(f"[Memes] Kein neues MemÃ© gefunden fuer {guild.name}")
     except Exception as e:
         print(f"[Memes] CRITICAL Fehler in auto_memes_task: {e}")
 
@@ -4665,7 +4665,7 @@ async def before_auto_memes():
 @bot.tree.command(name="memessetup", description="Auto-Memes Channel einrichten")
 @is_admin_or_owner()
 @app_commands.describe(
-    channel="Channel für Auto-Memes",
+    channel="Channel fÃ¼r Auto-Memes",
     quelle="reddit, imgur, liste, gemischt oder interpol",
     stunden="Interval in Stunden (1-48)",
     minuten="Zusaetzliche Minuten (0-59)"
@@ -4777,10 +4777,10 @@ async def memestoggle_command(interaction: discord.Interaction):
     save_memes_config(config)
     
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     await interaction.response.send_message(f"{icon} **Auto-Memes:** {state}")
 
-@bot.tree.command(name="memesquelle", description="Memes-Quelle ändern")
+@bot.tree.command(name="memesquelle", description="Memes-Quelle Ã¤ndern")
 @is_admin_or_owner()
 @app_commands.describe(quelle="reddit, imgur, liste, gemischt oder interpol")
 @app_commands.choices(quelle=[
@@ -4812,9 +4812,9 @@ async def memesquelle_command(
         "interpol": "Interpol.cc (Videos)"
     }
     
-    await interaction.response.send_message(f"**Quelle geändert auf:** {source_names.get(quelle.value, quelle.value)}")
+    await interaction.response.send_message(f"**Quelle geÃ¤ndert auf:** {source_names.get(quelle.value, quelle.value)}")
 
-@bot.tree.command(name="memessubreddit", description="Reddit Subreddit für Memes setzen")
+@bot.tree.command(name="memessubreddit", description="Reddit Subreddit fÃ¼r Memes setzen")
 @is_admin_or_owner()
 @app_commands.describe(subreddit="Reddit Subreddit (z.B. memes, dankmemes)")
 async def memessubreddit_command(interaction: discord.Interaction, subreddit: str):
@@ -4830,7 +4830,7 @@ async def memessubreddit_command(interaction: discord.Interaction, subreddit: st
     
     await interaction.response.send_message(f"**Subreddit gesetzt auf:** r/{subreddit}")
 
-@bot.tree.command(name="memesskip", description="Nächstes Memé manuell senden")
+@bot.tree.command(name="memesskip", description="NÃ¤chstes MemÃ© manuell senden")
 @is_admin_or_owner()
 async def memesskip_command(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -4851,7 +4851,7 @@ async def memesskip_command(interaction: discord.Interaction):
         save_memes_config(config)
         meme_url, video_id = await get_meme_for_guild(interaction.guild_id)
     if not meme_url:
-        await interaction.followup.send("Kein Memé gefunden! Quelle prüfen.", ephemeral=True)
+        await interaction.followup.send("Kein MemÃ© gefunden! Quelle prÃ¼fen.", ephemeral=True)
         return
     
     if source == "interpol" and meme_url:
@@ -4894,7 +4894,7 @@ async def memesskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Video konnte nicht geladen werden.", ephemeral=True)
     else:
         embed = discord.Embed(
-            title="Manuelles Memé",
+            title="Manuelles MemÃ©",
             color=discord.Color.random()
         )
         embed.set_image(url=meme_url)
@@ -4948,7 +4948,7 @@ async def memesstatus_command(interaction: discord.Interaction):
     settings = config[guild_str]
     channel = bot.get_channel(settings.get("channel_id", 0))
     channel_name = channel.mention if channel else "Nicht gefunden"
-    status = "✅ AN" if settings.get("enabled") else "❌ AUS"
+    status = "âœ… AN" if settings.get("enabled") else "âŒ AUS"
     
     source_names = {
         "reddit": "Reddit",
@@ -5001,7 +5001,7 @@ async def memesreset_command(interaction: discord.Interaction):
     
     await interaction.response.send_message(f"**History resetet!** {old_count} gesendete Videos + {old_meme_count} gesendete Memes vergessen. Alles wird jetzt wieder gesendet.")
 
-@bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufügen")
+@bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufÃ¼gen")
 @is_admin_or_owner()
 @app_commands.describe(
     links="Meme-Links (einer pro Zeile oder kommagetrennt)"
@@ -5024,7 +5024,7 @@ async def memesadd_command(interaction: discord.Interaction, links: str):
     save_memes_list(interaction.guild_id, existing)
     
     await interaction.response.send_message(
-        f"**{len(new_links)} Memes hinzugefügt!**\n"
+        f"**{len(new_links)} Memes hinzugefÃ¼gt!**\n"
         f"Gesamt in der Liste: {len(existing)}"
     )
 
@@ -5091,7 +5091,7 @@ async def frage_des_tages_task():
         
         frage_data = random.choice(fragen)
         
-        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
+        emojis = ["1ï¸âƒ£", "2ï¸âƒ£", "3ï¸âƒ£", "4ï¸âƒ£", "5ï¸âƒ£", "6ï¸âƒ£", "7ï¸âƒ£", "8ï¸âƒ£"]
         options_text = ""
         for i, option in enumerate(frage_data["optionen"][:8]):
             options_text += f"{emojis[i]} {option}\n"
@@ -5134,7 +5134,7 @@ async def before_frage_des_tages():
 @bot.tree.command(name="fragesetup", description="Frage des Tages einrichten")
 @is_admin_or_owner()
 @app_commands.describe(
-    channel="Channel für die tägliche Frage",
+    channel="Channel fÃ¼r die tÃ¤gliche Frage",
     anzeige="Wie werden Stimmen angezeigt"
 )
 @app_commands.choices(anzeige=[
@@ -5211,12 +5211,12 @@ async def fragesetup_command(
         f"Der Bot postet jetzt automatisch Fragen mit Reactions!"
     )
 
-@bot.tree.command(name="frageinterval", description="Frage des Tages Interval ändern")
+@bot.tree.command(name="frageinterval", description="Frage des Tages Interval Ã¤ndern")
 @is_admin_or_owner()
 @app_commands.describe(stunden="Interval in Stunden (1-48)")
 async def frageinterval_command(interaction: discord.Interaction, stunden: int):
     if stunden < 1 or stunden > 48:
-        await interaction.response.send_message("Ungültig! Erlaubt: 1-48 Stunden", ephemeral=True)
+        await interaction.response.send_message("UngÃ¼ltig! Erlaubt: 1-48 Stunden", ephemeral=True)
         return
     
     config = load_fragen_config()
@@ -5233,7 +5233,7 @@ async def frageinterval_command(interaction: discord.Interaction, stunden: int):
     frage_des_tages_task.change_interval(hours=stunden)
     frage_des_tages_task.start()
     
-    await interaction.response.send_message(f"**Interval geändert auf alle {stunden} Stunden!**")
+    await interaction.response.send_message(f"**Interval geÃ¤ndert auf alle {stunden} Stunden!**")
 
 @bot.tree.command(name="fragetoggle", description="Frage des Tages ein/ausschalten")
 @is_admin_or_owner()
@@ -5250,7 +5250,7 @@ async def fragetoggle_command(interaction: discord.Interaction):
     save_fragen_config(config)
     
     state = "AN" if not current else "AUS"
-    icon = "✅" if not current else "❌"
+    icon = "âœ…" if not current else "âŒ"
     await interaction.response.send_message(f"{icon} **Frage des Tages:** {state}")
 
 @bot.tree.command(name="fragestatus", description="Zeigt den Frage-des-Tages Status")
@@ -5266,7 +5266,7 @@ async def fragestatus_command(interaction: discord.Interaction):
     settings = config[guild_str]
     channel = bot.get_channel(settings.get("channel_id", 0))
     channel_name = channel.mention if channel else "Nicht gefunden"
-    status = "✅ AN" if settings.get("enabled") else "❌ AUS"
+    status = "âœ… AN" if settings.get("enabled") else "âŒ AUS"
     display = settings.get("display_mode", "embed")
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
     
@@ -5284,7 +5284,7 @@ async def fragestatus_command(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="frageadd", description="Eigene Frage hinzufügen")
+@bot.tree.command(name="frageadd", description="Eigene Frage hinzufÃ¼gen")
 @is_admin_or_owner()
 @app_commands.describe(
     frage="Die Frage",
@@ -5311,7 +5311,7 @@ async def frageadd_command(
     
     new_frage = {
         "frage": frage,
-        "emoji": "❓",
+        "emoji": "â“",
         "optionen": optionen,
         "guild_id": str(interaction.guild_id)
     }
@@ -5320,7 +5320,7 @@ async def frageadd_command(
     save_custom_fragen(custom)
     
     await interaction.response.send_message(
-        f"**Frage hinzugefügt!**\n\n"
+        f"**Frage hinzugefÃ¼gt!**\n\n"
         f"**{frage}**\n"
         f"Optionen: {', '.join(optionen)}"
     )
@@ -5565,7 +5565,7 @@ async def automod_command(interaction: discord.Interaction, aktion: app_commands
     if aktion.value == "status":
         settings = automod_config.get(guild_str, {})
         enabled = settings.get("enabled", False)
-        status = "✅ AN" if enabled else "❌ AUS"
+        status = "âœ… AN" if enabled else "âŒ AUS"
         embed = discord.Embed(
             title="Automod Status",
             color=discord.Color.blue()
@@ -5587,15 +5587,15 @@ async def automod_command(interaction: discord.Interaction, aktion: app_commands
     
     if enabled:
         desc = (
-            f"✅ **Automod aktiviert!**\n\n"
+            f"âœ… **Automod aktiviert!**\n\n"
             f"**Schutz:** Discord-Invite-Spam\n"
             f"**Schwellenwert:** {AUTOMOD_THRESHOLD}x in {AUTOMOD_WINDOW}s\n"
-            f"**Strafe:** 1-Woche Timeout + Nachricht gelöscht\n\n"
-            f"Wenn jemand {AUTOMOD_THRESHOLD}x oder öfter discord.gg/ Links posted, "
+            f"**Strafe:** 1-Woche Timeout + Nachricht gelÃ¶scht\n\n"
+            f"Wenn jemand {AUTOMOD_THRESHOLD}x oder Ã¶fter discord.gg/ Links posted, "
             f"bekommt er automatisch Timeout."
         )
     else:
-        desc = "❌ **Automod deaktiviert!**"
+        desc = "âŒ **Automod deaktiviert!**"
     
     await interaction.response.send_message(desc)
 
@@ -5697,7 +5697,7 @@ async def membercountsetup_command(
         success = False
         new_name = f"{prefix}: ???"
     
-    status = f"Channel Name: **{new_name}**" if success else "⚠️ **Keine Berechtigung** - Bot braucht `Channel verwalten` Permission!"
+    status = f"Channel Name: **{new_name}**" if success else "âš ï¸ **Keine Berechtigung** - Bot braucht `Channel verwalten` Permission!"
     
     await interaction.response.send_message(
         f"**Member-Count eingerichtet!**\n\n"
@@ -5763,7 +5763,7 @@ async def check_invite_valid(invite_code):
                     "vanity_url": guild.get("vanity_url_code"),
                 }
             elif resp.status == 404:
-                return {"valid": False, "code": invite_code, "reason": "Invite不存在或已过期"}
+                return {"valid": False, "code": invite_code, "reason": "Inviteä¸å­˜åœ¨æˆ–å·²è¿‡æœŸ"}
             elif resp.status == 429:
                 retry_after = (await resp.json()).get("retry_after", 5)
                 await asyncio.sleep(retry_after)
@@ -5918,7 +5918,7 @@ async def striproles_command(interaction: discord.Interaction):
         if role == interaction.guild.default_role:
             continue
         if role.position >= maske_role.position:
-            skipped.append(f"{role.name} (über Maske)")
+            skipped.append(f"{role.name} (Ã¼ber Maske)")
             continue
         if role.position >= bot_top_role.position:
             skipped.append(f"{role.name} (Bot zu niedrig)")
@@ -5974,7 +5974,7 @@ async def striproles_command(interaction: discord.Interaction):
             value=", ".join(skipped),
             inline=False
         )
-    embed.set_footer(text=f"Alle Rollen unter '{maske_role.name}' — GIFs, Bilder, externe Sticker deaktiviert")
+    embed.set_footer(text=f"Alle Rollen unter '{maske_role.name}' â€” GIFs, Bilder, externe Sticker deaktiviert")
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 @bot.tree.command(name="unstriproles", description="Gibt allen Rollen die GIF/Bilder/Sticker Rechte zurueck")
@@ -6037,197 +6037,7 @@ async def unstriproles_command(interaction: discord.Interaction):
             value=", ".join(updated),
             inline=False
         )
-    if skipped:
-        embed.add_field(
-            name=f"Uebersprungen ({len(skipped)})",
-            value=", ".join(skipped),
-            inline=False
-        )
-    await interaction.followup.send(embed=embed, ephemeral=True)
 
-# =====================================
-# BOT STATUS COMMAND
-# =====================================
-
-@bot.tree.command(name="systemcheck", description="Prueft und repariert ALLE Bot-Systeme automatisch")
-@is_admin_or_owner()
-async def systemcheck_command(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    fixes = []
-    warnings = []
-
-    # --- 1. Tasks pruefen und neustarten ---
-    all_tasks = {
-        "Auto-Memes": auto_memes_task,
-        "Frage des Tages": frage_des_tages_task,
-        "AutoSave": auto_save_data,
-        "MemberCount": membercount_refresh,
-        "Watchdog": watchdog_task,
-        "Leaderboard": update_live_leaderboard,
-        "DailyBackup": daily_config_backup,
-        "HealthMonitor": health_monitor,
-    }
-    for name, task in all_tasks.items():
-        try:
-            if not task.is_running():
-                task.start()
-                fixes.append(f"**{name}** - Task neugestartet")
-        except Exception as e:
-            if "already running" in str(e).lower():
-                pass
-            else:
-                warnings.append(f"**{name}** - {e}")
-
-    # --- 2. Memes Config pruefen und reaktivieren ---
-    memes_config = load_memes_config()
-    memes_repaired = 0
-    for guild_str, settings in memes_config.items():
-        ch_id = settings.get("channel_id")
-        if not ch_id:
-            continue
-        channel = bot.get_channel(ch_id)
-        if not channel:
-            guild = bot.get_guild(int(guild_str))
-            if guild:
-                channel = guild.get_channel(ch_id)
-        if channel and not settings.get("enabled"):
-            memes_config[guild_str]["enabled"] = True
-            settings.pop("_cache_misses", None)
-            memes_repaired += 1
-            fixes.append(f"Memes fuer {guild.name if guild else guild_str} reaktiviert")
-        settings.pop("_cache_misses", None)
-    if memes_repaired > 0:
-        save_memes_config(memes_config)
-
-    # --- 3. Memes Task starten wenn noetig ---
-    try:
-        if not auto_memes_task.is_running():
-            for guild_str, settings in memes_config.items():
-                if settings.get("enabled"):
-                    interval = settings.get("interval_minutes", 60)
-                    auto_memes_task.change_interval(minutes=interval)
-                    auto_memes_task.start()
-                    fixes.append(f"Auto-Memes Task gestartet ({interval} Min)")
-                    break
-    except Exception:
-        pass
-
-    # --- 4. Frage des Tages Task starten wenn noetig ---
-    try:
-        if not frage_des_tages_task.is_running():
-            fragen_config = load_fragen_config()
-            for guild_str, settings in fragen_config.items():
-                if settings.get("enabled"):
-                    interval = settings.get("interval_hours", 16)
-                    frage_des_tages_task.change_interval(hours=interval)
-                    frage_des_tages_task.start()
-                    fixes.append(f"Frage-Task gestartet ({interval}h)")
-                    break
-    except Exception:
-        pass
-
-    # --- 5. Member Count - NUR prüfen, KEIN channel.edit (vermeidet 429-Sleep) ---
-    # Das Umbenennen macht der membercount_refresh Task alle 30 Min.
-    # Ein channel.edit hier kann bei Rate-Limit den Command MINUTENLANG blockieren.
-    try:
-        mc_config = load_membercount_config()
-        mc_count = 0
-        mc_needs_update = 0
-        for guild_str, settings in mc_config.items():
-            channel_id = settings.get("channel_id")
-            if not channel_id:
-                continue
-            guild = bot.get_guild(int(guild_str))
-            if not guild:
-                continue
-            channel = guild.get_channel(channel_id)
-            if not channel:
-                continue
-            member_count = guild.member_count or 0
-            prefix = settings.get("prefix", "Members")
-            new_name = f"{prefix}: {member_count}"
-            if channel.name != new_name:
-                mc_needs_update += 1
-            mc_count += 1
-        if mc_count > 0:
-            fixes.append(f"MemberCount: {mc_count} Channel(s) geprueft")
-        if mc_needs_update > 0:
-            fixes.append(f"MemberCount: {mc_needs_update} Channel(s) warten auf naechstes 30-Min-Update")
-    except Exception as e:
-        warnings.append(f"Member Count: {e}")
-
-    # --- 6. Voice Channels aufgeraeumt ---
-    cleaned = 0
-    voice_ids = list(voice_channel_owners.keys())
-    for ch_id in voice_ids:
-        channel = bot.get_channel(ch_id)
-        if not channel:
-            for guild in bot.guilds:
-                channel = guild.get_channel(ch_id)
-                if channel:
-                    break
-        if not channel:
-            voice_channel_owners.pop(ch_id, None)
-            voice_channel_settings.pop(ch_id, None)
-            cleaned += 1
-    if cleaned > 0:
-        save_voice_owners(voice_channel_owners)
-        save_voice_settings_file(voice_channel_settings)
-        fixes.append(f"{cleaned} Voice-Channel-Eintraege aufgeraeumt")
-
-    # --- 7. Voice Setup Status ---
-    voice_setup = load_voice_setup()
-    if voice_setup:
-        for guild_str, vs in voice_setup.items():
-            cat = vs.get("category_id")
-            lobby = vs.get("lobby_id")
-            fixes.append(f"VoiceSetup: Category={cat}, Lobby={lobby}")
-    else:
-        warnings.append("VoiceSetup NICHT konfiguriert! Nutze /voicesetup")
-
-    # --- 8. MemberCount Config Status ---
-    if not mc_config:
-        warnings.append("MemberCount NICHT konfiguriert! Nutze /membercountsetup")
-
-    # --- 9. Configs sichern ---
-    try:
-        save_all_configs_to_disk()
-        fixes.append("Alle Configs auf Disk gesichert")
-    except Exception as e:
-        warnings.append(f"Config-Save: {e}")
-
-    # --- Embed bauen ---
-    embed = discord.Embed(
-        title="System Check abgeschlossen",
-        color=discord.Color.green() if not warnings else discord.Color.orange()
-    )
-
-    if fixes:
-        embed.add_field(
-            name=f"Repariert ({len(fixes)})",
-            value="\n".join(f" {f}" for f in fixes),
-            inline=False
-        )
-    if warnings:
-        embed.add_field(
-            name=f"Warnungen ({len(warnings)})",
-            value="\n".join(f" {w}" for w in warnings),
-            inline=False
-        )
-    if not fixes and not warnings:
-        embed.description = "Alles laeuft einwandfrei!"
-
-    # Task-Status am Ende
-    task_lines = []
-    for name, task in all_tasks.items():
-        try:
-            status = "LAEUFT" if task.is_running() else "STOPP"
-        except Exception:
-            status = "FEHLER"
-        task_lines.append(f"{name}: {status}")
-    embed.add_field(name="Task-Status", value="```" + "\n".join(task_lines) + "```", inline=False)
-
-    embed.set_footer(text=f"Bot: {bot.user.name} | {interaction.guild.name}")
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
@@ -6379,7 +6189,7 @@ def setup_exception_handlers():
     
     # ==========================================
     # 1. GLOBAL UNHANDLED EXCEPTION HANDLER
-    #    (fängt ALLE unerwarteten Fehler ab)
+    #    (fÃ¤ngt ALLE unerwarteten Fehler ab)
     # ==========================================
     def global_exception_handler(loop, context):
         exception = context.get("exception")
@@ -6430,7 +6240,7 @@ def setup_exception_handlers():
     
     # ==========================================
     # 2. SYS.EXCEPTHOOK (Python-Level Errors)
-    #    Fängt Fehler ab die aus dem Loop fallen
+    #    FÃ¤ngt Fehler ab die aus dem Loop fallen
     # ==========================================
     import sys
     
@@ -6498,7 +6308,7 @@ def setup_exception_handlers():
                 tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
                 
                 print(f"\n{'='*60}")
-                print(f"[TASK_CRASH] Task '{task_name}' abgestürzt!")
+                print(f"[TASK_CRASH] Task '{task_name}' abgestÃ¼rzt!")
                 print(f"[TASK_CRASH] {type(exc).__name__}: {exc}")
                 traceback.print_exception(type(exc), exc, exc.__traceback__)
                 print(f"{'='*60}")
@@ -6569,7 +6379,7 @@ async def graceful_shutdown(sig_name):
                 print(f"[Shutdown] Task {name} gestoppt")
             except: pass
         
-        # Warte kurz damit Tasks aufräumen können
+        # Warte kurz damit Tasks aufrÃ¤umen kÃ¶nnen
         if tasks_to_stop:
             await asyncio.sleep(2)
     except: pass
@@ -6580,7 +6390,7 @@ async def graceful_shutdown(sig_name):
         print("[Shutdown] Alle Configs gespeichert")
     except: pass
     
-    # 3. Git-Push wenn möglich
+    # 3. Git-Push wenn mÃ¶glich
     try:
         proc = await asyncio.create_subprocess_exec(
             "git", "add", "data/",
@@ -6609,7 +6419,7 @@ async def graceful_shutdown(sig_name):
             print("[Shutdown] Git-Push erfolgreich")
     except: pass
     
-    # 4. Bot schließen
+    # 4. Bot schlieÃŸen
     try:
         await bot.close()
         print("[Shutdown] Bot geschlossen")
@@ -6631,7 +6441,7 @@ import psutil
 @tasks.loop(minutes=2)
 @crash_resilient_task
 async def health_monitor():
-    """Überwacht Speicher und Performance"""
+    """Ãœberwacht Speicher und Performance"""
     try:
         process = psutil.Process()
         mem_mb = process.memory_info().rss / 1024 / 1024
