@@ -6244,7 +6244,20 @@ async def ai_command(
     await interaction.response.defer()
     
     api_key = os.getenv("MIMO_API_KEY")
+    
     if not api_key:
+        env_file = Path(".env")
+        if env_file.exists():
+            with open(env_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("MIMO_API_KEY="):
+                        api_key = line.split("=", 1)[1].strip()
+                        print(f"[AI] Key aus .env Datei geladen: {api_key[:10]}...")
+                        break
+    
+    if not api_key:
+        print(f"[AI] MIMO_API_KEY FEHLT! Alle Env-Vars mit KEY: {[k for k in os.environ if 'KEY' in k.upper() or 'TOKEN' in k.upper()]}")
         await interaction.followup.send("❌ MIMO_API_KEY nicht gesetzt!\nRailway → Variables → MIMO_API_KEY eintragen", ephemeral=True)
         return
     
