@@ -6257,6 +6257,7 @@ async def ai_command(
     
     for model in AI_MODELS:
         try:
+            print(f"[AI] Versuche {model['name']} ({model['id']})...")
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     MIMO_API_URL,
@@ -6272,19 +6273,23 @@ async def ai_command(
                     },
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
+                    error_text = await resp.text()
+                    print(f"[AI] {model['name']} Status: {resp.status}")
+                    
                     if resp.status == 429:
-                        print(f"[AI] {model['name']} rate-limited, naechstes Model...")
+                        print(f"[AI] {model['name']} RATE LIMITED: {error_text[:200]}")
                         continue
                     
                     if resp.status != 200:
-                        error_text = await resp.text()
-                        print(f"[AI] {model['name']} Fehler {resp.status}: {error_text[:100]}")
+                        print(f"[AI] {model['name']} FEHLER {resp.status}: {error_text[:200]}")
                         continue
                     
                     data = await resp.json()
                     
                     antwort = data["choices"][0]["message"]["content"]
                     tokens = data.get("usage", {})
+                    
+                    print(f"[AI] {model['name']} ERFOLG! Tokens: {tokens.get('total_tokens', '?')}")
                     
                     embed = discord.Embed(
                         title=f"🤖 {model['name']}",
@@ -6298,10 +6303,10 @@ async def ai_command(
                     return
         
         except asyncio.TimeoutError:
-            print(f"[AI] {model['name']} Timeout, naechstes Model...")
+            print(f"[AI] {model['name']} TIMEOUT nach 30s")
             continue
         except Exception as e:
-            print(f"[AI] {model['name']} Exception: {e}")
+            print(f"[AI] {model['name']} EXCEPTION: {type(e).__name__}: {e}")
             continue
     
     await interaction.followup.send("❌ Alle KI-Models sind gerade nicht verfuegbar - bitte spaeter nochmal versuchen!", ephemeral=True)
