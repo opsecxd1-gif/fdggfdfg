@@ -78,10 +78,11 @@ class RecoveryManager:
         self._recovery_log.append(entry)
         if len(self._recovery_log) > 200:
             self._recovery_log = self._recovery_log[-200:]
-        if level == "ERROR":
+        try:
             print(f"[Recovery] {entry}")
-        else:
-            print(f"[Recovery] {entry}")
+        except UnicodeEncodeError:
+            safe = entry.encode("cp1252", errors="replace").decode("cp1252")
+            print(f"[Recovery] {safe}")
 
     async def startup_sequence(self):
         self.start_time = time.time()
