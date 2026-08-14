@@ -5795,6 +5795,135 @@ async def serverlist_command(
     )
 
 # =====================================
+# ROLLEN RECHTE ENTZIEHEN (GIF/BILDER/STICKER)
+# =====================================
+
+@bot.tree.command(name="striproles", description="Entzieht allen Rollen UNTER 'Maske' die Rechte fuer GIFs, Bilder und externe Sticker")
+@is_admin_or_owner()
+async def striproles_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
+    maske_role = discord.utils.get(interaction.guild.roles, name="Maske")
+    if not maske_role:
+        await interaction.followup.send("Rolle 'Maske' nicht gefunden!", ephemeral=True)
+        return
+
+    bot_top_role = interaction.guild.me.top_role
+
+    updated = []
+    skipped = []
+
+    for role in interaction.guild.roles:
+        if role == interaction.guild.default_role:
+            continue
+        if role.position >= maske_role.position:
+            continue
+        if role.position >= bot_top_role.position:
+            skipped.append(f"{role.name} (Bot zu niedrig)")
+            continue
+        if role.managed:
+            skipped.append(f"{role.name} (Bot-Rolle)")
+            continue
+
+        old_perms = role.permissions
+        new_perms = old_perms
+        new_perms.attach_files = False
+        new_perms.use_external_stickers = False
+
+        if old_perms == new_perms:
+            skipped.append(f"{role.name} (bereits gesetzt)")
+            continue
+
+        try:
+            await role.edit(permissions=new_perms, reason=f"striproles von {interaction.user}")
+            updated.append(role.name)
+        except discord.Forbidden:
+            skipped.append(f"{role.name} (keine Berechtigung)")
+        except Exception as e:
+            skipped.append(f"{role.name} ({e})")
+
+    embed = discord.Embed(
+        title="Rechte entzogen",
+        color=discord.Color.green() if updated else discord.Color.red()
+    )
+    if updated:
+        embed.add_field(
+            name=f"Aktualisiert ({len(updated)})",
+            value=", ".join(updated),
+            inline=False
+        )
+    if skipped:
+        embed.add_field(
+            name=f"Uebersprungen ({len(skipped)})",
+            value=", ".join(skipped),
+            inline=False
+        )
+    embed.set_footer(text=f"Alle Rollen unter '{maske_role.name}' — GIFs, Bilder, externe Sticker deaktiviert")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="unstriproles", description="Gibt allen Rollen die GIF/Bilder/Sticker Rechte zurueck")
+@is_admin_or_owner()
+async def unstriproles_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
+    maske_role = discord.utils.get(interaction.guild.roles, name="Maske")
+    if not maske_role:
+        await interaction.followup.send("Rolle 'Maske' nicht gefunden!", ephemeral=True)
+        return
+
+    bot_top_role = interaction.guild.me.top_role
+
+    updated = []
+    skipped = []
+
+    for role in interaction.guild.roles:
+        if role == interaction.guild.default_role:
+            continue
+        if role.position >= maske_role.position:
+            continue
+        if role.position >= bot_top_role.position:
+            skipped.append(f"{role.name} (Bot zu niedrig)")
+            continue
+        if role.managed:
+            skipped.append(f"{role.name} (Bot-Rolle)")
+            continue
+
+        old_perms = role.permissions
+        new_perms = old_perms
+        new_perms.attach_files = True
+        new_perms.use_external_stickers = True
+
+        if old_perms == new_perms:
+            skipped.append(f"{role.name} (bereits gesetzt)")
+            continue
+
+        try:
+            await role.edit(permissions=new_perms, reason=f"unstriproles von {interaction.user}")
+            updated.append(role.name)
+        except discord.Forbidden:
+            skipped.append(f"{role.name} (keine Berechtigung)")
+        except Exception as e:
+            skipped.append(f"{role.name} ({e})")
+
+    embed = discord.Embed(
+        title="Rechte wiederhergestellt",
+        color=discord.Color.green() if updated else discord.Color.red()
+    )
+    if updated:
+        embed.add_field(
+            name=f"Aktualisiert ({len(updated)})",
+            value=", ".join(updated),
+            inline=False
+        )
+    if skipped:
+        embed.add_field(
+            name=f"Uebersprungen ({len(skipped)})",
+            value=", ".join(skipped),
+            inline=False
+        )
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+# =====================================
 # BOT STATUS COMMAND
 # =====================================
 
