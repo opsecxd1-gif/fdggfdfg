@@ -6239,8 +6239,9 @@ async def ai_command(
     await interaction.response.defer()
     
     api_key = os.getenv("MIMO_API_KEY")
+    print(f"[AI] MIMO_API_KEY: {'GESETZT (' + api_key[:10] + '...)' if api_key else 'LEER!'}")
     if not api_key:
-        await interaction.followup.send("❌ MIMO_API_KEY nicht gesetzt!", ephemeral=True)
+        await interaction.followup.send("❌ MIMO_API_KEY nicht gesetzt!\nRailway → Variables → MIMO_API_KEY eintragen", ephemeral=True)
         return
     
     messages = []
