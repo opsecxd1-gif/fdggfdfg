@@ -6211,7 +6211,7 @@ async def help_command(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=build_embed(cat_names[0]), view=view)
 
-MIMO_API_URL = "https://api.xiaomimimo.com/v1/chat/completions"
+MIMO_API_URL = "https://opencode.ai/zen/v1/chat/completions"
 MIMO_MODEL = "mimo-v2.5-free"
 
 ai_cooldowns = {}
