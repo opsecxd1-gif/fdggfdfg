@@ -5817,31 +5817,55 @@ async def serverlist_command(
         return
 
     await interaction.followup.send(
-        f"**{len(codes)} Invite(s) gefunden.** Pruefe auf Gueltigkeit...",
+        f"**{len(codes)} Invite(s) gefunden.** Pruefe parallel (10 gleichzeitig)...",
         ephemeral=True
     )
 
+    sem = asyncio.Semaphore(10)
+
+    async def check_with_limit(code):
+        async with sem:
+            return await check_invite_valid(code)
+
     valid = []
     invalid = []
-    errors = []
+    done = 0
 
-    for i, code in enumerate(codes):
-        result = await check_invite_valid(code)
-        if result["valid"]:
-            valid.append(result)
-        else:
-            invalid.append(result)
+    for i in range(0, len(codes), 10):
+        batch = codes[i:i + 10]
+        results = await asyncio.gather(*[check_with_limit(c) for c in batch])
+        for result in results:
+            if result["valid"]:
+                valid.append(result)
+            else:
+                invalid.append(result)
+            done += 1
 
-        if (i + 1) % 10 == 0:
-            try:
-                await interaction.edit_original_response(
-                    content=f"**Pruefe... {i+1}/{len(codes)}**\n"
-                            f"Gueltig: {len(valid)} | Ungueltig: {len(invalid)}"
-                )
-            except:
-                pass
+        try:
+            await interaction.edit_original_response(
+                content=f"**Pruefe... {done}/{len(codes)}**\n"
+                        f"Gueltig: {len(valid)} | Ungueltig: {len(invalid)}"
+            )
+        except:
+            pass
 
-        await asyncio.sleep(0.5)
+    result_data = {
+        "last_check": datetime.datetime.utcnow().isoformat(),
+        "total": len(codes),
+        "valid_count": len(valid),
+        "invalid_count": len(invalid),
+        "valid": valid,
+        "invalid": [r["code"] for r in invalid[:50]],
+    }
+
+    SERVERLIST_RESULT_FILE = DATA_DIR / "serverlist_results.json"
+    try:
+        with open(SERVERLIST_RESULT_FILE, "w") as f:
+            json.dump(result_data, f, indent=2)
+        saved = True
+    except Exception as e:
+        saved = False
+        print(f"[ServerList] Speichern fehlgeschlagen: {e}")
 
     report = (
         f"**Ergebnis:**\n"
@@ -5849,6 +5873,9 @@ async def serverlist_command(
         f" Ungueltig: **{len(invalid)}**\n"
         f" Gesamt: {len(codes)}"
     )
+
+    if saved:
+        report += f"\n Gueltige Links gespeichert in `data/serverlist_results.json`"
 
     if invalid:
         invalid_names = [f"`{r['code']}`" for r in invalid[:15]]
