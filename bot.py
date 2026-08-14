@@ -54,7 +54,7 @@ async def send_error_webhook(title, error_info, context=""):
         return
     try:
         embed = {
-            "title": f"ðŸ”´ {title}",
+            "title": f"🔴 {title}",
             "description": f"```{error_info[:1800]}```",
             "color": 0xFF0000,
             "fields": [],
@@ -611,7 +611,7 @@ def is_admin_or_owner():
         required_role = discord.utils.get(interaction.user.roles, name=REQUIRED_ROLE_NAME)
         if required_role:
             return True
-        await interaction.response.send_message("Keine Berechtigung! Nur User mit der 976 Rolle kÃ¶nnen den Bot nutzen.", ephemeral=True)
+        await interaction.response.send_message("Keine Berechtigung! Nur User mit der 976 Rolle können den Bot nutzen.", ephemeral=True)
         return False
     return app_commands.check(predicate)
 
@@ -841,7 +841,7 @@ async def _convert_to_h264(input_path):
     import shutil
     ffmpeg_path = shutil.which('ffmpeg')
     if not ffmpeg_path:
-        print(f"[TikTok] FFmpeg nicht gefunden, Ã¼berspringe Conversion")
+        print(f"[TikTok] FFmpeg nicht gefunden, überspringe Conversion")
         return input_path
     
     probe_cmd = [
@@ -998,9 +998,9 @@ async def download_tiktok_video(url, mode="clyppy"):
     print(f"[TikTok] ALL methods failed for: {url}")
     return None, None
 
-@bot.tree.command(name="add", description="FÃ¼ge GIF/Media-Links hinzu")
+@bot.tree.command(name="add", description="Füge GIF/Media-Links hinzu")
 @is_admin_or_owner()
-@app_commands.describe(links="Links oder Discord-Chat-Export einfÃ¼gen")
+@app_commands.describe(links="Links oder Discord-Chat-Export einfügen")
 async def add_command(interaction: discord.Interaction, links: str):
     await interaction.response.defer()
     use_filter = filter_mode.get(interaction.guild_id, False)
@@ -1020,7 +1020,7 @@ async def add_command(interaction: discord.Interaction, links: str):
     combined = existing + new_links
     save_links(interaction.channel_id, combined)
     await interaction.followup.send(
-        f"**{len(new_links)} neue Links hinzugefÃ¼gt!**\n"
+        f"**{len(new_links)} neue Links hinzugefügt!**\n"
         f"Gesamt: {len(combined)} Links"
     )
 
@@ -1091,9 +1091,9 @@ async def stop_command(interaction: discord.Interaction):
         channel_status[interaction.channel_id]["running"] = False
         await interaction.response.send_message("Gestoppt.")
     else:
-        await interaction.response.send_message("LÃ¤uft gerade nicht.", ephemeral=True)
+        await interaction.response.send_message("Läuft gerade nicht.", ephemeral=True)
 
-@bot.tree.command(name="next", description="Sendet die nÃ¤chsten 4 GIFs")
+@bot.tree.command(name="next", description="Sendet die nächsten 4 GIFs")
 @is_admin_or_owner()
 async def next_command(interaction: discord.Interaction):
     links = load_links(interaction.channel_id)
@@ -1117,7 +1117,7 @@ async def status_command(interaction: discord.Interaction):
         idx = channel_status[interaction.channel_id]["index"]
         running = channel_status[interaction.channel_id]["running"]
     remaining = len(links) - idx
-    status_text = "LÃ¤uft" if running else "Gestoppt"
+    status_text = "Läuft" if running else "Gestoppt"
     embed_mode = "AN" if video_embed_mode.get(interaction.channel_id, False) else "AUS"
     await interaction.response.send_message(
         f"**Status:** {status_text}\n"
@@ -1128,7 +1128,7 @@ async def status_command(interaction: discord.Interaction):
         f"**Uebrig:** {remaining}"
     )
 
-@bot.tree.command(name="clear", description="LÃ¶scht die komplette Liste")
+@bot.tree.command(name="clear", description="Löscht die komplette Liste")
 @is_admin_or_owner()
 async def clear_command(interaction: discord.Interaction):
     path = get_data_file(interaction.channel_id)
@@ -1136,7 +1136,7 @@ async def clear_command(interaction: discord.Interaction):
         path.unlink()
     if interaction.channel_id in channel_status:
         del channel_status[interaction.channel_id]
-    await interaction.response.send_message("Liste gelÃ¶scht.")
+    await interaction.response.send_message("Liste gelöscht.")
 
 @bot.tree.command(name="embedvideos", description="Toggle: MP4/MOV als Inline-Video-Embed senden (statt Text-Link)")
 @is_admin_or_owner()
@@ -1144,7 +1144,7 @@ async def embedvideos_command(interaction: discord.Interaction):
     current = video_embed_mode.get(interaction.channel_id, False)
     video_embed_mode[interaction.channel_id] = not current
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     await interaction.response.send_message(
         f"{icon} **Video-Embed Mode:** {state}\n"
         f"{'MP4/MOV werden jetzt als Inline-Video gesendet.' if not current else 'MP4/MOV werden wieder als Text-Links gesendet.'}"
@@ -1180,18 +1180,18 @@ async def list_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="pos", description="Setzt die Position manuell (z.B. /pos 100)")
 @is_admin_or_owner()
-@app_commands.describe(position="Die gewÃ¼nschte Startposition")
+@app_commands.describe(position="Die gewünschte Startposition")
 async def pos_command(interaction: discord.Interaction, position: int):
     links = load_links(interaction.channel_id)
     if position < 0 or position >= len(links):
-        await interaction.response.send_message(f"UngÃ¼ltige Position. GÃ¼ltig: 0-{len(links)-1}", ephemeral=True)
+        await interaction.response.send_message(f"Ungültige Position. Gültig: 0-{len(links)-1}", ephemeral=True)
         return
     if interaction.channel_id not in channel_status:
         channel_status[interaction.channel_id] = {"index": 0, "running": False}
     channel_status[interaction.channel_id]["index"] = position
     await interaction.response.send_message(f"Position auf {position} gesetzt.")
 
-@bot.tree.command(name="import", description="LÃ¤dt bis zu 10 .txt Dateien hoch, erstellt pro Datei einen Channel")
+@bot.tree.command(name="import", description="Lädt bis zu 10 .txt Dateien hoch, erstellt pro Datei einen Channel")
 @is_admin_or_owner()
 @app_commands.describe(
     datei1="Datei 1", datei2="Datei 2", datei3="Datei 3", datei4="Datei 4", datei5="Datei 5",
@@ -1215,7 +1215,7 @@ async def import_command(
     results = []
     for file in files:
         if not file.filename.endswith('.txt'):
-            results.append(f"**{file.filename}** - Ãœbersprungen (keine .txt)")
+            results.append(f"**{file.filename}** - Übersprungen (keine .txt)")
             continue
         content = await file.read()
         text = content.decode('utf-8', errors='ignore')
@@ -1260,7 +1260,7 @@ async def import_command(
         results.append(f"**{new_channel.mention}** - {len(extracted)} Links")
     await interaction.followup.send("\n".join(results))
 
-@bot.tree.command(name="import2", description="LÃ¤dt .txt Dateien und sendet die Links direkt in diesen Channel")
+@bot.tree.command(name="import2", description="Lädt .txt Dateien und sendet die Links direkt in diesen Channel")
 @is_admin_or_owner()
 @app_commands.describe(
     datei1="Datei 1", datei2="Datei 2", datei3="Datei 3", datei4="Datei 4", datei5="Datei 5",
@@ -1289,7 +1289,7 @@ async def import2_command(
     
     for file in files:
         if not file.filename.endswith('.txt'):
-            results.append(f"**{file.filename}** - Ãœbersprungen (keine .txt)")
+            results.append(f"**{file.filename}** - Übersprungen (keine .txt)")
             continue
         content = await file.read()
         text = content.decode('utf-8', errors='ignore')
@@ -1357,14 +1357,14 @@ async def filtermode_command(interaction: discord.Interaction):
     current = filter_mode.get(interaction.guild_id, False)
     filter_mode[interaction.guild_id] = not current
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     
     if not current:
         desc = (
             f"{icon} **Filter-Modus:** {state}\n\n"
-            "BehÃ¤lt nur: GIF, MP4, MOV, AVI, MKV, WebM, PNG, JPG, WEBP, APNG, SVG\n"
+            "Behält nur: GIF, MP4, MOV, AVI, MKV, WebM, PNG, JPG, WEBP, APNG, SVG\n"
             "Entfernt: Alles andere (Text-Links, HTML-Reste, Tracking-Parameter)\n"
-            "Gilt fÃ¼r: `/import2`, `/add`, `/load`"
+            "Gilt für: `/import2`, `/add`, `/load`"
         )
     else:
         desc = f"{icon} **Filter-Modus:** {state}\n\nStandard-Filter aktiv."
@@ -1381,15 +1381,15 @@ async def nofiltermode_command(interaction: discord.Interaction):
         filter_mode[interaction.guild_id] = False
     
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     
     if not current:
         desc = (
             f"{icon} **NoFilter-Modus:** {state}\n\n"
             "Jede Zeile wird als Link genommen - KEIN Filter!\n"
             "Kein URL-Check, keine Deduplizierung, keine Bereinigung\n"
-            "Gilt fÃ¼r: `/import2`, `/add`, `/load`\n\n"
-            "**Achtung:** Sendet wirklich ALLES was mit http anfÃ¤ngt!"
+            "Gilt für: `/import2`, `/add`, `/load`\n\n"
+            "**Achtung:** Sendet wirklich ALLES was mit http anfängt!"
         )
     else:
         desc = f"{icon} **NoFilter-Modus:** {state}\n\nStandard-Filter aktiv."
@@ -1402,29 +1402,29 @@ class TiktokModeSelect(discord.ui.Select):
             discord.SelectOption(
                 label="Clyppy",
                 value="clyppy",
-                description="Empfohlen - Schnell & zuverlÃ¤ssig",
-                emoji="â­"
+                description="Empfohlen - Schnell & zuverlässig",
+                emoji="⭐"
             ),
             discord.SelectOption(
                 label="dlbot",
                 value="dlbot",
-                description="Hohe QualitÃ¤t, MP4 Merge",
-                emoji="ðŸ“¥"
+                description="Hohe Qualität, MP4 Merge",
+                emoji="📥"
             ),
             discord.SelectOption(
                 label="TikCord",
                 value="tikcord",
                 description="Alle Formate, flexibel",
-                emoji="ðŸŽµ"
+                emoji="🎵"
             ),
             discord.SelectOption(
                 label="QuickVids",
                 value="quickvids",
                 description="Schnell & simpel",
-                emoji="âš¡"
+                emoji="⚡"
             ),
         ]
-        super().__init__(placeholder="WÃ¤hle einen TikTok Downloader...", options=options)
+        super().__init__(placeholder="Wähle einen TikTok Downloader...", options=options)
     
     async def callback(self, interaction: discord.Interaction):
         mode = self.values[0]
@@ -1437,14 +1437,14 @@ class TiktokModeSelect(discord.ui.Select):
         tiktok_mode[interaction.guild_id] = {"enabled": True, "mode": mode}
         
         mode_names = {
-            "clyppy": "Clyppy (â­ Empfohlen)",
-            "dlbot": "dlbot (ðŸ“¥ Hohe QualitÃ¤t)",
-            "tikcord": "TikCord (ðŸŽµ Flexibel)",
-            "quickvids": "QuickVids (âš¡ Schnell)"
+            "clyppy": "Clyppy (⭐ Empfohlen)",
+            "dlbot": "dlbot (📥 Hohe Qualität)",
+            "tikcord": "TikCord (🎵 Flexibel)",
+            "quickvids": "QuickVids (⚡ Schnell)"
         }
         
         await interaction.response.send_message(
-            f"âœ… **TikTok Auto-Download aktiviert!**\n\n"
+            f"✅ **TikTok Auto-Download aktiviert!**\n\n"
             f"**Service:** {mode_names.get(mode, mode)}\n"
             f"**Status:** AN\n\n"
             f"Ab jetzt werden automatisch alle TikTok Links heruntergeladen und als Video gesendet!",
@@ -1456,17 +1456,17 @@ class TiktokModeView(discord.ui.View):
         super().__init__(timeout=60)
         self.add_item(TiktokModeSelect())
 
-@bot.tree.command(name="tiktokmode", description="TikTok Auto-Download: WÃ¤hle einen Service fÃ¼r automatische Downloads")
+@bot.tree.command(name="tiktokmode", description="TikTok Auto-Download: Wähle einen Service für automatische Downloads")
 @is_admin_or_owner()
 async def tiktokmode_command(interaction: discord.Interaction):
     view = TiktokModeView()
     await interaction.response.send_message(
         "**TikTok Auto-Download Konfiguration**\n\n"
-        "WÃ¤hle einen Service aus:\n\n"
-        "â­ **Clyppy** - Empfohlen, schnell & zuverlÃ¤ssig\n"
-        "ðŸ“¥ **dlbot** - Hohe QualitÃ¤t mit MP4 Merge\n"
-        "ðŸŽµ **TikCord** - Alle Formate, flexibel\n"
-        "âš¡ **QuickVids** - Schnell & simpel\n\n"
+        "Wähle einen Service aus:\n\n"
+        "⭐ **Clyppy** - Empfohlen, schnell & zuverlässig\n"
+        "📥 **dlbot** - Hohe Qualität mit MP4 Merge\n"
+        "🎵 **TikCord** - Alle Formate, flexibel\n"
+        "⚡ **QuickVids** - Schnell & simpel\n\n"
         "Sobald aktiviert, werden alle TikTok Links automatisch erkannt und heruntergeladen!",
         view=view,
         ephemeral=True
@@ -1485,7 +1485,7 @@ async def tiktoktoggle_command(interaction: discord.Interaction):
         tiktok_mode[interaction.guild_id] = tiktok_mode_data[guild_id_str]
         
         state = "AN" if not current else "AUS"
-        icon = "âœ…" if not current else "âŒ"
+        icon = "✅" if not current else "❌"
         
         if not current:
             mode = tiktok_mode_data[guild_id_str].get("mode", "clyppy")
@@ -1504,7 +1504,7 @@ async def tiktoktoggle_command(interaction: discord.Interaction):
             desc = f"{icon} **TikTok Auto-Download:** {state}\n\nTikTok Links werden nicht mehr automatisch heruntergeladen."
     else:
         await interaction.response.send_message(
-            "Noch nicht konfiguriert! Benutze zuerst `/tiktokmode` um einen Service auszuwÃ¤hlen.",
+            "Noch nicht konfiguriert! Benutze zuerst `/tiktokmode` um einen Service auszuwählen.",
             ephemeral=True
         )
         return
@@ -1523,13 +1523,13 @@ async def tiktokstatus_command(interaction: discord.Interaction):
         mode = data.get("mode", "clyppy")
         
         mode_names = {
-            "clyppy": "Clyppy (â­ Empfohlen)",
-            "dlbot": "dlbot (ðŸ“¥ Hohe QualitÃ¤t)",
-            "tikcord": "TikCord (ðŸŽµ Flexibel)",
-            "quickvids": "QuickVids (âš¡ Schnell)"
+            "clyppy": "Clyppy (⭐ Empfohlen)",
+            "dlbot": "dlbot (📥 Hohe Qualität)",
+            "tikcord": "TikCord (🎵 Flexibel)",
+            "quickvids": "QuickVids (⚡ Schnell)"
         }
         
-        status = "âœ… AN" if enabled else "âŒ AUS"
+        status = "✅ AN" if enabled else "❌ AUS"
         
         await interaction.response.send_message(
             f"**TikTok Auto-Download Status**\n\n"
@@ -1539,11 +1539,11 @@ async def tiktokstatus_command(interaction: discord.Interaction):
         )
     else:
         await interaction.response.send_message(
-            "Noch nicht konfiguriert! Benutze `/tiktokmode` um einen Service auszuwÃ¤hlen.",
+            "Noch nicht konfiguriert! Benutze `/tiktokmode` um einen Service auszuwählen.",
             ephemeral=True
         )
 
-@bot.tree.command(name="clearchannels", description="LÃ¶scht alle vom Bot erstellten Channels")
+@bot.tree.command(name="clearchannels", description="Löscht alle vom Bot erstellten Channels")
 @is_admin_or_owner()
 async def clearchannels_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -1552,19 +1552,19 @@ async def clearchannels_command(interaction: discord.Interaction):
         channel = interaction.guild.get_channel(channel_id)
         if channel:
             try:
-                await channel.delete(reason=f"GelÃ¶scht via /clearchannels von {interaction.user}")
+                await channel.delete(reason=f"Gelöscht via /clearchannels von {interaction.user}")
                 deleted += 1
             except discord.Forbidden:
                 pass
         auto_channels.discard(channel_id)
     if deleted == 0:
-        await interaction.followup.send("Keine Bot-Channels zum LÃ¶schen gefunden.", ephemeral=True)
+        await interaction.followup.send("Keine Bot-Channels zum Löschen gefunden.", ephemeral=True)
     else:
-        await interaction.followup.send(f"**{deleted} Channel(s) gelÃ¶scht!**")
+        await interaction.followup.send(f"**{deleted} Channel(s) gelöscht!**")
 
 @bot.tree.command(name="permsync", description="Synchronisiert die Permissions aller Channels einer Kategorie mit der Kategorie")
 @is_admin_or_owner()
-@app_commands.describe(kategorie="WÃ¤hle eine Kategorie aus")
+@app_commands.describe(kategorie="Wähle eine Kategorie aus")
 async def permsync_command(interaction: discord.Interaction, kategorie: str):
     await interaction.response.defer(ephemeral=True)
     
@@ -1626,7 +1626,7 @@ async def hoistall_command(interaction: discord.Interaction):
                 skipped += 1
         else:
             skipped += 1
-    await interaction.followup.send(f"**{updated} Rollen aktualisiert!** ({skipped} Ã¼bersprungen â€“ bereits aktiv oder keine Berechtigung)")
+    await interaction.followup.send(f"**{updated} Rollen aktualisiert!** ({skipped} übersprungen – bereits aktiv oder keine Berechtigung)")
 
 @bot.tree.command(name="setavatar", description="Setzt das Bot-Profilbild (Bild reinziehen)")
 @is_admin_or_owner()
@@ -1639,13 +1639,13 @@ async def setavatar_command(interaction: discord.Interaction, bild: discord.Atta
         return
     image_data = await bild.read()
     if len(image_data) > 8 * 1024 * 1024:
-        await interaction.followup.send("Bild ist zu groÃŸ (max 8MB)!", ephemeral=True)
+        await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
         return
     try:
         await bot.user.edit(avatar=image_data)
-        await interaction.followup.send("Profilbild erfolgreich geÃ¤ndert!", ephemeral=True)
+        await interaction.followup.send("Profilbild erfolgreich geändert!", ephemeral=True)
     except discord.HTTPException as e:
-        await interaction.followup.send(f"Fehler beim Ã„ndern: {e}", ephemeral=True)
+        await interaction.followup.send(f"Fehler beim Ändern: {e}", ephemeral=True)
 
 @bot.tree.command(name="setbanner", description="Setzt das Bot-Bannerbild (Bild reinziehen)")
 @is_admin_or_owner()
@@ -1658,20 +1658,20 @@ async def setbanner_command(interaction: discord.Interaction, bild: discord.Atta
         return
     image_data = await bild.read()
     if len(image_data) > 10 * 1024 * 1024:
-        await interaction.followup.send("Bild ist zu groÃŸ (max 10MB)!", ephemeral=True)
+        await interaction.followup.send("Bild ist zu groß (max 10MB)!", ephemeral=True)
         return
     try:
         await bot.user.edit(banner=image_data)
-        await interaction.followup.send("Banner erfolgreich geÃ¤ndert!", ephemeral=True)
+        await interaction.followup.send("Banner erfolgreich geändert!", ephemeral=True)
     except discord.HTTPException as e:
-        await interaction.followup.send(f"Fehler beim Ã„ndern: {e}\n\n**Hinweis:** Banner-Ã„nderung funktioniert nur bei verifizierten Bots.", ephemeral=True)
+        await interaction.followup.send(f"Fehler beim Ändern: {e}\n\n**Hinweis:** Banner-Änderung funktioniert nur bei verifizierten Bots.", ephemeral=True)
 
 @bot.tree.command(name="reactionrole", description="Verwaltet Reaction-Roles (wie Carl-bot)")
 @is_admin_or_owner()
 @app_commands.describe(
     aktion="add, remove, list oder clear",
     message_id="Die ID der Nachricht",
-    emoji="Das Emoji (z.B. ðŸ˜ˆ oder :name:)",
+    emoji="Das Emoji (z.B. 😈 oder :name:)",
     rolle="Die Rolle (Name oder Mention)"
 )
 @app_commands.choices(aktion=[
@@ -1692,12 +1692,12 @@ async def reactionrole_command(
     
     if aktion.value == "list":
         if str(interaction.guild_id) not in reaction_roles:
-            await interaction.followup.send("Keine Reaction-Roles fÃ¼r diesen Server.", ephemeral=True)
+            await interaction.followup.send("Keine Reaction-Roles für diesen Server.", ephemeral=True)
             return
         
         guild_data = reaction_roles[str(interaction.guild_id)]
         if not guild_data:
-            await interaction.followup.send("Keine Reaction-Roles fÃ¼r diesen Server.", ephemeral=True)
+            await interaction.followup.send("Keine Reaction-Roles für diesen Server.", ephemeral=True)
             return
         
         lines = []
@@ -1708,7 +1708,7 @@ async def reactionrole_command(
             for emoji_key, role_id in data["roles"].items():
                 role = interaction.guild.get_role(role_id)
                 role_name = role.name if role else f"ID: {role_id}"
-                lines.append(f"  {emoji_key} â†’ {role_name}")
+                lines.append(f"  {emoji_key} → {role_name}")
             lines.append("")
         
         await interaction.followup.send("\n".join(lines)[:2000], ephemeral=True)
@@ -1725,7 +1725,7 @@ async def reactionrole_command(
             if not reaction_roles[guild_id_str]:
                 del reaction_roles[guild_id_str]
             save_reaction_roles(reaction_roles)
-            await interaction.followup.send(f"Alle Reaction-Roles fÃ¼r Nachricht {message_id} gelÃ¶scht.", ephemeral=True)
+            await interaction.followup.send(f"Alle Reaction-Roles für Nachricht {message_id} gelöscht.", ephemeral=True)
         else:
             await interaction.followup.send("Nachricht nicht gefunden.", ephemeral=True)
         return
@@ -1738,7 +1738,7 @@ async def reactionrole_command(
         channel = interaction.channel
         msg = await channel.fetch_message(int(message_id))
     except:
-        await interaction.followup.send("Nachricht nicht gefunden! ID prÃ¼fen.", ephemeral=True)
+        await interaction.followup.send("Nachricht nicht gefunden! ID prüfen.", ephemeral=True)
         return
     
     role = None
@@ -1756,7 +1756,7 @@ async def reactionrole_command(
         return
     
     if role.position >= interaction.guild.me.top_role.position:
-        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch fÃ¼r den Bot!", ephemeral=True)
+        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch für den Bot!", ephemeral=True)
         return
     
     if role.managed:
@@ -1766,7 +1766,7 @@ async def reactionrole_command(
     try:
         await msg.add_reaction(emoji)
     except:
-        await interaction.followup.send(f"Emoji **{emoji}** ungÃ¼ltig!", ephemeral=True)
+        await interaction.followup.send(f"Emoji **{emoji}** ungültig!", ephemeral=True)
         return
     
     guild_id_str = str(interaction.guild_id)
@@ -1781,7 +1781,7 @@ async def reactionrole_command(
     reaction_roles[guild_id_str][message_id]["roles"][emoji] = role.id
     save_reaction_roles(reaction_roles)
     
-    await interaction.followup.send(f"âœ… {emoji} â†’ **{role.name}** hinzugefÃ¼gt!", ephemeral=True)
+    await interaction.followup.send(f"✅ {emoji} → **{role.name}** hinzugefügt!", ephemeral=True)
 
 async def send_next_batch(channel_id, channel):
     links = load_links(channel_id)
@@ -1820,11 +1820,11 @@ async def send_next_batch(channel_id, channel):
         await asyncio.sleep(2)
         await send_next_batch(channel_id, channel)
 
-@bot.tree.command(name="reactionsetup", description="Sendet eine Webhook-Embed mit Button fÃ¼r Reaction-Roles")
+@bot.tree.command(name="reactionsetup", description="Sendet eine Webhook-Embed mit Button für Reaction-Roles")
 @is_admin_or_owner()
 @app_commands.describe(
     rolle="Die Rolle (Name)",
-    emoji="Das Emoji fÃ¼r den Button (z.B. ðŸ˜ˆ)",
+    emoji="Das Emoji für den Button (z.B. 😈)",
     farbe="Embed Farbe (hex, z.B. FF0000)",
     channel="Channel (Standard: aktueller Channel)"
 )
@@ -1858,7 +1858,7 @@ async def reactionsetup_command(
         return
     
     if role.position >= interaction.guild.me.top_role.position:
-        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch fÃ¼r den Bot!", ephemeral=True)
+        await interaction.followup.send(f"Rolle **{role.name}** ist zu hoch für den Bot!", ephemeral=True)
         return
     
     is_excluded = any(ex in role.name.lower() for ex in EXCLUDED_ROLE_NAMES)
@@ -1947,14 +1947,14 @@ async def rolle_autocomplete(interaction: discord.Interaction, current: str):
 
 USER_ROLE_KEYWORDS = [
     "maske", "tik-toker", "streamer", "ehrenuser", "e-girl", "hello kitty", 
-    "seÃ±orita", "marlboro", "sugar mommy", "casanova", "galatasaray", 
-    "smile", "gengar", "durstlÃ¶scher", "uchiha", "bunny", "sonic", "kitten", 
+    "señorita", "marlboro", "sugar mommy", "casanova", "galatasaray", 
+    "smile", "gengar", "durstlöscher", "uchiha", "bunny", "sonic", "kitten", 
     "emo", "rolex", "patrick", "prinzessin", "geistig", "beefer", "queen", 
     "barbie", "baby", "shiggy", "hustler", "saiyajin", "domina", "king", 
     "sadboy", "terrorist", "speedy", "ruffy", "spongebob", "engel", "uwu", 
     "habibi", "geist", "teufel", "cop", "smoker", "stoner", "alien", "senpai", 
-    "superman", "tÃ¼rsteher", "demon", "spiderman", "moncler", "godsent", "toxic", 
-    "npc", "ehrenmann", "ehrenfrau", "cute", "goofy", "og", "freund", "ðŸ‘‘"
+    "superman", "türsteher", "demon", "spiderman", "moncler", "godsent", "toxic", 
+    "npc", "ehrenmann", "ehrenfrau", "cute", "goofy", "og", "freund", "👑"
 ]
 
 EXCLUDED_ROLE_KEYWORDS = [
@@ -1964,11 +1964,11 @@ EXCLUDED_ROLE_KEYWORDS = [
     "no-xp", "sendmoji", "pic", "platzhalter", "supreme", "stammuser",
     "champion", "ultimativ", "titan", "prestige", "legende", "meister",
     "veteran", "elite", "platin", "silver", "treu", "aktiv", "noob",
-    "meme maker", "test", "pb master", "----", "â€”â€”", "ðŸ”Š", "ðŸ”ž+",
-    "star", "â˜…", "*"
+    "meme maker", "test", "pb master", "----", "——", "🔊", "🔞+",
+    "star", "★", "*"
 ]
 
-@bot.tree.command(name="masssetup", description="Erstellt Reaction-Role Buttons fÃ¼r ALLE User-Rollen automatisch")
+@bot.tree.command(name="masssetup", description="Erstellt Reaction-Role Buttons für ALLE User-Rollen automatisch")
 @is_admin_or_owner()
 @app_commands.describe(
     channel="Channel wo die Nachricht hinsoll"
@@ -1998,8 +1998,8 @@ async def masssetup_command(
         is_user_role = any(kw in role_name_lower for kw in USER_ROLE_KEYWORDS)
         
         if not is_user_role:
-            if role.hoist and not any(ex in role_name_lower for ex in ["----", "â€”â€”", "rank", "level"]):
-                if role.color.value != 0 and role.name not in ["----", "â€”â€”"]:
+            if role.hoist and not any(ex in role_name_lower for ex in ["----", "——", "rank", "level"]):
+                if role.color.value != 0 and role.name not in ["----", "——"]:
                     pass
                 else:
                     continue
@@ -2062,13 +2062,13 @@ async def masssetup_command(
         payload = {
             "content": "",
             "embeds": [{
-                "description": f"**WÃ¤hle deine Rollen:**\n\n" + "\n".join([f"â€¢ {r.name}" for r in chunk]),
+                "description": f"**Wähle deine Rollen:**\n\n" + "\n".join([f"• {r.name}" for r in chunk]),
                 "color": 0x5865F2,
                 "author": {
                     "name": f"User Rollen ({page_num}/{total_pages})"
                 },
                 "footer": {
-                    "text": f"Seite {page_num} von {total_pages} â€¢ {len(user_roles)} Rollen gesamt"
+                    "text": f"Seite {page_num} von {total_pages} • {len(user_roles)} Rollen gesamt"
                 }
             }],
             "components": components
@@ -2099,7 +2099,7 @@ async def masssetup_command(
     
     await interaction.followup.send(
         f"**Fertig!** {messages_sent} Nachrichten in {target_channel.mention}\n\n"
-        f"**{total_buttons} Buttons** fÃ¼r {len(user_roles)} User-Rollen erstellt!\n"
+        f"**{total_buttons} Buttons** für {len(user_roles)} User-Rollen erstellt!\n"
         f"Alle funktionieren sofort - Klick = Rolle toggle!",
         ephemeral=True
     )
@@ -2491,10 +2491,10 @@ async def ticketsetup_command(
             "Brauchst du Hilfe?\n"
             "Klicke auf den Button um ein Ticket zu erstellen!\n\n"
             "**Wann ein Ticket erstellen?**\n"
-            "â€¢ Allgemeine Fragen\n"
-            "â€¢ Probleme melden\n"
-            "â€¢ Beantragungen\n"
-            "â€¢ Beschwerden"
+            "• Allgemeine Fragen\n"
+            "• Probleme melden\n"
+            "• Beantragungen\n"
+            "• Beschwerden"
         ),
         color=discord.Color.blurple()
     )
@@ -2598,7 +2598,7 @@ async def on_member_update(before, after):
             continue
         if role.name.lower() in [r.lower() for r in PROTECTED_ROLE_NAMES]:
             protected_roles.append(role)
-        elif role.name.startswith(("â˜…", "*", "â­", "Level")):
+        elif role.name.startswith(("★", "*", "⭐", "Level")):
             protected_roles.append(role)
         else:
             normal_roles.append(role)
@@ -2606,7 +2606,7 @@ async def on_member_update(before, after):
     if len(normal_roles) > MAX_ROLES_FOR_MITGLIED:
         to_remove = normal_roles[MAX_ROLES_FOR_MITGLIED:]
         try:
-            await after.remove_roles(*to_remove, reason="Max 7 Rollen fÃ¼r Mitglieder")
+            await after.remove_roles(*to_remove, reason="Max 7 Rollen für Mitglieder")
         except discord.Forbidden:
             pass
 
@@ -2793,7 +2793,7 @@ async def on_interaction(interaction: discord.Interaction):
         else:
             try:
                 await member.add_roles(role, reason="Reaction Role Button")
-                await interaction.response.send_message(f"**{role.name}** hinzugefÃ¼gt!", ephemeral=True)
+                await interaction.response.send_message(f"**{role.name}** hinzugefügt!", ephemeral=True)
             except discord.Forbidden:
                 await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
@@ -2866,7 +2866,7 @@ class VoiceChannelView(discord.ui.View):
         self.owner_id = owner_id
         self.channel_id = channel_id
 
-    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="ðŸ”’", custom_id="vc_private")
+    @discord.ui.button(label="Private", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="vc_private")
     async def private_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2889,12 +2889,12 @@ class VoiceChannelView(discord.ui.View):
         save_voice_settings_file(voice_channel_settings)
         
         button.label = "Public" if not is_private else "Private"
-        button.emoji = "ðŸŒ" if not is_private else "ðŸ”’"
+        button.emoji = "🌍" if not is_private else "🔒"
         
-        status = "privat" if not is_private else "Ã¶ffentlich"
+        status = "privat" if not is_private else "öffentlich"
         await interaction.response.send_message(f"Channel ist jetzt {status}!", ephemeral=True)
 
-    @discord.ui.button(label="Hide", style=discord.ButtonStyle.secondary, emoji="ðŸ‘ï¸", custom_id="vc_hide")
+    @discord.ui.button(label="Hide", style=discord.ButtonStyle.secondary, emoji="👁️", custom_id="vc_hide")
     async def hide_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2921,7 +2921,7 @@ class VoiceChannelView(discord.ui.View):
         status = "versteckt" if not is_hidden else "sichtbar"
         await interaction.response.send_message(f"Channel ist jetzt {status}!", ephemeral=True)
 
-    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary, emoji="âœï¸", custom_id="vc_rename")
+    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary, emoji="✏️", custom_id="vc_rename")
     async def rename_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2929,7 +2929,7 @@ class VoiceChannelView(discord.ui.View):
         
         await interaction.response.send_modal(RenameModal(self.channel_id))
 
-    @discord.ui.button(label="Kick", style=discord.ButtonStyle.danger, emoji="ðŸ‘¢", custom_id="vc_kick")
+    @discord.ui.button(label="Kick", style=discord.ButtonStyle.danger, emoji="👢", custom_id="vc_kick")
     async def kick_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann Leute kicken!", ephemeral=True)
@@ -2946,9 +2946,9 @@ class VoiceChannelView(discord.ui.View):
             return
         
         view = KickSelectView(self.owner_id, self.channel_id, members_in_channel)
-        await interaction.response.send_message("WÃ¤hle wen du kicken mÃ¶chtest:", view=view, ephemeral=True)
+        await interaction.response.send_message("Wähle wen du kicken möchtest:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Ban", style=discord.ButtonStyle.danger, emoji="ðŸš«", custom_id="vc_ban")
+    @discord.ui.button(label="Ban", style=discord.ButtonStyle.danger, emoji="🚫", custom_id="vc_ban")
     async def ban_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2967,7 +2967,7 @@ class VoiceChannelView(discord.ui.View):
         view = BanSelectView(self.owner_id, self.channel_id, members_in_channel)
         await interaction.response.send_message("Wen bannen:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Invite", style=discord.ButtonStyle.success, emoji="ðŸ”—", custom_id="vc_invite")
+    @discord.ui.button(label="Invite", style=discord.ButtonStyle.success, emoji="🔗", custom_id="vc_invite")
     async def invite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2978,7 +2978,7 @@ class VoiceChannelView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Permit", style=discord.ButtonStyle.success, emoji="âœ…", custom_id="vc_permit")
+    @discord.ui.button(label="Permit", style=discord.ButtonStyle.success, emoji="✅", custom_id="vc_permit")
     async def permit_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der Channel-Besitzer kann das!", ephemeral=True)
@@ -2992,7 +2992,7 @@ class VoiceChannelView(discord.ui.View):
         view = PermitSelectView(self.owner_id, self.channel_id)
         await interaction.response.send_message("Wem Zugriff geben:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="Change Owner", style=discord.ButtonStyle.primary, emoji="ðŸ‘‘", custom_id="vc_changeowner")
+    @discord.ui.button(label="Change Owner", style=discord.ButtonStyle.primary, emoji="👑", custom_id="vc_changeowner")
     async def change_owner_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.owner_id:
             await interaction.response.send_message("Nur der aktuelle Besitzer kann das!", ephemeral=True)
@@ -3009,7 +3009,7 @@ class VoiceChannelView(discord.ui.View):
             return
         
         view = OwnerSelectView(self.owner_id, self.channel_id, members_in_channel)
-        await interaction.response.send_message("WÃ¤hle den neuen Besitzer:", view=view, ephemeral=True)
+        await interaction.response.send_message("Wähle den neuen Besitzer:", view=view, ephemeral=True)
 
 class RenameModal(discord.ui.Modal, title="Channel umbenennen"):
     new_name = discord.ui.TextInput(label="Neuer Name", placeholder="Mein Chat", max_length=50)
@@ -3039,11 +3039,11 @@ class OwnerSelect(discord.ui.Select):
             discord.SelectOption(
                 label=m.display_name,
                 value=str(m.id),
-                emoji="ðŸ‘‘"
+                emoji="👑"
             ) for m in members[:25]
         ]
         
-        super().__init__(placeholder="WÃ¤hle den neuen Besitzer...", options=options)
+        super().__init__(placeholder="Wähle den neuen Besitzer...", options=options)
     
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id:
@@ -3093,7 +3093,7 @@ class OwnerSelect(discord.ui.Select):
         embed, view = await create_voice_control_embed(target_member, channel)
         await channel.send(embed=embed, view=view)
         
-        await interaction.response.send_message(f"Besitz an {target_member.display_name} Ã¼bertragen!", ephemeral=True)
+        await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
 
 class OwnerSelectView(discord.ui.View):
     def __init__(self, owner_id: int, channel_id: int, members: list):
@@ -3109,11 +3109,11 @@ class KickSelect(discord.ui.Select):
             discord.SelectOption(
                 label=m.display_name,
                 value=str(m.id),
-                emoji="ðŸ‘¢"
+                emoji="👢"
             ) for m in members[:25]
         ]
         
-        super().__init__(placeholder="WÃ¤hle wen du kicken mÃ¶chtest...", options=options)
+        super().__init__(placeholder="Wähle wen du kicken möchtest...", options=options)
     
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.owner_id:
@@ -3152,7 +3152,7 @@ class BanSelect(discord.ui.Select):
             discord.SelectOption(
                 label=m.display_name,
                 value=str(m.id),
-                emoji="ðŸš«"
+                emoji="🚫"
             ) for m in members[:25]
         ]
         
@@ -3204,7 +3204,7 @@ class PermitSelect(discord.ui.Select):
             return
         
         await interaction.response.send_message(
-            "Schreib die User ID die du permiten mÃ¶chtest (nur Zahlen):",
+            "Schreib die User ID die du permiten möchtest (nur Zahlen):",
             ephemeral=True
         )
 
@@ -3218,7 +3218,7 @@ async def create_voice_control_embed(member, channel):
         title=f"{member.display_name}'s Private Chat",
         description=(
             f"Willkommen {member.mention}!\n"
-            f"Der Channel wird gelÃ¶scht wenn alle gehen."
+            f"Der Channel wird gelöscht wenn alle gehen."
         ),
         color=discord.Color.blue()
     )
@@ -3250,7 +3250,7 @@ async def voicesetup(interaction: discord.Interaction):
     }
     
     lobby = await guild.create_voice_channel(
-        "âž• Join to Create",
+        "➕ Join to Create",
         category=category,
         overwrites=lobby_overwrites
     )
@@ -3266,7 +3266,7 @@ async def voicesetup(interaction: discord.Interaction):
         title="Voice Channel System",
         description=(
             f"Betritt den {lobby.mention} Channel!\n"
-            f"Es wird automatisch ein privater Channel fÃ¼r dich erstellt.\n"
+            f"Es wird automatisch ein privater Channel für dich erstellt.\n"
             f"Du bekommst Buttons zum Verwalten deines Channels."
         ),
         color=discord.Color.green()
@@ -3278,7 +3278,7 @@ async def vc_kick(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
         return
     
     owner_channel = None
@@ -3311,7 +3311,7 @@ async def vc_ban(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
         return
     
     owner_channel = None
@@ -3343,7 +3343,7 @@ async def vc_permit(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
         return
     
     owner_channel = None
@@ -3370,12 +3370,12 @@ async def vc_permit(interaction: discord.Interaction, user_id: str):
     except discord.Forbidden:
         await interaction.response.send_message("Keine Berechtigung!", ephemeral=True)
 
-@bot.tree.command(name="vc_changeowner", description="Channel Besitz Ã¼bertragen")
+@bot.tree.command(name="vc_changeowner", description="Channel Besitz übertragen")
 async def vc_changeowner(interaction: discord.Interaction, user_id: str):
     try:
         target_id = int(user_id)
     except:
-        await interaction.response.send_message("UngÃ¼ltige User ID!", ephemeral=True)
+        await interaction.response.send_message("Ungültige User ID!", ephemeral=True)
         return
     
     old_owner_channel = None
@@ -3426,7 +3426,7 @@ async def vc_changeowner(interaction: discord.Interaction, user_id: str):
     embed, view = await create_voice_control_embed(target_member, old_owner_channel)
     await old_owner_channel.send(embed=embed, view=view)
     
-    await interaction.response.send_message(f"Besitz an {target_member.display_name} Ã¼bertragen!", ephemeral=True)
+    await interaction.response.send_message(f"Besitz an {target_member.display_name} übertragen!", ephemeral=True)
 
 # =====================================
 # LEVEL SYSTEM
@@ -3672,7 +3672,7 @@ async def level_command(interaction: discord.Interaction, user: discord.Member =
 
     bar_length = 20
     filled = int(bar_length * progress / 100)
-    bar = "â–ˆ" * filled + "â–‘" * (bar_length - filled)
+    bar = "█" * filled + "░" * (bar_length - filled)
 
     embed = discord.Embed(
         title=f"Level von {target.display_name}",
@@ -3717,19 +3717,19 @@ def build_leaderboard_embeds(guild):
     msg_lines = []
     for i, (member, count) in enumerate(messages_ranking[:15]):
         medal = medals[i] if i < 3 else f"**{i+1}.**"
-        msg_lines.append(f"{medal} {member.mention} â€” **{count:,}** messages")
+        msg_lines.append(f"{medal} {member.mention} — **{count:,}** messages")
 
     voice_lines = []
     for i, (member, seconds) in enumerate(voice_ranking[:15]):
         medal = medals[i] if i < 3 else f"**{i+1}.**"
-        voice_lines.append(f"{medal} {member.mention} â€” **{format_time_short(seconds)}**")
+        voice_lines.append(f"{medal} {member.mention} — **{format_time_short(seconds)}**")
 
     top_msg_user = messages_ranking[0][0].mention if messages_ranking else "Keine Daten"
     top_voice_user = voice_ranking[0][0].display_name if voice_ranking else "Keine Daten"
 
     embed_messages = discord.Embed(
         title=f"{guild.name} Leaderboard",
-        description=f" Top Messages (Lifetime) â€” {top_msg_user}",
+        description=f" Top Messages (Lifetime) — {top_msg_user}",
         color=discord.Color.red()
     )
     embed_messages.description += "\n\n**Rankings**\n"
@@ -3740,7 +3740,7 @@ def build_leaderboard_embeds(guild):
 
     embed_voice = discord.Embed(
         title=f"{guild.name} Leaderboard",
-        description=f" Top Voice Time (Lifetime) â€” {top_voice_user}",
+        description=f" Top Voice Time (Lifetime) — {top_voice_user}",
         color=discord.Color.blue()
     )
     embed_voice.description += "\n\n**Rankings**\n"
@@ -3756,9 +3756,9 @@ async def leaderboard_command(interaction: discord.Interaction):
     embed_msg, embed_voice = build_leaderboard_embeds(interaction.guild)
     await interaction.response.send_message(embeds=[embed_msg, embed_voice])
 
-@bot.tree.command(name="setlevelchannel", description="Setzt den Channel fÃ¼r Level-Up Nachrichten")
+@bot.tree.command(name="setlevelchannel", description="Setzt den Channel für Level-Up Nachrichten")
 @is_admin_or_owner()
-@app_commands.describe(channel="Der Channel fÃ¼r Level-Up Nachrichten")
+@app_commands.describe(channel="Der Channel für Level-Up Nachrichten")
 async def setlevelchannel_command(interaction: discord.Interaction, channel: discord.TextChannel):
     config = load_level_config()
     guild_str = str(interaction.guild_id)
@@ -3770,7 +3770,7 @@ async def setlevelchannel_command(interaction: discord.Interaction, channel: dis
 
 @bot.tree.command(name="setleaderboard", description="Richtet das Live-Leaderboard in einem Channel ein")
 @is_admin_or_owner()
-@app_commands.describe(channel="Der Channel fÃ¼r das Leaderboard")
+@app_commands.describe(channel="Der Channel für das Leaderboard")
 async def setleaderboard_command(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer(ephemeral=True)
 
@@ -3852,7 +3852,7 @@ async def leaderboardrefresh_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="levelimage", description="Setzt ein Bild fuer einen bestimmten Levelaufstieg")
 @is_admin_or_owner()
-@app_commands.describe(level="Das Level (z.B. 5)", bild="Das Bild fÃ¼r diesen Level")
+@app_commands.describe(level="Das Level (z.B. 5)", bild="Das Bild für diesen Level")
 async def levelimage_command(interaction: discord.Interaction, level: int, bild: discord.Attachment):
     await interaction.response.defer(ephemeral=True)
 
@@ -3863,7 +3863,7 @@ async def levelimage_command(interaction: discord.Interaction, level: int, bild:
 
     image_data = await bild.read()
     if len(image_data) > 8 * 1024 * 1024:
-        await interaction.followup.send("Bild ist zu groÃŸ (max 8MB)!", ephemeral=True)
+        await interaction.followup.send("Bild ist zu groß (max 8MB)!", ephemeral=True)
         return
 
     filename = f"level_{level}.png"
@@ -3882,7 +3882,7 @@ async def levelimage_command(interaction: discord.Interaction, level: int, bild:
     config[guild_str]["level_images"][str(level)] = str(filepath)
     save_level_config(config)
 
-    await interaction.followup.send(f"Bild fÃ¼r Level **{level}** gespeichert!", ephemeral=True)
+    await interaction.followup.send(f"Bild für Level **{level}** gespeichert!", ephemeral=True)
 
 @bot.tree.command(name="noxpchannel", description="Toggle: Kein XP in diesem Channel")
 @is_admin_or_owner()
@@ -3897,11 +3897,11 @@ async def noxpchannel_command(interaction: discord.Interaction):
     if interaction.channel_id in no_xp_channels:
         no_xp_channels.remove(interaction.channel_id)
         state = "entfernt"
-        icon = "âŒ"
+        icon = "❌"
     else:
         no_xp_channels.append(interaction.channel_id)
-        state = "hinzugefÃ¼gt"
-        icon = "âœ…"
+        state = "hinzugefügt"
+        icon = "✅"
 
     config[guild_str]["no_xp_channels"] = no_xp_channels
     save_level_config(config)
@@ -3920,7 +3920,7 @@ async def toggleleveling_command(interaction: discord.Interaction):
     save_level_config(config)
 
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     await interaction.response.send_message(f"{icon} Level-System: **{state}**")
 
 @bot.tree.command(name="togglelevelimage", description="Toggle: Bilder bei Level-Up ein/ausschalten")
@@ -3936,10 +3936,10 @@ async def togglelevelimage_command(interaction: discord.Interaction):
     save_level_config(config)
 
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     await interaction.response.send_message(f"{icon} Level-Up Bilder: **{state}**")
 
-@bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurÃ¼ck")
+@bot.tree.command(name="resetlevels", description="Setzt alle Level-Daten zurück")
 @is_admin_or_owner()
 async def resetlevels_command(interaction: discord.Interaction):
     data = load_level_data()
@@ -3947,7 +3947,7 @@ async def resetlevels_command(interaction: discord.Interaction):
     if guild_str in data:
         del data[guild_str]
         save_level_data(data)
-    await interaction.response.send_message("Alle Level-Daten fÃ¼r diesen Server zurÃ¼ckgesetzt!")
+    await interaction.response.send_message("Alle Level-Daten für diesen Server zurückgesetzt!")
 
 @bot.tree.command(name="setlevel", description="Setzt das Level eines Users manuell")
 @is_admin_or_owner()
@@ -4232,7 +4232,7 @@ async def auto_save_data():
             await proc.communicate()
             print("[AutoSave] Data backup pushed")
     except FileNotFoundError:
-        print("[AutoSave] git nicht verfuegbar - Ã¼bersprungen")
+        print("[AutoSave] git nicht verfuegbar - übersprungen")
     except Exception as e:
         print(f"[AutoSave] Fehler: {e}")
 
@@ -4241,13 +4241,13 @@ async def before_auto_save():
     await bot.wait_until_ready()
 
 # =====================================
-# DAILY CONFIG BACKUP (zusÃ¤tzlich zu auto_save)
+# DAILY CONFIG BACKUP (zusätzlich zu auto_save)
 # =====================================
 
 @tasks.loop(hours=24)
 @crash_resilient_task
 async def daily_config_backup():
-    """TÃ¤gliches Config-Backup mit Timestamp"""
+    """Tägliches Config-Backup mit Timestamp"""
     from datetime import datetime as _dt
     timestamp = _dt.now().strftime("%Y-%m-%d_%H-%M")
     backup_dir = DATA_DIR / "backups"
@@ -4273,7 +4273,7 @@ async def daily_config_backup():
                 saved += 1
             except: pass
     
-    # Alte Backups lÃ¶schen (nur letzte 7 behalten pro Datei)
+    # Alte Backups löschen (nur letzte 7 behalten pro Datei)
     for fname in config_files:
         base = fname.replace('.json', '')
         backups = sorted(backup_dir.glob(f"{base}_*.json"))
@@ -4326,7 +4326,7 @@ async def on_message(message):
         async with message.channel.typing():
             for url in tiktok_urls[:3]:
                 try:
-                    await message.add_reaction("â³")
+                    await message.add_reaction("⏳")
                     
                     filename, title = await download_tiktok_video(url, mode)
                     
@@ -4335,17 +4335,17 @@ async def on_message(message):
                         print(f"[TikTok] Sending file: {file_size} bytes")
                         
                         if file_size > 25 * 1024 * 1024:
-                            await message.remove_reaction("â³", bot.user)
-                            await message.add_reaction("âŒ")
+                            await message.remove_reaction("⏳", bot.user)
+                            await message.add_reaction("❌")
                             await message.reply(
-                                f"âŒ Video zu groÃŸ ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 25MB.",
+                                f"❌ Video zu groß ({file_size / 1024 / 1024:.1f}MB). Discord Limit: 25MB.",
                                 mention_author=False
                             )
                             os.remove(filename)
                             continue
                         
-                        await message.remove_reaction("â³", bot.user)
-                        await message.add_reaction("âœ…")
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("✅")
                         
                         discord_file = discord.File(filename, filename="tiktok.mp4")
                         await message.reply(
@@ -4355,14 +4355,14 @@ async def on_message(message):
                         
                         os.remove(filename)
                     else:
-                        await message.remove_reaction("â³", bot.user)
-                        await message.add_reaction("âŒ")
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("❌")
                         print(f"[TikTok] Download returned None for: {url}")
                 except Exception as e:
                     print(f"[TikTok] Exception in loop: {e}")
                     try:
-                        await message.remove_reaction("â³", bot.user)
-                        await message.add_reaction("âŒ")
+                        await message.remove_reaction("⏳", bot.user)
+                        await message.add_reaction("❌")
                     except:
                         pass
     
@@ -4685,7 +4685,7 @@ async def auto_memes_task():
                         except Exception as e:
                             print(f"[Memes] Fehler beim Senden: {e}")
                     else:
-                        print(f"[Memes] Kein neues MemÃ© gefunden fuer {guild.name}")
+                        print(f"[Memes] Kein neues Memé gefunden fuer {guild.name}")
     except Exception as e:
         print(f"[Memes] CRITICAL Fehler in auto_memes_task: {e}")
 
@@ -4779,7 +4779,7 @@ async def before_auto_frage():
 @bot.tree.command(name="memessetup", description="Auto-Memes Channel einrichten")
 @is_admin_or_owner()
 @app_commands.describe(
-    channel="Channel fÃ¼r Auto-Memes",
+    channel="Channel für Auto-Memes",
     quelle="reddit, imgur, liste, gemischt oder interpol",
     stunden="Interval in Stunden (1-48)",
     minuten="Zusaetzliche Minuten (0-59)"
@@ -4891,10 +4891,10 @@ async def memestoggle_command(interaction: discord.Interaction):
     save_memes_config(config)
     
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     await interaction.response.send_message(f"{icon} **Auto-Memes:** {state}")
 
-@bot.tree.command(name="memesquelle", description="Memes-Quelle Ã¤ndern")
+@bot.tree.command(name="memesquelle", description="Memes-Quelle ändern")
 @is_admin_or_owner()
 @app_commands.describe(quelle="reddit, imgur, liste, gemischt oder interpol")
 @app_commands.choices(quelle=[
@@ -4926,9 +4926,9 @@ async def memesquelle_command(
         "interpol": "Interpol.cc (Videos)"
     }
     
-    await interaction.response.send_message(f"**Quelle geÃ¤ndert auf:** {source_names.get(quelle.value, quelle.value)}")
+    await interaction.response.send_message(f"**Quelle geändert auf:** {source_names.get(quelle.value, quelle.value)}")
 
-@bot.tree.command(name="memessubreddit", description="Reddit Subreddit fÃ¼r Memes setzen")
+@bot.tree.command(name="memessubreddit", description="Reddit Subreddit für Memes setzen")
 @is_admin_or_owner()
 @app_commands.describe(subreddit="Reddit Subreddit (z.B. memes, dankmemes)")
 async def memessubreddit_command(interaction: discord.Interaction, subreddit: str):
@@ -4944,7 +4944,7 @@ async def memessubreddit_command(interaction: discord.Interaction, subreddit: st
     
     await interaction.response.send_message(f"**Subreddit gesetzt auf:** r/{subreddit}")
 
-@bot.tree.command(name="memesskip", description="NÃ¤chstes MemÃ© manuell senden")
+@bot.tree.command(name="memesskip", description="Nächstes Memé manuell senden")
 @is_admin_or_owner()
 async def memesskip_command(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -4965,7 +4965,7 @@ async def memesskip_command(interaction: discord.Interaction):
         save_memes_config(config)
         meme_url, video_id = await get_meme_for_guild(interaction.guild_id)
     if not meme_url:
-        await interaction.followup.send("Kein MemÃ© gefunden! Quelle prÃ¼fen.", ephemeral=True)
+        await interaction.followup.send("Kein Memé gefunden! Quelle prüfen.", ephemeral=True)
         return
     
     if source == "interpol" and meme_url:
@@ -5008,7 +5008,7 @@ async def memesskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Video konnte nicht geladen werden.", ephemeral=True)
     else:
         embed = discord.Embed(
-            title="Manuelles MemÃ©",
+            title="Manuelles Memé",
             color=discord.Color.random()
         )
         embed.set_image(url=meme_url)
@@ -5062,7 +5062,7 @@ async def memesstatus_command(interaction: discord.Interaction):
     settings = config[guild_str]
     channel = bot.get_channel(settings.get("channel_id", 0))
     channel_name = channel.mention if channel else "Nicht gefunden"
-    status = "âœ… AN" if settings.get("enabled") else "âŒ AUS"
+    status = "✅ AN" if settings.get("enabled") else "❌ AUS"
     
     source_names = {
         "reddit": "Reddit",
@@ -5115,7 +5115,7 @@ async def memesreset_command(interaction: discord.Interaction):
     
     await interaction.response.send_message(f"**History resetet!** {old_count} gesendete Videos + {old_meme_count} gesendete Memes vergessen. Alles wird jetzt wieder gesendet.")
 
-@bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufÃ¼gen")
+@bot.tree.command(name="memesadd", description="Memes zur eigenen Liste hinzufügen")
 @is_admin_or_owner()
 @app_commands.describe(
     links="Meme-Links (einer pro Zeile oder kommagetrennt)"
@@ -5138,7 +5138,7 @@ async def memesadd_command(interaction: discord.Interaction, links: str):
     save_memes_list(interaction.guild_id, existing)
     
     await interaction.response.send_message(
-        f"**{len(new_links)} Memes hinzugefÃ¼gt!**\n"
+        f"**{len(new_links)} Memes hinzugefügt!**\n"
         f"Gesamt in der Liste: {len(existing)}"
     )
 
@@ -5181,7 +5181,7 @@ async def memesload_command(interaction: discord.Interaction, datei: discord.Att
 @bot.tree.command(name="fragesetup", description="Frage des Tages einrichten")
 @is_admin_or_owner()
 @app_commands.describe(
-    channel="Channel fÃ¼r die tÃ¤gliche Frage",
+    channel="Channel für die tägliche Frage",
     anzeige="Wie werden Stimmen angezeigt"
 )
 @app_commands.choices(
@@ -5234,7 +5234,7 @@ async def fragetoggle_command(interaction: discord.Interaction):
     save_fragen_config(config)
     
     state = "AN" if not current else "AUS"
-    icon = "âœ…" if not current else "âŒ"
+    icon = "✅" if not current else "❌"
     await interaction.response.send_message(f"{icon} **Frage des Tages:** {state}")
 
 @bot.tree.command(name="fragestatus", description="Zeigt den Frage-des-Tages Status")
@@ -5250,7 +5250,7 @@ async def fragestatus_command(interaction: discord.Interaction):
     settings = config[guild_str]
     channel = bot.get_channel(settings.get("channel_id", 0))
     channel_name = channel.mention if channel else "Nicht gefunden"
-    status = "âœ… AN" if settings.get("enabled") else "âŒ AUS"
+    status = "✅ AN" if settings.get("enabled") else "❌ AUS"
     display = settings.get("display_mode", "embed")
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
     source = settings.get("source", "entwederoder")
@@ -5277,7 +5277,7 @@ async def fragestatus_command(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="frageadd", description="Eigene Frage hinzufÃ¼gen")
+@bot.tree.command(name="frageadd", description="Eigene Frage hinzufügen")
 @is_admin_or_owner()
 @app_commands.describe(
     frage="Die Frage",
@@ -5304,7 +5304,7 @@ async def frageadd_command(
     
     new_frage = {
         "frage": frage,
-        "emoji": "â“",
+        "emoji": "❓",
         "optionen": optionen,
         "guild_id": str(interaction.guild_id)
     }
@@ -5313,7 +5313,7 @@ async def frageadd_command(
     save_custom_fragen(custom)
     
     await interaction.response.send_message(
-        f"**Frage hinzugefÃ¼gt!**\n\n"
+        f"**Frage hinzugefügt!**\n\n"
         f"**{frage}**\n"
         f"Optionen: {', '.join(optionen)}"
     )
@@ -5571,7 +5571,7 @@ async def automod_command(interaction: discord.Interaction, aktion: app_commands
     if aktion.value == "status":
         settings = automod_config.get(guild_str, {})
         enabled = settings.get("enabled", False)
-        status = "âœ… AN" if enabled else "âŒ AUS"
+        status = "✅ AN" if enabled else "❌ AUS"
         embed = discord.Embed(
             title="Automod Status",
             color=discord.Color.blue()
@@ -5593,15 +5593,15 @@ async def automod_command(interaction: discord.Interaction, aktion: app_commands
     
     if enabled:
         desc = (
-            f"âœ… **Automod aktiviert!**\n\n"
+            f"✅ **Automod aktiviert!**\n\n"
             f"**Schutz:** Discord-Invite-Spam\n"
             f"**Schwellenwert:** {AUTOMOD_THRESHOLD}x in {AUTOMOD_WINDOW}s\n"
-            f"**Strafe:** 1-Woche Timeout + Nachricht gelÃ¶scht\n\n"
-            f"Wenn jemand {AUTOMOD_THRESHOLD}x oder Ã¶fter discord.gg/ Links posted, "
+            f"**Strafe:** 1-Woche Timeout + Nachricht gelöscht\n\n"
+            f"Wenn jemand {AUTOMOD_THRESHOLD}x oder öfter discord.gg/ Links posted, "
             f"bekommt er automatisch Timeout."
         )
     else:
-        desc = "âŒ **Automod deaktiviert!**"
+        desc = "❌ **Automod deaktiviert!**"
     
     await interaction.response.send_message(desc)
 
@@ -5703,7 +5703,7 @@ async def membercountsetup_command(
         success = False
         new_name = f"{prefix}: ???"
     
-    status = f"Channel Name: **{new_name}**" if success else "âš ï¸ **Keine Berechtigung** - Bot braucht `Channel verwalten` Permission!"
+    status = f"Channel Name: **{new_name}**" if success else "⚠️ **Keine Berechtigung** - Bot braucht `Channel verwalten` Permission!"
     
     await interaction.response.send_message(
         f"**Member-Count eingerichtet!**\n\n"
@@ -5769,7 +5769,7 @@ async def check_invite_valid(invite_code):
                     "vanity_url": guild.get("vanity_url_code"),
                 }
             elif resp.status == 404:
-                return {"valid": False, "code": invite_code, "reason": "Inviteä¸å­˜åœ¨æˆ–å·²è¿‡æœŸ"}
+                return {"valid": False, "code": invite_code, "reason": "Invite不存在或已过期"}
             elif resp.status == 429:
                 retry_after = (await resp.json()).get("retry_after", 5)
                 await asyncio.sleep(retry_after)
@@ -6775,7 +6775,7 @@ def setup_exception_handlers():
     
     # ==========================================
     # 1. GLOBAL UNHANDLED EXCEPTION HANDLER
-    #    (fÃ¤ngt ALLE unerwarteten Fehler ab)
+    #    (fängt ALLE unerwarteten Fehler ab)
     # ==========================================
     def global_exception_handler(loop, context):
         exception = context.get("exception")
@@ -6826,7 +6826,7 @@ def setup_exception_handlers():
     
     # ==========================================
     # 2. SYS.EXCEPTHOOK (Python-Level Errors)
-    #    FÃ¤ngt Fehler ab die aus dem Loop fallen
+    #    Fängt Fehler ab die aus dem Loop fallen
     # ==========================================
     import sys
     
@@ -6894,7 +6894,7 @@ def setup_exception_handlers():
                 tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
                 
                 print(f"\n{'='*60}")
-                print(f"[TASK_CRASH] Task '{task_name}' abgestÃ¼rzt!")
+                print(f"[TASK_CRASH] Task '{task_name}' abgestürzt!")
                 print(f"[TASK_CRASH] {type(exc).__name__}: {exc}")
                 traceback.print_exception(type(exc), exc, exc.__traceback__)
                 print(f"{'='*60}")
@@ -6965,7 +6965,7 @@ async def graceful_shutdown(sig_name):
                 print(f"[Shutdown] Task {name} gestoppt")
             except: pass
         
-        # Warte kurz damit Tasks aufrÃ¤umen kÃ¶nnen
+        # Warte kurz damit Tasks aufräumen können
         if tasks_to_stop:
             await asyncio.sleep(2)
     except: pass
@@ -6976,7 +6976,7 @@ async def graceful_shutdown(sig_name):
         print("[Shutdown] Alle Configs gespeichert")
     except: pass
     
-    # 3. Git-Push wenn mÃ¶glich
+    # 3. Git-Push wenn möglich
     try:
         proc = await asyncio.create_subprocess_exec(
             "git", "add", "data/",
@@ -7005,7 +7005,7 @@ async def graceful_shutdown(sig_name):
             print("[Shutdown] Git-Push erfolgreich")
     except: pass
     
-    # 4. Bot schlieÃŸen
+    # 4. Bot schließen
     try:
         await bot.close()
         print("[Shutdown] Bot geschlossen")
@@ -7027,7 +7027,7 @@ import psutil
 @tasks.loop(minutes=2)
 @crash_resilient_task
 async def health_monitor():
-    """Ãœberwacht Speicher und Performance"""
+    """Überwacht Speicher und Performance"""
     try:
         process = psutil.Process()
         mem_mb = process.memory_info().rss / 1024 / 1024
