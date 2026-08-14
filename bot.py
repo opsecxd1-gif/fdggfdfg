@@ -4137,19 +4137,6 @@ async def on_ready():
     except Exception as e:
         print(f"[on_ready] Memes Task Fehler: {e}")
     
-    try:
-        fragen_config = load_fragen_config()
-        for guild_str, settings in fragen_config.items():
-            if settings.get("enabled", False):
-                if not auto_frage_task.is_running():
-                    interval_minutes = settings.get("interval_minutes", 960)
-                    auto_frage_task.change_interval(minutes=interval_minutes)
-                    auto_frage_task.start()
-                    print(f"[on_ready] Frage Task gestartet ({interval_minutes} Min)")
-                    break
-    except Exception as e:
-        print(f"[on_ready] Frage Task Fehler: {e}")
-    
     global recovery
     try:
         recovery = RecoveryManager(bot)
@@ -5195,19 +5182,9 @@ async def memesload_command(interaction: discord.Interaction, datei: discord.Att
 @is_admin_or_owner()
 @app_commands.describe(
     channel="Channel fÃ¼r die tÃ¤gliche Frage",
-    quelle="Woher kommen die Fragen?",
-    anzeige="Wie werden Stimmen angezeigt",
-    stunden="Interval in Stunden (1-48)",
-    minuten="Zusaetzliche Minuten (0-59)"
+    anzeige="Wie werden Stimmen angezeigt"
 )
 @app_commands.choices(
-    quelle=[
-        app_commands.Choice(name="Eisbrecher-Fragen", value="eisbrecher"),
-        app_commands.Choice(name="Entweder-Oder Fragen", value="entwederoder"),
-        app_commands.Choice(name="Wuerdest-du-lieber Fragen", value="wuerdestu"),
-        app_commands.Choice(name="Nur eigene Fragen", value="eigene"),
-        app_commands.Choice(name="Gemischt (Alles)", value="gemischt")
-    ],
     anzeige=[
         app_commands.Choice(name="Embed (Empfohlen)", value="embed"),
         app_commands.Choice(name="Text (einfach)", value="text"),
@@ -5217,16 +5194,8 @@ async def memesload_command(interaction: discord.Interaction, datei: discord.Att
 async def fragesetup_command(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
-    quelle: app_commands.Choice[str],
-    anzeige: app_commands.Choice[str] = None,
-    stunden: int = 16,
-    minuten: int = 0
+    anzeige: app_commands.Choice[str] = None
 ):
-    total_minutes = (stunden * 60) + minuten
-    if total_minutes < 1 or total_minutes > 2880:
-        await interaction.response.send_message("Ungueltig! Min: 1 Minute, Max: 48 Stunden", ephemeral=True)
-        return
-    
     config = load_fragen_config()
     guild_str = str(interaction.guild_id)
     
@@ -5235,41 +5204,20 @@ async def fragesetup_command(
     config[guild_str] = {
         "enabled": True,
         "channel_id": channel.id,
-        "interval_hours": stunden,
-        "interval_minutes": total_minutes,
         "display_mode": display,
-        "source": quelle.value
+        "source": "entwederoder"
     }
     save_fragen_config(config)
     
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
-    source_names = {
-        "eisbrecher": "Eisbrecher-Fragen",
-        "entwederoder": "Entweder-Oder Fragen",
-        "wuerdestu": "Wuerdest-du-lieber Fragen",
-        "eigene": "Nur eigene Fragen",
-        "gemischt": "Gemischt (Alles)"
-    }
-    
-    if total_minutes >= 60:
-        interval_text = f"{total_minutes // 60}h {total_minutes % 60}m"
-    else:
-        interval_text = f"{total_minutes} Minuten"
     
     await interaction.response.send_message(
         f"**Frage des Tages eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
-        f"**Quelle:** {source_names.get(quelle.value, quelle.value)}\n"
-        f"**Interval:** Alle {interval_text}\n"
+        f"**Quelle:** Entweder-Oder Fragen\n"
         f"**Anzeige:** {display_names.get(display, display)}\n\n"
-        f"Der Bot postet jetzt automatisch Fragen!"
+        f"Kein Auto-System aktiv - Fragen sendest du manuell mit `/fragetest`."
     )
-    
-    if auto_frage_task.is_running():
-        auto_frage_task.cancel()
-    
-    auto_frage_task.change_interval(minutes=total_minutes)
-    auto_frage_task.start()
 
 @bot.tree.command(name="fragetoggle", description="Frage des Tages ein/ausschalten")
 @is_admin_or_owner()
@@ -5305,7 +5253,7 @@ async def fragestatus_command(interaction: discord.Interaction):
     status = "âœ… AN" if settings.get("enabled") else "âŒ AUS"
     display = settings.get("display_mode", "embed")
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
-    source = settings.get("source", "gemischt")
+    source = settings.get("source", "entwederoder")
     source_names = {
         "eisbrecher": "Eisbrecher-Fragen",
         "entwederoder": "Entweder-Oder Fragen",
@@ -5315,11 +5263,6 @@ async def fragestatus_command(interaction: discord.Interaction):
     }
     
     fragen = get_all_fragen(interaction.guild_id)
-    interval_min = settings.get("interval_minutes", 960)
-    if interval_min >= 60:
-        interval_text = f"{interval_min // 60}h {interval_min % 60}m"
-    else:
-        interval_text = f"{interval_min} Min"
     
     embed = discord.Embed(
         title="Frage des Tages Status",
@@ -5327,13 +5270,10 @@ async def fragestatus_command(interaction: discord.Interaction):
     )
     embed.add_field(name="Status", value=status, inline=True)
     embed.add_field(name="Channel", value=channel_name, inline=True)
-    embed.add_field(name="Interval", value=interval_text, inline=True)
     embed.add_field(name="Quelle", value=source_names.get(source, source), inline=True)
     embed.add_field(name="Anzeige", value=display_names.get(display, display), inline=True)
     embed.add_field(name="Eigene Fragen", value=str(len(fragen)), inline=True)
-    
-    auto_status = "âœ… LÃ„UFT" if auto_frage_task.is_running() else "âŒ STOPP"
-    embed.add_field(name="Auto-Send", value=auto_status, inline=True)
+    embed.add_field(name="Modus", value="Manuell (per /fragetest)", inline=True)
     
     await interaction.response.send_message(embed=embed)
 
@@ -5385,7 +5325,9 @@ async def fragetest_command(interaction: discord.Interaction):
     
     config = load_fragen_config()
     guild_str = str(interaction.guild_id)
-    source = config.get(guild_str, {}).get("source", "gemischt")
+    source = config.get(guild_str, {}).get("source", "entwederoder")
+    if source != "entwederoder":
+        source = "entwederoder"
     
     fragen = await get_fragen_from_source(source, interaction.guild_id)
     if not fragen:
@@ -5475,7 +5417,9 @@ async def frageskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Channel nicht gefunden!", ephemeral=True)
         return
     
-    source = settings.get("source", "gemischt")
+    source = settings.get("source", "entwederoder")
+    if source != "entwederoder":
+        source = "entwederoder"
     fragen = await get_fragen_from_source(source, interaction.guild_id)
     if not fragen:
         fragen = get_all_fragen(interaction.guild_id)
