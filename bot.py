@@ -6479,31 +6479,60 @@ async def run_dev_agent(task):
         },
         {"role": "user", "content": task}
     ]
+
+    dev_models = [m["id"] for m in AI_MODELS]
+    last_err = ""
     for step in range(1, 21):
         print(f"[DEV] Schritt {step}")
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    MIMO_API_URL,
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "mimo-v2.5-free",
-                        "messages": messages,
-                        "tools": DEV_TOOLS,
-                        "max_tokens": 8192,
-                        "temperature": 0.3
-                    },
-                    timeout=aiohttp.ClientTimeout(total=120)
-                ) as resp:
-                    if resp.status != 200:
-                        text = await resp.text()
-                        return None, f"❌ Zen-API Fehler {resp.status}: {text[:300]}"
-                    data = await resp.json()
-        except Exception as e:
-            return None, f"❌ Zen-API Exception: {type(e).__name__}: {e}"
+        ok = False
+        for model_id in dev_models:
+            for attempt in range(1, 4):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            MIMO_API_URL,
+                            headers={
+                                "Authorization": f"Bearer {api_key}",
+                                "Content-Type": "application/json"
+                            },
+                            json={
+                                "model": model_id,
+                                "messages": messages,
+                                "tools": DEV_TOOLS,
+                                "max_tokens": 8192,
+                                "temperature": 0.3
+                            },
+                            timeout=aiohttp.ClientTimeout(total=120)
+                        ) as resp:
+                            if resp.status == 429 or resp.status == 503:
+                                text = await resp.text()
+                                last_err = f"Model {model_id}: {text[:200]}"
+                                print(f"[DEV] {last_err} (Versuch {attempt}/3, warte {attempt * 5}s)")
+                                await asyncio.sleep(attempt * 5)
+                                continue
+                            if resp.status != 200:
+                                text = await resp.text()
+                                last_err = f"Zen-API Fehler {resp.status}: {text[:300]}"
+                                print(f"[DEV] {last_err}")
+                                break
+                            data = await resp.json()
+                            ok = True
+                            break
+                    if ok:
+                        break
+                except asyncio.TimeoutError:
+                    last_err = f"Model {model_id}: Timeout (120s)"
+                    print(f"[DEV] {last_err} (Versuch {attempt}/3)")
+                    await asyncio.sleep(attempt * 5)
+                except Exception as e:
+                    last_err = f"Zen-API Exception: {type(e).__name__}: {e}"
+                    print(f"[DEV] {last_err}")
+                    break
+            if ok:
+                break
+
+        if not ok:
+            return None, f"❌ Alle Models fehlgeschlagen. Letzter Fehler:\n{last_err}"
 
         msg = data["choices"][0]["message"]
         messages.append(msg)
