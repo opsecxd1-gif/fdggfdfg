@@ -6229,8 +6229,8 @@ async def ai_command(
     user_id = interaction.user.id
     now = time.time()
     
-    if user_id in ai_cooldowns and (now - ai_cooldowns[user_id]) < 10:
-        rest = int(10 - (now - ai_cooldowns[user_id]))
+    if user_id in ai_cooldowns and (now - ai_cooldowns[user_id]) < 30:
+        rest = int(30 - (now - ai_cooldowns[user_id]))
         await interaction.response.send_message(f"⏳ Noch {rest} Sekunden warten...", ephemeral=True)
         return
     
@@ -6239,7 +6239,6 @@ async def ai_command(
     await interaction.response.defer()
     
     api_key = os.getenv("MIMO_API_KEY")
-    print(f"[AI] MIMO_API_KEY: {'GESETZT (' + api_key[:10] + '...)' if api_key else 'LEER!'}")
     if not api_key:
         await interaction.followup.send("❌ MIMO_API_KEY nicht gesetzt!\nRailway → Variables → MIMO_API_KEY eintragen", ephemeral=True)
         return
@@ -6251,46 +6250,66 @@ async def ai_command(
         messages.append({"role": "system", "content": "Du bist ein hilfreicher Discord-Bot Assistent. Antworte kurz und präzise auf Deutsch. Verwende Emojis sparsam."})
     messages.append({"role": "user", "content": frage})
     
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                MIMO_API_URL,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": MIMO_MODEL,
-                    "messages": messages,
-                    "max_tokens": 1024,
-                    "temperature": 0.7
-                },
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status != 200:
-                    error_text = await resp.text()
-                    await interaction.followup.send(f"❌ API Fehler ({resp.status}): `{error_text[:200]}`", ephemeral=True)
+    max_retries = 2
+    for attempt in range(max_retries + 1):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    MIMO_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": MIMO_MODEL,
+                        "messages": messages,
+                        "max_tokens": 1024,
+                        "temperature": 0.7
+                    },
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as resp:
+                    if resp.status == 429:
+                        if attempt < max_retries:
+                            await asyncio.sleep(5)
+                            continue
+                        await interaction.followup.send("⏳ Rate Limit erreicht - bitte in 30 Sekunden nochmal versuchen!", ephemeral=True)
+                        return
+                    
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        await interaction.followup.send(f"❌ API Fehler ({resp.status}): `{error_text[:200]}`", ephemeral=True)
+                        return
+                    
+                    data = await resp.json()
+                    
+                    antwort = data["choices"][0]["message"]["content"]
+                    tokens = data.get("usage", {})
+                    
+                    embed = discord.Embed(
+                        title="🤖 MiMo KI",
+                        description=antwort[:4000],
+                        color=discord.Color.blue()
+                    )
+                    embed.add_field(name="📋 Frage", value=frage[:256], inline=False)
+                    embed.set_footer(text=f"Tokens: {tokens.get('total_tokens', '?')} | Model: {MIMO_MODEL}")
+                    
+                    await interaction.followup.send(embed=embed)
                     return
-                
-                data = await resp.json()
-                
-                antwort = data["choices"][0]["message"]["content"]
-                tokens = data.get("usage", {})
-                
-                embed = discord.Embed(
-                    title="🤖 MiMo KI",
-                    description=antwort[:4000],
-                    color=discord.Color.blue()
-                )
-                embed.add_field(name="📋 Frage", value=frage[:256], inline=False)
-                embed.set_footer(text=f"Tokens: {tokens.get('total_tokens', '?')} | Model: {MIMO_MODEL}")
-                
-                await interaction.followup.send(embed=embed)
+        
+        except asyncio.TimeoutError:
+            if attempt < max_retries:
+                await asyncio.sleep(3)
+                continue
+            await interaction.followup.send("❌ Timeout - KI hat zu lange gebraucht!", ephemeral=True)
+            return
+        except Exception as e:
+            if attempt < max_retries:
+                await asyncio.sleep(3)
+                continue
+            await interaction.followup.send(f"❌ Fehler: `{str(e)[:200]}`", ephemeral=True)
+            return
     
-    except asyncio.TimeoutError:
-        await interaction.followup.send("❌ Timeout - KI hat zu lange gebraucht!", ephemeral=True)
-    except Exception as e:
-        await interaction.followup.send(f"❌ Fehler: `{str(e)[:200]}`", ephemeral=True)
+    await interaction.followup.send("❌ Alle Versuche fehlgeschlagen - bitte spaeter nochmal versuchen!", ephemeral=True)
 
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
 @is_admin_or_owner()
