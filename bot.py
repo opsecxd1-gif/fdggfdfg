@@ -6,6 +6,8 @@ import json
 import sys
 import re
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import asyncio
 import io
 import tempfile
