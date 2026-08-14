@@ -4062,11 +4062,6 @@ async def on_ready():
     except Exception as e:
         print(f"Sync fehlgeschlagen: {e}")
     
-    try:
-        await disable_permissions_everywhere()
-    except Exception as e:
-        print(f"[on_ready] Perm-Sweep Fehler: {e}")
-    
     global tiktok_mode
     try:
         tiktok_mode = load_tiktok_mode()
@@ -6654,9 +6649,21 @@ def is_bot_owner():
                 return True
         except Exception as e:
             print(f"[DEV] Owner-Check Fehler: {e}")
-        await interaction.response.send_message("❌ Nur der Bot-Owner darf /dev verwenden.", ephemeral=True)
+        await interaction.response.send_message("❌ Nur der Bot-Owner darf diesen Befehl verwenden.", ephemeral=True)
         return False
     return app_commands.check(predicate)
+
+@bot.tree.command(name="permoff", description="Setzt 5 Rechte (Attach/Embed/Reactions/Sticker/Emojis) bei allen Rollen auf False (nur Owner)")
+@is_bot_owner()
+async def permoff_command(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    await interaction.followup.send("🔧 Starte Perm-Sweep über alle Server/Rollen...", ephemeral=True)
+    try:
+        await disable_permissions_everywhere()
+    except Exception as e:
+        await interaction.followup.send(f"❌ Fehler: {e}", ephemeral=True)
+        return
+    await interaction.followup.send("✅ Fertig! Alle Rollen haben die 5 Rechte jetzt auf False (Bot-Rolle behält sie). Details in den Railway-Logs unter [PERMS].", ephemeral=True)
 
 @bot.tree.command(name="dev", description="Lass den Bot Code für sich selbst entwickeln, committen und deployen (nur Owner)")
 @app_commands.describe(task="Was soll der Bot implementieren oder ändern?")
