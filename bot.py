@@ -6212,11 +6212,16 @@ async def help_command(interaction: discord.Interaction):
     await interaction.response.send_message(embed=build_embed(cat_names[0]), view=view)
 
 MIMO_API_URL = "https://opencode.ai/zen/v1/chat/completions"
-MIMO_MODEL = "mimo-v2.5-free"
+
+AI_MODELS = [
+    {"id": "mimo-v2.5-free", "name": "MiMo V2.5"},
+    {"id": "deepseek-v4-flash-free", "name": "DeepSeek V4"},
+    {"id": "nemotron-3-ultra-free", "name": "Nemotron 3 Ultra"},
+]
 
 ai_cooldowns = {}
 
-@bot.tree.command(name="ai", description="Frage die MiMo KI")
+@bot.tree.command(name="ai", description="Frage die KI (MiMo / DeepSeek / Nemotron)")
 @app_commands.describe(
     frage="Deine Frage an die KI",
     system="System-Prompt (z.B. 'Antworte wie ein Pirat')"
@@ -6250,8 +6255,7 @@ async def ai_command(
         messages.append({"role": "system", "content": "Du bist ein hilfreicher Discord-Bot Assistent. Antworte kurz und präzise auf Deutsch. Verwende Emojis sparsam."})
     messages.append({"role": "user", "content": frage})
     
-    max_retries = 2
-    for attempt in range(max_retries + 1):
+    for model in AI_MODELS:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -6261,7 +6265,7 @@ async def ai_command(
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": MIMO_MODEL,
+                        "model": model["id"],
                         "messages": messages,
                         "max_tokens": 1024,
                         "temperature": 0.7
@@ -6269,16 +6273,13 @@ async def ai_command(
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
                     if resp.status == 429:
-                        if attempt < max_retries:
-                            await asyncio.sleep(5)
-                            continue
-                        await interaction.followup.send("⏳ Rate Limit erreicht - bitte in 30 Sekunden nochmal versuchen!", ephemeral=True)
-                        return
+                        print(f"[AI] {model['name']} rate-limited, naechstes Model...")
+                        continue
                     
                     if resp.status != 200:
                         error_text = await resp.text()
-                        await interaction.followup.send(f"❌ API Fehler ({resp.status}): `{error_text[:200]}`", ephemeral=True)
-                        return
+                        print(f"[AI] {model['name']} Fehler {resp.status}: {error_text[:100]}")
+                        continue
                     
                     data = await resp.json()
                     
@@ -6286,30 +6287,24 @@ async def ai_command(
                     tokens = data.get("usage", {})
                     
                     embed = discord.Embed(
-                        title="🤖 MiMo KI",
+                        title=f"🤖 {model['name']}",
                         description=antwort[:4000],
                         color=discord.Color.blue()
                     )
                     embed.add_field(name="📋 Frage", value=frage[:256], inline=False)
-                    embed.set_footer(text=f"Tokens: {tokens.get('total_tokens', '?')} | Model: {MIMO_MODEL}")
+                    embed.set_footer(text=f"Tokens: {tokens.get('total_tokens', '?')} | Model: {model['id']}")
                     
                     await interaction.followup.send(embed=embed)
                     return
         
         except asyncio.TimeoutError:
-            if attempt < max_retries:
-                await asyncio.sleep(3)
-                continue
-            await interaction.followup.send("❌ Timeout - KI hat zu lange gebraucht!", ephemeral=True)
-            return
+            print(f"[AI] {model['name']} Timeout, naechstes Model...")
+            continue
         except Exception as e:
-            if attempt < max_retries:
-                await asyncio.sleep(3)
-                continue
-            await interaction.followup.send(f"❌ Fehler: `{str(e)[:200]}`", ephemeral=True)
-            return
+            print(f"[AI] {model['name']} Exception: {e}")
+            continue
     
-    await interaction.followup.send("❌ Alle Versuche fehlgeschlagen - bitte spaeter nochmal versuchen!", ephemeral=True)
+    await interaction.followup.send("❌ Alle KI-Models sind gerade nicht verfuegbar - bitte spaeter nochmal versuchen!", ephemeral=True)
 
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
 @is_admin_or_owner()
