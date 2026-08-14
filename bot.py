@@ -5592,15 +5592,7 @@ async def update_member_count_channels():
         guild = channel.guild
         if not guild:
             continue
-        try:
-            fresh_guild = await bot.fetch_guild(guild.id)
-            member_count = fresh_guild.member_count
-        except Exception:
-            member_count = None
-        if member_count is None:
-            member_count = guild.member_count
-        if member_count is None:
-            member_count = len(guild.members) if guild else 0
+        member_count = guild.member_count or 0
         prefix = settings.get("prefix", "Members")
         new_name = f"{prefix}: {member_count}"
         if channel.name != new_name:
@@ -6046,7 +6038,7 @@ async def systemcheck_command(interaction: discord.Interaction):
     if memes_repaired > 0:
         save_memes_config(memes_config)
 
-    # --- 3. Memes Task starten wenn Config enabled aber Task laeuft nicht ---
+    # --- 3. Memes Task starten wenn noetig ---
     try:
         if not auto_memes_task.is_running():
             for guild_str, settings in memes_config.items():
@@ -6073,13 +6065,34 @@ async def systemcheck_command(interaction: discord.Interaction):
     except Exception:
         pass
 
-    # --- 5. Member Count sofort updaten ---
+    # --- 5. Member Count - KEIN fetch_guild (vermeidet Rate-Limit) ---
     try:
-        await update_member_count_channels()
         mc_config = load_membercount_config()
-        fixes.append(f"Member Count updatet fuer {len(mc_config)} Channel(s)")
+        mc_count = 0
+        for guild_str, settings in mc_config.items():
+            channel_id = settings.get("channel_id")
+            if not channel_id:
+                continue
+            guild = bot.get_guild(int(guild_str))
+            if not guild:
+                continue
+            channel = guild.get_channel(channel_id)
+            if not channel:
+                continue
+            member_count = guild.member_count or 0
+            prefix = settings.get("prefix", "Members")
+            new_name = f"{prefix}: {member_count}"
+            if channel.name != new_name:
+                try:
+                    await channel.edit(name=new_name)
+                    fixes.append(f"MemberCount: {channel.name} -> {new_name}")
+                except discord.HTTPException:
+                    pass
+            mc_count += 1
+        if mc_count > 0:
+            fixes.append(f"MemberCount: {mc_count} Channel(s) geprueft")
     except Exception as e:
-        warnings.append(f"Member Count Update: {e}")
+        warnings.append(f"Member Count: {e}")
 
     # --- 6. Voice Channels aufgeraeumt ---
     cleaned = 0
@@ -6100,7 +6113,21 @@ async def systemcheck_command(interaction: discord.Interaction):
         save_voice_settings_file(voice_channel_settings)
         fixes.append(f"{cleaned} Voice-Channel-Eintraege aufgeraeumt")
 
-    # --- 7. Configs sichern ---
+    # --- 7. Voice Setup Status ---
+    voice_setup = load_voice_setup()
+    if voice_setup:
+        for guild_str, vs in voice_setup.items():
+            cat = vs.get("category_id")
+            lobby = vs.get("lobby_id")
+            fixes.append(f"VoiceSetup: Category={cat}, Lobby={lobby}")
+    else:
+        warnings.append("VoiceSetup NICHT konfiguriert! Nutze /voicesetup")
+
+    # --- 8. MemberCount Config Status ---
+    if not mc_config:
+        warnings.append("MemberCount NICHT konfiguriert! Nutze /membercountsetup")
+
+    # --- 9. Configs sichern ---
     try:
         save_all_configs_to_disk()
         fixes.append("Alle Configs auf Disk gesichert")
