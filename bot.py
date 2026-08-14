@@ -343,146 +343,7 @@ FRAGEN_CONFIG_FILE = DATA_DIR / "fragen_config.json"
 FRAGEN_CUSTOM_FILE = DATA_DIR / "fragen_custom.json"
 FRAGEN_MESSAGES_FILE = DATA_DIR / "fragen_messages.json"
 
-DEFAULT_FRAGEN = [
-    # === VIRAL WOULD YOU RATHER (140+ Glamour / TikTok / Discord Viral) ===
-    {"frage": "Stinkende FÃ¼ÃŸe oder schlechten Atem?", "emoji": "ðŸ‘ƒ", "optionen": ["Stinkende FÃ¼ÃŸe", "Schlechter Atem"]},
-    {"frage": "Telepathisch kommunizieren oder jede Sprache der Welt kennen?", "emoji": "ðŸ—£ï¸", "optionen": ["Telepathie", "Alle Sprachen"]},
-    {"frage": "Einem AuÃŸerirdischen oder Big Foot begegnen?", "emoji": "ðŸ‘½", "optionen": ["Alien", "Big Foot"]},
-    {"frage": "Unkontrolliert in Gesang ausbrechen oder unerwartet die Stimme verlieren?", "emoji": "ðŸŽ¤", "optionen": ["Immer singen", "Stimme verlieren"]},
-    {"frage": "Von jeder OberflÃ¤che abprallen oder nie wieder springen kÃ¶nnen?", "emoji": "ðŸ¤¸", "optionen": ["Abprallen", "Nie springen"]},
-    {"frage": "Ein GesprÃ¤ch mit deinem vergangenen oder zukÃ¼nftigen Ich?", "emoji": "â³", "optionen": ["Vergangenes Ich", "ZukÃ¼nftiges Ich"]},
-    {"frage": "StÃ¤ndig Kopfschmerzen oder stÃ¤ndig Juckreiz?", "emoji": "ðŸ¤•", "optionen": ["Kopfschmerzen", "Juckreiz"]},
-    {"frage": "Wissen was deine Haustiere denken oder dass sie dich verstehen?", "emoji": "ðŸ¾", "optionen": ["Ihre Gedanken wissen", "Sie verstehen mich"]},
-    {"frage": "Nur noch schreien oder nur noch flÃ¼stern?", "emoji": "ðŸ”Š", "optionen": ["Nur schreien", "Nur flÃ¼stern"]},
-    {"frage": "Wie ein Fisch aussehen oder wie ein Fisch riechen?", "emoji": "ðŸŸ", "optionen": ["Wie ein Fisch aussehen", "Wie ein Fisch riechen"]},
-    {"frage": "Auf YouTube oder TikTok berÃ¼hmt werden?", "emoji": "ðŸ“±", "optionen": ["YouTube", "TikTok"]},
-    {"frage": "In einer alten Stadt oder im Wald verirren?", "emoji": "ðŸŒ²", "optionen": ["Alte Stadt", "Wald"]},
-    {"frage": "Von einem Zombie oder einem LÃ¶wen gejagt werden?", "emoji": "ðŸ§Ÿ", "optionen": ["Zombie", "LÃ¶we"]},
-    {"frage": "Nur 7 Finger oder nur 7 Zehen haben?", "emoji": "ðŸ–ï¸", "optionen": ["7 Finger", "7 Zehen"]},
-    {"frage": "Alles was du isst ist zu sÃ¼ÃŸ oder nicht sÃ¼ÃŸ genug?", "emoji": "ðŸ¬", "optionen": ["Zu sÃ¼ÃŸ", "Nicht sÃ¼ÃŸ genug"]},
-    {"frage": "Deinen KÃ¶rper gegen den deines Ex oder deiner Oma tauschen?", "emoji": "äº¤æ¢", "optionen": ["Ex-KÃ¶rper", "Oma-KÃ¶rper"]},
-    {"frage": "Nur einen einzigen Film oder nur das gleiche Essen fÃ¼r immer?", "emoji": "ðŸŽ¬", "optionen": ["Nur 1 Film", "Nur 1 Essen"]},
-    {"frage": "Eine Menge mittelmÃ¤ÃŸiger Freunde oder einen wirklich treuen Hund?", "emoji": "ðŸ•", "optionen": ["Viele mittelmÃ¤ÃŸige Freunde", "1 treuer Hund"]},
-    {"frage": "Eine Woche nur Burger oder eine Woche nur Eiscreme?", "emoji": "ðŸ”", "optionen": ["Nur Burger", "Nur Eiscreme"]},
-    {"frage": "SuperkrÃ¤fte von Iron Man oder Batman?", "emoji": "ðŸ¦¸", "optionen": ["Iron Man", "Batman"]},
-    {"frage": "In einer Welt mit stÃ¤ndigem Schnee oder stÃ¤ndigem Regen?", "emoji": "ðŸŒ§ï¸", "optionen": ["Immer Schnee", "Immer Regen"]},
-    {"frage": "Feuer oder Wasser kontrollieren kÃ¶nnen?", "emoji": "ðŸ”¥", "optionen": ["Feuer", "Wasser"]},
-    {"frage": "In einer Welt ohne Musik oder ohne Filme?", "emoji": "ðŸŽµ", "optionen": ["Keine Musik", "Keine Filme"]},
-    {"frage": "Das Leben einer Friends-Figur oder Game of Thrones-Charakters?", "emoji": "ðŸ“º", "optionen": ["Friends", "Game of Thrones"]},
-    {"frage": "Ãœberall behaart oder nirgends behaart?", "emoji": "ðŸ¦", "optionen": ["Ãœberall behaart", "Nirgends behaart"]},
-    {"frage": "Kalte Pizza oder heiÃŸen Joghurt zum FrÃ¼hstÃ¼ck?", "emoji": "ðŸ•", "optionen": ["Kalte Pizza", "HeiÃŸer Joghurt"]},
-    {"frage": "Eine Woche ohne ZÃ¤hneputzen oder zwei Wochen ohne Duschen?", "emoji": "ðŸš¿", "optionen": ["Nie ZÃ¤hneputzen", "Nie Duschen"]},
-    {"frage": "Fotografisches GedÃ¤chtnis oder perfektes GehÃ¶r?", "emoji": "ðŸ“·", "optionen": ["Fotografisch", "Perfektes GehÃ¶r"]},
-    {"frage": "Bei einer Dating-Show oder Survival-Show mitmachen?", "emoji": "ðŸï¸", "optionen": ["Dating-Show", "Survival-Show"]},
-    {"frage": "Deinen Lieblingssong fÃ¼r immer in Dauerschleife oder nie wieder Musik?", "emoji": "ðŸŽ¶", "optionen": ["Dauerschleife", "Nie wieder Musik"]},
-    {"frage": "Teleportieren kÃ¶nnen oder ein Privatflugzeug?", "emoji": "âœˆï¸", "optionen": ["Teleportieren", "Privatflugzeug"]},
-    {"frage": "Immer schwitzen oder immer frieren?", "emoji": "ðŸ¥µ", "optionen": ["Immer schwitzen", "Immer frieren"]},
-    {"frage": "Einen neuen Planeten entdecken oder einen versunkenen Schatz finden?", "emoji": "ðŸª", "optionen": ["Neuer Planet", "Versunkener Schatz"]},
-    {"frage": "Gelegentlich zaubern oder Superhelden-KrÃ¤fte fÃ¼r immer?", "emoji": "ðŸ§™", "optionen": ["Gelegentlich zaubern", "SuperkrÃ¤fte"]},
-    {"frage": "Auf einem Boot oder in einem Baumhaus leben?", "emoji": "â›µ", "optionen": ["Boot", "Baumhaus"]},
-    {"frage": "FÃ¼r immer superschrÃ¤ge TrÃ¤ume oder nie wieder trÃ¤umen?", "emoji": "ðŸŒ™", "optionen": ["SchrÃ¤ge TrÃ¤ume", "Nie trÃ¤umen"]},
-    {"frage": "Alles was du dir wÃ¼nschst in die RealitÃ¤t umsetzen oder Gedanken lesen?", "emoji": "ðŸ’­", "optionen": ["WÃ¼nsche erfÃ¼llen", "Gedanken lesen"]},
-    {"frage": "Ein Jahr lang jeden Tag die gleiche Farbe tragen oder immer die gleiche Frisur?", "emoji": "ðŸ‘•", "optionen": ["Gleiche Farbe", "Gleiche Frisur"]},
-    {"frage": "Mit StÃ¶ckelschuhen am Strand oder Sandalen auf schlammigem Festival?", "emoji": "ðŸ‘¡", "optionen": ["StÃ¶ckelschuhe am Strand", "Sandalen im Schlamm"]},
-    {"frage": "Den Rest deines Lebens nur drinnen oder nur drauÃŸen?", "emoji": "ðŸ¡", "optionen": ["Nur drinnen", "Nur drauÃŸen"]},
-    {"frage": "FÃ¼r immer auf das FrÃ¼hstÃ¼ck oder auf das Abendessen verzichten?", "emoji": "ðŸ³", "optionen": ["Kein FrÃ¼hstÃ¼ck", "Kein Abendessen"]},
-    {"frage": "Einen ganzen Tag im Sitzen oder im Stehen verbringen?", "emoji": "ðŸª‘", "optionen": ["Im Sitzen", "Im Stehen"]},
-    {"frage": "Ein Leben mit 1000 Jahren oder zehn Leben mit jeweils 100 Jahren?", "emoji": "ðŸ•°ï¸", "optionen": ["1x 1000 Jahre", "10x 100 Jahre"]},
-    {"frage": "Das Internet oder deine Krankenversicherung aufgeben?", "emoji": "ðŸŒ", "optionen": ["Internet aufgeben", "Krankenversicherung"]},
-    {"frage": "Einen Film Ã¼ber deinen peinlichsten Moment oder Kollegen deine Handy-Bilder zeigen?", "emoji": "ðŸ“±", "optionen": ["Film drehen", "Bilder zeigen"]},
-    {"frage": "Superschnell oder unmenschlich stark?", "emoji": "ðŸ’¨", "optionen": ["Schnell", "Stark"]},
-    {"frage": "Attraktiver oder intelligenter sein?", "emoji": "ðŸ’…", "optionen": ["Attraktiv", "Intelligent"]},
-    {"frage": "Einen schicken Abend im Restaurant oder Filmabend zu Hause?", "emoji": "ðŸ½ï¸", "optionen": ["Restaurant", "Zu Hause"]},
-    {"frage": "Die meiste Zeit mit der gleichen Person oder mit vielen verschiedenen?", "emoji": "ðŸ‘«", "optionen": ["Gleiche Person", "Verschiedene Menschen"]},
-    {"frage": "Das perfekte Geschenk machen oder bekommen?", "emoji": "ðŸŽ", "optionen": ["Machen", "Bekommen"]},
-    {"frage": "Alles wissen was im Kopf deines Partners vorgeht oder einen Tag in seiner Haut?", "emoji": "ðŸ§ ", "optionen": ["Gedanken wissen", "In seiner Haut"]},
-    {"frage": "Das beste Date aller Zeiten oder eine Reihe guter Dates?", "emoji": "ðŸ’˜", "optionen": ["Bestes Date", "Reihe guter Dates"]},
-    {"frage": "FÃ¼r den Rest deines Lebens nur noch texten oder nur noch anrufen?", "emoji": "ðŸ’¬", "optionen": ["Nur texten", "Nur anrufen"]},
-    {"frage": "Einen Tag in der UnterwÃ¤sche deines Partners oder in seinen Schuhen?", "emoji": "ðŸ‘Ÿ", "optionen": ["UnterwÃ¤sche", "Schuhe"]},
-    {"frage": "StÃ¤ndig Ã¼berrascht werden oder immer wissen was auf dich zukommt?", "emoji": "ðŸŽ", "optionen": ["Ãœberrascht", "Immer wissen"]},
-    {"frage": "Deinen Geist fÃ¼r immer jung oder deinen KÃ¶rper fÃ¼r immer jung?", "emoji": "ðŸ§¬", "optionen": ["Geist jung", "KÃ¶rper jung"]},
-    {"frage": "Nur noch mit Ã¤lteren oder jÃ¼ngeren Menschen Zeit verbringen?", "emoji": "ðŸ‘´", "optionen": ["Ã„ltere", "JÃ¼ngere"]},
-    {"frage": "Als SÃ¤ugetier oder als Insekt wiedergeboren werden?", "emoji": "ðŸ›", "optionen": ["SÃ¤ugetier", "Insekt"]},
-    {"frage": "Eine Hochzeit oder eine riesige Geburtstagsparty planen?", "emoji": "ðŸ’’", "optionen": ["Hochzeit", "Geburtstagsparty"]},
-    {"frage": "Immer die lauteste oder die leiseste Person im Raum sein?", "emoji": "ðŸ“¢", "optionen": ["Lauteste", "Leiseste"]},
-    {"frage": "Immer zu spÃ¤t oder immer zu frÃ¼h kommen?", "emoji": "â°", "optionen": ["Zu spÃ¤t", "Zu frÃ¼h"]},
-    {"frage": "Den schlimmsten oder den schÃ¶nsten Moment deines Lebens vergessen?", "emoji": "ðŸ’­", "optionen": ["Schlimmsten vergessen", "SchÃ¶nsten vergessen"]},
-    {"frage": "FÃ¼r den Rest deines Lebens 20 oder 40 sein?", "emoji": "ðŸŽ‚", "optionen": ["20", "40"]},
-    {"frage": "Jeden Tag einen Kuss oder jeden Tag eine Umarmung?", "emoji": "ðŸ’‹", "optionen": ["Kuss", "Umarmung"]},
-    {"frage": "Alles Geld oder all die Liebe die du dir wÃ¼nschst?", "emoji": "â¤ï¸", "optionen": ["Geld", "Liebe"]},
-    {"frage": "Ein Jahr Fernbeziehung oder einen Monat garnicht reden?", "emoji": "ðŸ“ž", "optionen": ["Fernbeziehung", "Nicht reden"]},
-    {"frage": "Die Person deiner TrÃ¤ume heiraten oder die Karriere deiner TrÃ¤ume machen?", "emoji": "ðŸ’", "optionen": ["Heiraten", "Karriere"]},
-    {"frage": "Wissen wie du stirbst oder wann du stirbst?", "emoji": "ðŸ’€", "optionen": ["Wie", "Wann"]},
-    {"frage": "FÃ¼r immer in einer GroÃŸstadt oder Kleinstadt leben?", "emoji": "ðŸ™ï¸", "optionen": ["GroÃŸstadt", "Kleinstadt"]},
-    {"frage": "Ganz auf soziale Medien verzichten oder als Influencer:in Geld verdienen?", "emoji": "ðŸ“²", "optionen": ["Keine sozialen Medien", "Influencer"]},
-    {"frage": "Eine Tiefsee- oder Weltraum-Reise machen?", "emoji": "ðŸš€", "optionen": ["Tiefsee", "Weltraum"]},
-    {"frage": "Jedes Jahr an demselben Strand Urlaub machen oder jedes Jahr einen neuen Ort entdecken?", "emoji": "ðŸ–ï¸", "optionen": ["Gleicher Strand", "Neuer Ort"]},
-    {"frage": "FÃ¼r immer umsonst reisen oder dein Traumhaus umsonst kaufen?", "emoji": "ðŸ ", "optionen": ["Umsonst reisen", "Traumhaus"]},
-    {"frage": "Fliegen oder unter Wasser atmen kÃ¶nnen?", "emoji": "ðŸ¦…", "optionen": ["Fliegen", "Unter Wasser atmen"]},
-    {"frage": "Nachts im Meer schwimmen obwohl ein Hai in der NÃ¤he ist oder in einem Spukhaus Ã¼bernachten?", "emoji": "ðŸ¦ˆ", "optionen": ["Hai-Meer", "Spukhaus"]},
-    {"frage": "Sechs Monate FrÃ¼hling oder sechs Monate Winter?", "emoji": "ðŸŒ¸", "optionen": ["FrÃ¼hling", "Winter"]},
-    {"frage": "Ein Jahr lang auf Desserts verzichten oder jeden Tag einen LÃ¶ffel Wasabi essen?", "emoji": "ðŸ£", "optionen": ["Keine Desserts", "TÃ¤glich Wasabi"]},
-    {"frage": "Jede Nacht um 21:30 einschlafen oder erst um 3:30?", "emoji": "ðŸ˜´", "optionen": ["21:30", "3:30"]},
-    {"frage": "Deinen Schwarm kÃ¼ssen nach einer Woche ohne ZÃ¤hneputzen oder wissen dass du ihn ein Jahr lang nicht kÃ¼ssen kannst?", "emoji": "ðŸ’‹", "optionen": ["Nach ZÃ¤hneputzen", "1 Jahr warten"]},
-    {"frage": "Im nÃ¤chsten Leben als Hund oder als Katze?", "emoji": "ðŸ•", "optionen": ["Hund", "Katze"]},
-    {"frage": "Fotografisches GedÃ¤chtnis oder Gedanken lesen kÃ¶nnen?", "emoji": "ðŸ§ ", "optionen": ["Fotografisch", "Gedanken lesen"]},
-    {"frage": "FÃ¼r immer FrÃ¼hstÃ¼ck zum Abendessen oder Abendessen zum FrÃ¼hstÃ¼ck?", "emoji": "ðŸ³", "optionen": ["FrÃ¼hstÃ¼ckâ†’Abend", "Abendâ†’FrÃ¼hstÃ¼ck"]},
-    {"frage": "FÃ¼r immer auf das Fahrrad verzichten oder nie wieder fliegen?", "emoji": "ðŸš²", "optionen": ["Kein Fahrrad", "Nie fliegen"]},
-    {"frage": "Einen Monat den Fitnessplan von The Rock befolgen oder ein Tattoo von Pete Davidson nachstechen lassen?", "emoji": "ðŸ’ª", "optionen": ["Rock-Fitness", "Tattoo nachstechen"]},
-    {"frage": "FÃ¼r immer nur noch Horrorfilme oder nur noch Liebes-KomÃ¶dien?", "emoji": "ðŸ‘»", "optionen": ["Horrorfilme", "Liebes-KomÃ¶dien"]},
-    {"frage": "Alleine auf einer unbewohnten Insel oder in einer Wohnung mit 6 Mitbewohnern?", "emoji": "ðŸï¸", "optionen": ["Alleine Insel", "6 Mitbewohner"]},
-    {"frage": "Gut singen und schlecht tanzen oder schlecht singen und gut tanzen?", "emoji": "ðŸ’ƒ", "optionen": ["Gut singen", "Gut tanzen"]},
-    {"frage": "Alles zurÃ¼cknehmen kÃ¶nnen was du sagst oder jedes GesprÃ¤ch Ã¼ber dich mithÃ¶ren?", "emoji": "ðŸ—£ï¸", "optionen": ["ZurÃ¼cknehmen", "MithÃ¶ren"]},
-    {"frage": "Statist in einem Oscar-Film oder Hauptdarsteller in einem Goldene-Palme-Flop?", "emoji": "ðŸ†", "optionen": ["Statist Oscar", "Hauptdarsteller Flop"]},
-    {"frage": "Ein Jahr lang auf Kaffee oder auf Brot verzichten?", "emoji": "â˜•", "optionen": ["Kein Kaffee", "Kein Brot"]},
-    {"frage": "DafÃ¼r bekannt immer ehrlich oder immer nett zu sein?", "emoji": "ðŸ˜Š", "optionen": ["Ehrlich", "Nett"]},
-    {"frage": "15 Stunden am Tag schlafen oder nur 2 Stunden pro Nacht?", "emoji": "ðŸ˜´", "optionen": ["15h schlafen", "2h pro Nacht"]},
-    {"frage": "FÃ¼r immer nur noch denselben Song hÃ¶ren oder nur noch denselben Film sehen?", "emoji": "ðŸŽµ", "optionen": ["Gleicher Song", "Gleicher Film"]},
-    {"frage": "Einen Pool im Garten oder direkt am Meer wohnen?", "emoji": "ðŸŠ", "optionen": ["Pool", "Meer"]},
-    {"frage": "Deinen gesamten Suchverlauf verÃ¶ffentlichen oder die Namen aller Personen in die du verknallt warst?", "emoji": "ðŸ”", "optionen": ["Suchverlauf", "Verknalltheiten"]},
-    {"frage": "150 erste Dates in einem Jahr oder automatisch ein Jahr mit der nÃ¤chsten Person?", "emoji": "ðŸ’‘", "optionen": ["150 Dates", "1 Jahr automatisch"]},
-    {"frage": "Einen besten Freund aber keine Bekannten oder groÃŸe Gruppe aber keinen besten Freund?", "emoji": "ðŸ¤", "optionen": ["1 bester Freund", "Viele Bekannte"]},
-    {"frage": "Mit Aalen schwimmen oder in einer Fledermaus-HÃ¶hle schlafen?", "emoji": "ðŸ¦‡", "optionen": ["Aale", "Fledermaus-HÃ¶hle"]},
-    {"frage": "Mitten im Date eine Magenverstimmung bekommen oder zum Doppel-Date mit den Eltern?", "emoji": "ðŸ¤¢", "optionen": ["Magen im Date", "Doppel-Date Eltern"]},
-    {"frage": "Als klÃ¼gste oder lustigste Person im Raum bekannt sein?", "emoji": "ðŸ¤“", "optionen": ["Klugste", "Lustigste"]},
-    {"frage": "24 Stunden mit deinem Ex in einem Zimmer oder mit jemandem dessen Meinung das Gegenteil ist?", "emoji": "ðŸšª", "optionen": ["Ex im Zimmer", "Gegenteil"]},
-    {"frage": "Morgen eine Million oder in 10 Jahren 10 Millionen?", "emoji": "ðŸ’¶", "optionen": ["1 Mio jetzt", "10 Mio in 10 Jahren"]},
-    {"frage": "Jedes Jahr in eine neue Stadt ziehen oder fÃ¼r immer in deiner jetzigen Stadt?", "emoji": "ðŸ ", "optionen": ["Jedes Jahr neu", "FÃ¼r immer hier"]},
-    {"frage": "Mit deinem LieblingskÃ¼nstler auf Tournee oder mit deinem Lieblingsschauspieler Ã¼ber den roten Teppich?", "emoji": "ðŸŽ¤", "optionen": ["Tournee", "Roter Teppich"]},
-    {"frage": "Jedes Foto auf dem Handy zeigen oder jede SMS dieser Woche laut vorlesen?", "emoji": "ðŸ“±", "optionen": ["Fotos zeigen", "SMS vorlesen"]},
-    {"frage": "Wissen wie ein Flugzeug fliegt oder wie man seine eigenen Klamotten nÃ¤ht?", "emoji": "âœˆï¸", "optionen": ["Flugzeug", "Klamotten nÃ¤hen"]},
-    {"frage": "Ein ZÃ¶libatsgelÃ¼bde oder ein SchweigegelÃ¼bde ablegen?", "emoji": "ðŸ¤«", "optionen": ["ZÃ¶libat", "Schweigen"]},
-    {"frage": "FÃ¼r immer den Sonnenuntergang oder den Sonnenaufgang beobachten?", "emoji": "ðŸŒ…", "optionen": ["Untergang", "Aufgang"]},
-    {"frage": "Ãœber Nacht in einem VergnÃ¼gungspark oder Einkaufszentrum eingesperrt?", "emoji": "ðŸŽ¢", "optionen": ["VergnÃ¼gungspark", "Einkaufszentrum"]},
-    {"frage": "Einmal im Jahr First Class oder mehrere billige Rucksack-Reisen?", "emoji": "ðŸ§³", "optionen": ["First Class", "Rucksack"]},
-    {"frage": "FÃ¼r einen strengen Chef arbeiten den du magst oder fÃ¼r einen lockeren der dich nervt?", "emoji": "ðŸ‘”", "optionen": ["Strenger Chef (mag ich)", "Lockerer (nervt)"]},
-    {"frage": "Ein Bestseller-Buch verÃ¶ffentlichen oder einen Oscar-prÃ¤mierten Film drehen?", "emoji": "ðŸ“–", "optionen": ["Bestseller", "Oscar-Film"]},
-    {"frage": "FÃ¼r immer overdressed oder fÃ¼r immer underdressed?", "emoji": "ðŸ‘”", "optionen": ["Overdressed", "Underdressed"]},
-    {"frage": "Dein Haustier kÃ¶nnte mit dir reden oder ewig leben?", "emoji": "ðŸ¾", "optionen": ["Reden", "Ewig leben"]},
-    {"frage": "Ein Jahr lang nur Wiederholungen von Friends oder The Office sehen?", "emoji": "ðŸ“º", "optionen": ["Friends", "The Office"]},
-    {"frage": "Den ganzen Tag Spinat zwischen den ZÃ¤hnen haben oder Klopapier am Schuh kleben?", "emoji": "ðŸ˜¬", "optionen": ["Spinat zwischen ZÃ¤hnen", "Klopapier am Schuh"]},
-    {"frage": "Noch einmal die Grundschulzeit erleben oder wissen wie deine Rente sein wird?", "emoji": "ðŸ“š", "optionen": ["Grundschule", "Rente wissen"]},
-    {"frage": "Von AuÃŸerirdischen entfÃ¼hrt werden oder auf einer einsamen Insel stranden?", "emoji": "ðŸ›¸", "optionen": ["EntfÃ¼hrt", "Insel"]},
-    {"frage": "Nur noch Literatur aus dem 19. Jahrhundert oder nur noch Comics lesen?", "emoji": "ðŸ“š", "optionen": ["19. Jahrhundert", "Comics"]},
-    {"frage": "Im RÃ¶mischen Reich oder im Mittelalter leben?", "emoji": "âš”ï¸", "optionen": ["RÃ¶misches Reich", "Mittelalter"]},
-    {"frage": "Jemand der in traurigen Momenten zwangshaft lacht oder weint wenn jemand einen Witz macht?", "emoji": "ðŸ˜‚", "optionen": ["Zwanghaft lachen", "Bei Witzen weinen"]},
-    {"frage": "Zu Lebzeiten ins Weltall fliegen oder dafÃ¼r sorgen dass MilliardÃ¤re nie ins All dÃ¼rfen?", "emoji": "ðŸš€", "optionen": ["Selber ins All", "MilliardÃ¤re blockieren"]},
-    {"frage": "Wie Minnie Maus reden wenn du wÃ¼tend bist oder lachen wie Spongebob?", "emoji": "ðŸ˜¤", "optionen": ["Minnie Maus", "Spongebob"]},
-    {"frage": "Jeden Tag eine neue Sprache oder jeden Tag ein neues Instrument lernen?", "emoji": "ðŸŽ¹", "optionen": ["Sprache", "Instrument"]},
-    {"frage": "Nie wieder SÃ¼ÃŸigkeiten oder nie wieder salzige Snacks?", "emoji": "ðŸ«", "optionen": ["Keine SÃ¼ÃŸigkeiten", "Keine salzigen Snacks"]},
-    {"frage": "Dein GedÃ¤chtnis verlieren oder nie wieder neue Erinnerungen machen kÃ¶nnen?", "emoji": "ðŸ’­", "optionen": ["GedÃ¤chtnis verlieren", "Keine neuen Erinnerungen"]},
-    {"frage": "Jeden Tag im Regen tanzen oder jeden Tag im Schlamm laufen?", "emoji": "ðŸŒ§ï¸", "optionen": ["Im Regen tanzen", "Im Schlamm laufen"]},
-    {"frage": "Deinen Geburtstag vergessen oder den deiner besten Freunde?", "emoji": "ðŸŽ‚", "optionen": ["Meinen vergessen", "Freunde vergessen"]},
-    {"frage": "Einen Monat ohne Handy oder einen Monat ohne Freunde?", "emoji": "ðŸ“±", "optionen": ["Ohne Handy", "Ohne Freunde"]},
-    {"frage": "In einer Welt ohne Haustiere oder ohne Pflanzen?", "emoji": "ðŸŒ¿", "optionen": ["Keine Haustiere", "Keine Pflanzen"]},
-    {"frage": "Eine Zeitmaschine fÃ¼r Vergangenheit oder Zukunft?", "emoji": "â³", "optionen": ["Vergangenheit", "Zukunft"]},
-    {"frage": "Nur noch Nachrichten auf Papier schreiben oder nur noch per Sprachnachricht?", "emoji": "ðŸ“", "optionen": ["Papier", "Sprachnachricht"]},
-    {"frage": "Immer sofort einschlafen wenn du das Handy weglegst oder nie wieder ohne Smartphone einschlafen?", "emoji": "ðŸ˜´", "optionen": ["Sofort einschlafen", "Smartphone zum Schlafen"]},
-    {"frage": "Dein ganzes Leben immer laut denken oder nie wieder sprechen kÃ¶nnen?", "emoji": "ðŸ§ ", "optionen": ["Laut denken", "Nie sprechen"]},
-    {"frage": "FÃ¼r immer in einer Stadt bleiben die du liebst oder stÃ¤ndig unterwegs sein?", "emoji": "ðŸŒ", "optionen": ["Bleiben", "Unterwegs"]},
-    {"frage": "Ein geheimes Doppelleben oder dein ganzes Leben Ã¶ffentlich?", "emoji": "ðŸŽ­", "optionen": ["Doppelleben", "Ã–ffentlich"]},
-    {"frage": "Nie verletzt werden oder nie jemand anderen verletzen?", "emoji": "ðŸ›¡ï¸", "optionen": ["Nie verletzt", "Nie verletzen"]},
-]
+DEFAULT_FRAGEN = []
 
 def load_fragen_config():
     if FRAGEN_CONFIG_FILE.exists():
@@ -5130,6 +4991,7 @@ async def frage_des_tages_task():
 @frage_des_tages_task.before_loop
 async def before_frage_des_tages():
     await bot.wait_until_ready()
+    await asyncio.sleep(3600)
 
 @bot.tree.command(name="fragesetup", description="Frage des Tages einrichten")
 @is_admin_or_owner()
@@ -5160,55 +5022,14 @@ async def fragesetup_command(
     }
     save_fragen_config(config)
     
-    fragen = get_all_fragen(interaction.guild_id)
-    frage_data = random.choice(fragen) if fragen else None
-    
-    first_msg = ""
-    if frage_data and fragen:
-        emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
-        options_text = ""
-        for i, option in enumerate(frage_data["optionen"][:8]):
-            options_text += f"{emojis[i]} {option}\n"
-        
-        embed = discord.Embed(
-            title=f"{frage_data.get('emoji', '\u2753')} Frage des Tages",
-            description=f"**{frage_data['frage']}**\n\n{options_text}",
-            color=discord.Color.gold()
-        )
-        embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
-        
-        msg = await channel.send(embed=embed)
-        
-        reaction_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
-        for i in range(len(frage_data["optionen"][:8])):
-            await msg.add_reaction(reaction_emojis[i])
-        
-        frage_messages = load_frage_messages()
-        frage_messages[str(msg.id)] = {
-            "guild_id": guild_str,
-            "options": frage_data["optionen"][:8]
-        }
-        save_frage_messages(frage_messages)
-        
-        results_text = build_results_text(str(msg.id), display)
-        results_msg = await channel.send(results_text)
-        
-        config[guild_str]["last_message_id"] = msg.id
-        config[guild_str]["last_channel_id"] = channel.id
-        config[guild_str]["last_results_id"] = results_msg.id
-        save_fragen_config(config)
-        
-        first_msg = f"\n**Erste Frage direkt gesendet!**"
-    
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
     
     await interaction.response.send_message(
         f"**Frage des Tages eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
         f"**Interval:** Alle 16 Stunden\n"
-        f"**Anzeige:** {display_names.get(display, display)}"
-        f"{first_msg}\n\n"
-        f"Der Bot postet jetzt automatisch Fragen mit Reactions!"
+        f"**Anzeige:** {display_names.get(display, display)}\n\n"
+        f"Keine Standard-Fragen aktiv - fuege eigene mit `/frageadd` hinzu!"
     )
 
 @bot.tree.command(name="frageinterval", description="Frage des Tages Interval Ã¤ndern")
