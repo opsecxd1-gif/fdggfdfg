@@ -2761,7 +2761,7 @@ async def on_member_join(member):
 async def on_member_remove(member):
     await update_member_count_channels()
 
-@tasks.loop(seconds=30)
+@tasks.loop(minutes=5)
 @crash_resilient_task
 async def membercount_refresh():
     await update_member_count_channels()
@@ -4132,35 +4132,40 @@ def save_all_configs_to_disk():
 async def auto_save_data():
     save_all_configs_to_disk()
     
-    proc = await asyncio.create_subprocess_exec(
-        "git", "add", "data/",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    await proc.communicate()
-    
-    proc = await asyncio.create_subprocess_exec(
-        "git", "diff", "--cached", "--quiet",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, _ = await proc.communicate()
-    
-    if proc.returncode != 0:
+    try:
         proc = await asyncio.create_subprocess_exec(
-            "git", "commit", "-m", "auto-save: data backup",
+            "git", "add", "data/",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         await proc.communicate()
         
         proc = await asyncio.create_subprocess_exec(
-            "git", "push",
+            "git", "diff", "--cached", "--quiet",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        await proc.communicate()
-        print("[AutoSave] Data backup pushed")
+        stdout, _ = await proc.communicate()
+        
+        if proc.returncode != 0:
+            proc = await asyncio.create_subprocess_exec(
+                "git", "commit", "-m", "auto-save: data backup",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            
+            proc = await asyncio.create_subprocess_exec(
+                "git", "push",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            print("[AutoSave] Data backup pushed")
+    except FileNotFoundError:
+        print("[AutoSave] git nicht verfuegbar - übersprungen")
+    except Exception as e:
+        print(f"[AutoSave] Fehler: {e}")
 
 @auto_save_data.before_loop
 async def before_auto_save():
@@ -5870,7 +5875,7 @@ async def striproles_command(interaction: discord.Interaction):
             continue
 
         old_perms = role.permissions
-        new_perms = old_perms
+        new_perms = old_perms.copy()
         new_perms.attach_files = False
         new_perms.use_external_stickers = False
 
@@ -5948,7 +5953,7 @@ async def unstriproles_command(interaction: discord.Interaction):
             continue
 
         old_perms = role.permissions
-        new_perms = old_perms
+        new_perms = old_perms.copy()
         new_perms.attach_files = True
         new_perms.use_external_stickers = True
 
