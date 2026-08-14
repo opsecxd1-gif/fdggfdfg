@@ -2090,6 +2090,16 @@ class TicketCreateView(discord.ui.View):
                     ticket_info["status"] = "closed"
                     ticket_info["closed_at"] = discord.utils.utcnow().isoformat()
 
+        save_ticket_data(ticket_data)
+
+        for ch in interaction.guild.text_channels:
+            if ch.name.startswith("ticket-") and user_str in ch.name:
+                await interaction.followup.send(
+                    f"Du hast bereits ein offenes Ticket: {ch.mention}",
+                    ephemeral=True
+                )
+                return
+
         ticket_data[guild_str]["counter"] = ticket_data[guild_str].get("counter", 0) + 1
         ticket_number = ticket_data[guild_str]["counter"]
 
