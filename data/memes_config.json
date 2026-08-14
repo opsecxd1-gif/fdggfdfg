@@ -1,1 +1,10 @@
-{}
+{
+  "1532797083554156806": {
+    "enabled": true,
+    "channel_id": 1536962452082925598,
+    "source": "reddit",
+    "interval_minutes": 60,
+    "subreddit": "memes",
+    "imgur_tag": "memes"
+  }
+}
