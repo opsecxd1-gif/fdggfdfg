@@ -308,106 +308,143 @@ FRAGEN_CUSTOM_FILE = DATA_DIR / "fragen_custom.json"
 FRAGEN_MESSAGES_FILE = DATA_DIR / "fragen_messages.json"
 
 DEFAULT_FRAGEN = [
-    {
-        "frage": "Welche Pizza mögt ihr am liebsten?",
-        "emoji": "🍕",
-        "optionen": ["Salami", "Schinken", "Thunfisch", "Ananas", "Margherita", "Vegetarisch"]
-    },
-    {
-        "frage": "Bett oder Couch?",
-        "emoji": "🛋️",
-        "optionen": ["Bett", "Couch", "Boden", "Hängematte"]
-    },
-    {
-        "frage": "Frühstück oder Abendessen?",
-        "emoji": "🍳",
-        "optionen": ["Frühstück", "Abendessen", "Beides gleich"]
-    },
-    {
-        "frage": "Katze oder Hund?",
-        "emoji": "🐱",
-        "optionen": ["Katze", "Hund", "Beide", "Keins"]
-    },
-    {
-        "frage": "Gaming oder Serien schauen?",
-        "emoji": "🎮",
-        "optionen": ["Gaming", "Serien", "Beides", "Nix von beidem"]
-    },
-    {
-        "frage": "Kaffee oder Tee?",
-        "emoji": "☕",
-        "optionen": ["Kaffee", "Tee", "Beide", "Wasser"]
-    },
-    {
-        "frage": "Sommer oder Winter?",
-        "emoji": "☀️",
-        "optionen": ["Sommer", "Winter", "Frühling", "Herbst"]
-    },
-    {
-        "frage": "Berühmtheit zum Abendessen - wen würdest du einladen?",
-        "emoji": "🍽️",
-        "optionen": ["Elon Musk", "Taylor Swift", "MrBeast", "Johnny Depp", "Die Queen"]
-    },
-    {
-        "frage": "Welches Instrument könntet ihr lernen?",
-        "emoji": "🎸",
-        "optionen": ["Gitarre", "Klavier", "Schlagzeug", "Geige", "Saxophon"]
-    },
-    {
-        "frage": "Was ist euer guilty pleasure Food?",
-        "emoji": "😋",
-        "optionen": ["Döner", "Pizza", "McDonalds", "Kebab", "Süßigkeiten"]
-    },
-    {
-        "frage": "Würdet ihr lieber fliegen können oder unsichtbar sein?",
-        "emoji": "🦅",
-        "optionen": ["Fliegen", "Unsichtbar", "Zeitreise", "Teleportation"]
-    },
-    {
-        "frage": "Wie lange braucht ihr morgens zum fertig werden?",
-        "emoji": "⏰",
-        "optionen": ["5 Minuten", "15 Minuten", "30 Minuten", "1 Stunde+", "Schlafe an"]
-    },
-    {
-        "frage": "Welches Wetter mögt ihr am liebsten?",
-        "emoji": "🌤️",
-        "optionen": ["Sonne", "Regen", "Schnee", "Bewölkt", "Sturm"]
-    },
-    {
-        "frage": "Was ist das wichtigste auf einer Party?",
-        "emoji": "🎉",
-        "optionen": ["Musik", "Leute", "Getränke", "Essen", "Vibe"]
-    },
-    {
-        "frage": "Welchen Superpower hättet ihr?",
-        "emoji": "💪",
-        "optionen": ["Fliegen", "Unsichtbarkeit", "Telepathie", "Superkraft", "Zeitreise"]
-    },
-    {
-        "frage": "Was hört ihr gerade für Musik?",
-        "emoji": "🎵",
-        "optionen": ["Pop", "Rap/Hip-Hop", "Rock", "EDM", "Klassik", "Metal"]
-    },
-    {
-        "frage": "Lieblings-Season in Serien?",
-        "emoji": "📺",
-        "optionen": ["Staffel 1", "Finale Staffel", "Alle gleich", "Keine Serien"]
-    },
-    {
-        "frage": "Was macht einen guten Freund aus?",
-        "emoji": "🤝",
-        "optionen": ["Ehrlichkeit", "Humor", "Loyalität", "Verständnis", "Spaß"]
-    },
-    {
-        "frage": "Welches Land wolltet ihr immer mal besuchen?",
-        "emoji": "✈️",
-        "optionen": ["USA", "Japan", "Australien", "Brasilien", "Island", "Thailand"]
-    },
-    {
-        "frage": "Wie chillt ihr am liebsten am Wochenende?",
-        "emoji": "😎",
-        "optionen": ["Gaming", "Schlafen", "Essen gehen", "Mit Freunden", "Sport"]
-    }
+    # === ESSENTIALS / CLASSICS ===
+    {"frage": "Welche Pizza mögt ihr am liebsten?", "emoji": "🍕", "optionen": ["Salami", "Schinken", "Thunfisch", "Ananas", "Margherita", "Vegetarisch"]},
+    {"frage": "Katze oder Hund?", "emoji": "🐱", "optionen": ["Katze", "Hund", "Beide", "Keins"]},
+    {"frage": "Kaffee oder Tee?", "emoji": "☕", "optionen": ["Kaffee", "Tee", "Beide", "Wasser"]},
+    {"frage": "Sommer oder Winter?", "emoji": "☀️", "optionen": ["Sommer", "Winter", "Frühling", "Herbst"]},
+    {"frage": "Frühstück oder Abendessen?", "emoji": "🍳", "optionen": ["Frühstück", "Abendessen", "Beides gleich"]},
+    {"frage": "Bett oder Couch?", "emoji": "🛋️", "optionen": ["Bett", "Couch", "Boden", "Hängematte"]},
+    {"frage": "Gaming oder Serien schauen?", "emoji": "🎮", "optionen": ["Gaming", "Serien", "Beides", "Nix von beidem"]},
+    {"frage": "Berg oder Meer?", "emoji": "🏖️", "optionen": ["Berg", "Meer", "Beides", "Keins"]},
+    {"frage": "Auto oder Zug?", "emoji": "🚗", "optionen": ["Auto", "Zug", "Fahrrad", "Zu Fuß"]},
+
+    # === WÜRDSTE DU EHER (LUSTIG) ===
+    {"frage": "Würdest du eher für immer wie Yoda sprechen oder dich nur singend verständigen können?", "emoji": "🗣️", "optionen": ["Wie Yoda sprechen", "Nur singen"]},
+    {"frage": "Würdest du eher gegen ein riesiges Huhn oder gegen 50 Enten kämpfen?", "emoji": "🐔", "optionen": ["Riesenhuhn", "50 Enten"]},
+    {"frage": "Würdest du eher Spaghetti statt Haare haben oder geriebenen Käse niesen?", "emoji": "🍝", "optionen": ["Spaghetti-Haare", "Käse niesen"]},
+    {"frage": "Würdest du eher ein superhohes Cartoon-Lachen oder eine Roboterstimme haben?", "emoji": "🤣", "optionen": ["Cartoon-Lachen", "Roboterstimme"]},
+    {"frage": "Würdest du eher jeden Tag Schwimmflossen an den Füßen oder Boxhandschuhe an den Händen tragen?", "emoji": "🧤", "optionen": ["Schwimmflossen", "Boxhandschuhe"]},
+    {"frage": "Würdest du eher permanently nach Fußschweiß riechen oder Mundgeruch nach Fisch haben?", "emoji": "👃", "optionen": ["Fußschweiß", "Fisch-Mundgeruch"]},
+    {"frage": "Würdest du eher eine leuchtende Clownsnase haben die angeht wenn du lügst oder spitze Elfenohren?", "emoji": "🤡", "optionen": ["Clownsnase", "Elfenohren"]},
+    {"frage": "Würdest du eher mit Eichhörnchen sprechen können die sich über dich lustig machen oder Katzen verstehen ihnen aber nicht antworten können?", "emoji": "🐿️", "optionen": ["Eichhörnchen (lachen mich aus)", "Katzen (nicht antworten)"]},
+    {"frage": "Würdest du eher in einem Lebkuchenhaus wohnen (Knabber-Gefahr) oder in einer Hüpfburg?", "emoji": "🏠", "optionen": ["Lebkuchenhaus", "Hüpfburg"]},
+    {"frage": "Würdest du eher nur noch Neonklamotten oder nur noch Kleidung tragen die drei Nummern zu groß ist?", "emoji": "👕", "optionen": ["Neonklamotten", "Zu große Kleidung"]},
+    {"frage": "Würdest du eher jedes Mal Macarena tanzen müssen wenn du deinen Namen hörst oder das Alphabet rückwärts singen bevor du sprichst?", "emoji": "💃", "optionen": ["Macarena tanzen", "Alphabet rückwärts singen"]},
+    {"frage": "Würdest du eher für immer eine ultra-langsame Internetverbindung haben oder nur noch den Internet Explorer benutzen können?", "emoji": "🌐", "optionen": ["Ultra-langsam", "Nur Internet Explorer"]},
+    {"frage": "Würdest du eher ein superhohes Cartoon-Lachen oder eine Roboterstimme haben?", "emoji": "😂", "optionen": ["Cartoon-Lachen", "Roboterstimme"]},
+
+    # === WÜRDSTE DU EHER (EXTREM / EKLIG) ===
+    {"frage": "Würdest du eher Mayonnaise schwitzen oder Essig weinen?", "emoji": "🤮", "optionen": ["Mayo schwitzen", "Essig weinen"]},
+    {"frage": "Würdest du eher Zähne anstatt Haare haben oder Haare anstatt Zähne?", "emoji": "🦷", "optionen": ["Zähne statt Haare", "Haare statt Zähne"]},
+    {"frage": "Würdest du eher eine Schüssel frittierte Spinnen essen oder eine Schüssel lebender Regenwürmer?", "emoji": "🕷️", "optionen": ["Frittierte Spinnen", "Lebende Regenwürmer"]},
+    {"frage": "Würdest du eher dir nie wieder die Zähne putzen oder nie wieder duschen?", "emoji": "🚿", "optionen": ["Nie Zähne putzen", "Nie duschen"]},
+    {"frage": "Würdest du eher den Boden in der U-Bahn ablecken oder die Haltestange in einem vollen Bus?", "emoji": "🚇", "optionen": ["U-Bahn-Boden", "Bus-Haltestange"]},
+    {"frage": "Würdest du eher immer einen sichtbaren Popel in der Nase haben oder immer ein Stück Salat zwischen den Zähnen?", "emoji": "😬", "optionen": ["Popel in der Nase", "Salat zwischen Zähnen"]},
+    {"frage": "Würdest du eher jedes Mal kotzen wenn du jemanden küsst oder Durchfall bekommen wenn du dein Lieblingsessen isst?", "emoji": "🤢", "optionen": ["Kotzen beim Küssen", "Durchfall beim Lieblingsessen"]},
+    {"frage": "Würdest du eher dein Leben lang barfuß auf Lego treten oder auf Nacktschnecken?", "emoji": "🧱", "optionen": ["Auf Lego treten", "Auf Nacktschnecken"]},
+    {"frage": "Würdest du eher ein Jahr lang Katzenfutter essen oder einen Monat lang Hundefutter?", "emoji": "🐾", "optionen": ["Katzenfutter 1 Jahr", "Hundefutter 1 Monat"]},
+    {"frage": "Würdest du eher 50 Mal am Tag niesen oder jeden Tag 2 Stunden lang Schluckauf haben?", "emoji": "🤧", "optionen": ["50x niesen", "2h Schluckauf"]},
+    {"frage": "Würdest du eher permanent klebrige Haut haben oder Haut die ständig juckt?", "emoji": "😣", "optionen": ["Klebrige Haut", "Ständig juckende Haut"]},
+
+    # === TIEFSINNIG / PHILOSOPHISCH ===
+    {"frage": "Würdest du eher unglaublich reich aber allein sein oder wenig Geld haben aber von Liebe umgeben sein?", "emoji": "💰", "optionen": ["Reich und einsam", "Arm und geliebt"]},
+    {"frage": "Würdest du eher das genaue Datum deines Todes kennen oder es nie erfahren?", "emoji": "💀", "optionen": ["Datum kennen", "Nie erfahren"]},
+    {"frage": "Würdest du eher in die Vergangenheit zurückkehren um einen Fehler zu ändern oder deine Zukunft in 10 Jahren sehen können?", "emoji": "⏳", "optionen": ["Vergangenheit ändern", "Zukunft sehen"]},
+    {"frage": "Würdest du eher die Gedanken anderer lesen können oder zulassen dass andere deine lesen können?", "emoji": "🧠", "optionen": ["Andere Gedanken lesen", "Eigene Gedanken lesbar"]},
+    {"frage": "Würdest du eher eine gerechte Sache verteidigen auch wenn du allein gegen alle bist oder der Mehrheit folgen um deine Ruhe zu haben?", "emoji": "⚖️", "optionen": ["Allein für Gerechtigkeit", "Mehrheit folgen"]},
+    {"frage": "Würdest du eher deine gesamte Vergangenheit vergessen oder keine neuen Erinnerungen mehr schaffen können?", "emoji": "💭", "optionen": ["Vergangenheit vergessen", "Keine neuen Erinnerungen"]},
+    {"frage": "Würdest du eher in einer Welt ohne Lügen leben oder in einer Welt ohne Konflikte?", "emoji": "🌍", "optionen": ["Keine Lügen", "Keine Konflikte"]},
+    {"frage": "Würdest du eher den Mut haben immer zu sagen was du denkst oder die Weisheit zu wissen wann du schweigen solltest?", "emoji": "🤫", "optionen": ["Immer ehrlich", "Wann schweigen"]},
+    {"frage": "Würdest du eher respektiert oder geliebt werden?", "emoji": "❤️", "optionen": ["Respektiert", "Geliebt"]},
+    {"frage": "Würdest du eher ein bedeutendes materielles Erbe oder ein Erbe aus guten Taten hinterlassen?", "emoji": "📜", "optionen": ["Materielles Erbe", "Erbe aus Taten"]},
+    {"frage": "Würdest du eher ein kurzes aber intensives Leben oder ein langes aber eintöniges Leben führen?", "emoji": "🔥", "optionen": ["Kurz und intensiv", "Lang und ruhig"]},
+    {"frage": "Würdest du eher wissen wann du stirbst oder wie du stirbst?", "emoji": "⏰", "optionen": ["Wann sterbe ich", "Wie sterbe ich"]},
+
+    # === LEBEN / ALLTAG ===
+    {"frage": "Wie lange braucht ihr morgens zum fertig werden?", "emoji": "⏰", "optionen": ["5 Minuten", "15 Minuten", "30 Minuten", "1 Stunde+", "Schlafe an"]},
+    {"frage": "Was ist das wichtigste auf einer Party?", "emoji": "🎉", "optionen": ["Musik", "Leute", "Getränke", "Essen", "Vibe"]},
+    {"frage": "Was macht einen guten Freund aus?", "emoji": "🤝", "optionen": ["Ehrlichkeit", "Humor", "Loyalität", "Verständnis", "Spaß"]},
+    {"frage": "Wie chillt ihr am liebsten am Wochenende?", "emoji": "😎", "optionen": ["Gaming", "Schlafen", "Essen gehen", "Mit Freunden", "Sport"]},
+    {"frage": "Was ist euer guilty pleasure Food?", "emoji": "😋", "optionen": ["Döner", "Pizza", "McDonalds", "Kebab", "Süßigkeiten"]},
+    {"frage": "Nacht oder Morgen?", "emoji": "🌙", "optionen": ["Nachteule", "Morgenschlaue", "Beides", "Keins"]},
+    {"frage": "Allein living oder mit Freunden/Partner?", "emoji": "🏡", "optionen": ["Allein", "Mit Freunden", "Mit Partner", "Großfamilie"]},
+    {"frage": "Schule/Uni oder direkt arbeiten?", "emoji": "📚", "optionen": ["Schule/Uni", "Arbeiten", "Beides gleich", "Gar nichts"]},
+    {"frage": "Mit Handy aufs Klo gehen oder langweilen?", "emoji": "📱", "optionen": ["Handy mitnehmen", "Langweilen", "Buch mitnehmen"]},
+    {"frage": "Wie oft pro Woche duscht ihr?", "emoji": "🚿", "optionen": ["Täglich", "2-3x", "1x", "Selten", "Jeden Tag"]},
+    {"frage": "Zahnarzt oder Papierkram?", "emoji": "📋", "optionen": ["Zahnarzt", "Papierkram", "Beides schlimm", "Keins"]},
+    {"frage": "Geld oder Zeit?", "emoji": "💸", "optionen": ["Geld", "Zeit", "Beides", "Keins davon nötig"]},
+
+    # === TECHNOLOGIE / GAMING ===
+    {"frage": "iPhone oder Android?", "emoji": "📱", "optionen": ["iPhone", "Android", "Beides", "Keins"]},
+    {"frage": "PC oder Konsole?", "emoji": "💻", "optionen": ["PC", "PlayStation", "Xbox", "Nintendo", "Keins"]},
+    {"frage": "Was ist das beste Game aller Zeiten?", "emoji": "🏆", "optionen": ["GTA V", "Minecraft", "Fortnite", "CS2", "League of Legends", "Keins davon"]},
+    {"frage": "Social Media oder gar nichts?", "emoji": "📲", "optionen": ["Social Media", "Gar nichts", "Nur WhatsApp", "Nur YouTube"]},
+    {"frage": "Welchen Superpower hättet ihr?", "emoji": "💪", "optionen": ["Fliegen", "Unsichtbarkeit", "Telepathie", "Superkraft", "Zeitreise"]},
+    {"frage": "Was hört ihr gerade für Musik?", "emoji": "🎵", "optionen": ["Pop", "Rap/Hip-Hop", "Rock", "EDM", "Klassik", "Metal"]},
+    {"frage": "Lieblings-Season in Serien?", "emoji": "📺", "optionen": ["Staffel 1", "Finale Staffel", "Alle gleich", "Keine Serien"]},
+    {"frage": "Netflix oder YouTube?", "emoji": "🎬", "optionen": ["Netflix", "YouTube", "Beides", "Disney+", "Prime"]},
+    {"frage": "Welches Wetter mögt ihr am liebsten?", "emoji": "🌤️", "optionen": ["Sonne", "Regen", "Schnee", "Bewölkt", "Sturm"]},
+    {"frage": "Welches Instrument könntet ihr lernen?", "emoji": "🎸", "optionen": ["Gitarre", "Klavier", "Schlagzeug", "Geige", "Saxophon"]},
+
+    # === REISEN / ABENTEUER ===
+    {"frage": "Welches Land wolltet ihr immer mal besuchen?", "emoji": "✈️", "optionen": ["USA", "Japan", "Australien", "Brasilien", "Island", "Thailand"]},
+    {"frage": "Städtetrip oder Natururlaub?", "emoji": "🏕️", "optionen": ["Städtetrip", "Natururlaub", "Beides", "Zu Hause bleiben"]},
+    {"frage": "Businesseconomy oder Backpacker?", "emoji": "🧳", "optionen": ["Business", "Backpacker", "Roadtrip", "Kreuzfahrt"]},
+    {"frage": "Würdet ihr lieber fliegen können oder unsichtbar sein?", "emoji": "🦅", "optionen": ["Fliegen", "Unsichtbar", "Zeitreise", "Teleportation"]},
+    {"frage": "Mit dem Fahrrad um die Welt oder zu Fuß?", "emoji": "🌍", "optionen": ["Fahrrad", "Zu Fuß", "Auto", "Motorrad"]},
+    {"frage": "Lieblingsreiseziel ever?", "emoji": "🗺️", "optionen": ["Malediven", "New York", "Tokio", "Paris", "Rom", "Bali"]},
+
+    # === FREUNDSCHAFT / SOCIAL ===
+    {"frage": "Würdest du eher mit deinen Kumpels ohne Geld auf einen Roadtrip gehen oder mit deiner Familie in den Luxusurlaub fahren?", "emoji": "🚗", "optionen": ["Roadtrip mit Freunden", "Luxusurlaub mit Familie"]},
+    {"frage": "Würdest du eher ein peinliches Geheimnis über einen Freund bewahren müssen oder ein kleines Geheimnis über dich preisgeben?", "emoji": "🤫", "optionen": ["Geheimnis bewahren", "Eigenes preisgeben"]},
+    {"frage": "Würdest du eher einen super zuverlässigen aber langweiligen Freund haben oder einen super lustigen aber unzuverlässigen?", "emoji": "🤷", "optionen": ["Zuverlässig & langweilig", "Lustig & unzuverlässig"]},
+    {"frage": "Würdest du eher einem Freund Geld leihen (und nie wiedersehen) oder ablehnen und ihn verärgern?", "emoji": "💸", "optionen": ["Geld leihen", "Ablehnen"]},
+    {"frage": "Würdest du eher den ganzen Abend der nüchterne Fahrer sein oder der der nach 2 Drinks Blödsinn redet?", "emoji": "🍺", "optionen": ["Nüchterner Fahrer", "Nach 2 Drinks Blödsinn"]},
+    {"frage": "Immer die Wahrheit sagen oder manchmal lügen um Gefühle zu schonen?", "emoji": "🤥", "optionen": ["Immer Wahrheit", "Manchmal lügen"]},
+
+    # === FOOD / TRINKEN ===
+    {"frage": "Döner oder Burger?", "emoji": "🍔", "optionen": ["Döner", "Burger", "Pizza", "Pommes"]},
+    {"frage": "Süß oder salzig?", "emoji": "🍿", "optionen": ["Süß", "Salzig", "Beides", "Keins"]},
+    {"frage": "Cola oder Fanta?", "emoji": "🥤", "optionen": ["Cola", "Fanta", "Sprite", "Wasser", "Eistee"]},
+    {"frage": "McDonalds oder Burger King?", "emoji": "🍟", "optionen": ["McDonalds", "Burger King", "Five Guys", "Keins"]},
+    {"frage": "Lieblings-Eis?", "emoji": "🍦", "optionen": ["Vanille", "Schokolade", "Erdbeere", "Stracciatella", "Sorbet"]},
+    {"frage": "Kuchen oder Kekse?", "emoji": "🍰", "optionen": ["Kuchen", "Kekse", "Beides", "Keins"]},
+    {"frage": "Frühstück: Brötchen oder Müsli?", "emoji": "🥐", "optionen": ["Brötchen", "Müsli", "Eier", "Haferflocken", "Nix"]},
+    {"frage": "Würdet ihr eher eine ganze Pizza mit Sardellen und Ananas oder Müsli mit Wasser statt Milch essen?", "emoji": "🤢", "optionen": ["Sardellen-Pizza", "Müsli mit Wasser"]},
+
+    # === SPORT ===
+    {"frage": "Fußball oder Handball?", "emoji": "⚽", "optionen": ["Fußball", "Handball", "Basketball", "Volleyball", "Keins"]},
+    {"frage": "Zuschauen oder selbst machen?", "emoji": "🏃", "optionen": ["Zuschauen", "Selbst machen", "Beides", "Keins"]},
+    {"frage": "Morgens oder abends sporteln?", "emoji": "🏋️", "optionen": ["Morgens", "Abends", "Mittags", "Gar nicht"]},
+    {"frage": "Fitnessstudio oder draußen trainieren?", "emoji": "💪", "optionen": ["Fitnessstudio", "Draußen", "Zu Hause", "Gar nicht"]},
+    {"frage": "Welchen Sport wolltet ihr immer mal ausprobieren?", "emoji": "🎯", "optionen": ["Surfen", "Klettern", "Boxen", "Tanzen", "Bogenschießen"]},
+
+    # === KULTUR / UNTERHALTUNG ===
+    {"frage": "Marvel oder DC?", "emoji": "🦸", "optionen": ["Marvel", "DC", "Beides", "Keins"]},
+    {"frage": "Harry Potter oder Herr der Ringe?", "emoji": "🧙", "optionen": ["Harry Potter", "Herr der Ringe", "Beides", "Keins"]},
+    {"frage": "Horror oder Komödie?", "emoji": "👻", "optionen": ["Horror", "Komödie", "Action", "Drama"]},
+    {"frage": "Bücher lesen oder Hörbuch hören?", "emoji": "📖", "optionen": ["Bücher", "Hörbuch", "E-Book", "Gar nichts"]},
+    {"frage": "Anime oder Zeichentrick?", "emoji": "🎌", "optionen": ["Anime", "Zeichentrick", "Beides", "Keins"]},
+    {"frage": "Was ist der schlechteste Film den ihr je gesehen habt?", "emoji": "🎬", "optionen": ["The Last Airbender", "Cats", "Batman v Superman", "Keinen schlechten"]},
+    {"frage": "Kino oder Streamen?", "emoji": "🎥", "optionen": ["Kino", "Streamen", "Beides", "Keins"]},
+
+    # === LIEBE / BEZIEHUNG ===
+    {"frage": "Romantisch verabreden oder spontan treffen?", "emoji": "💕", "optionen": ["Romantisch", "Spontan", "Beides", "Keins"]},
+    {"frage": "Komplimente für Aussehen oder Intelligenz?", "emoji": "💋", "optionen": ["Aussehen", "Intelligenz", "Beides", "Keins"]},
+    {"frage": "Zusammen kochen oder Essen bestellen?", "emoji": "🍕", "optionen": ["Zusammen kochen", "Essen bestellen", "Restaurant", "Selber essen"]},
+    {"frage": "Oft Ich-liebe-dich sagen oder durch Gesten zeigen?", "emoji": "❤️", "optionen": ["Sagen", "Zeigen", "Beides", "Keins"]},
+    {"frage": "Serie zusammen bingen oder jeder eigene Serien?", "emoji": "📺", "optionen": ["Zusammen", "Eigene Serien", "Beides", "Keine Serien"]},
+
+    # === ZUFALLSFRAGEN / BREAKER ===
+    {"frage": "Was ist das peinlichste das euch passiert ist?", "emoji": "😳", "optionen": ["Vor der Klasse stolpern", "Laut furzen im Aufzug", "Jemanden falsch umarmen", "Anderes"]},
+    {"frage": "Wenn ihr ein Tier wärt - welches?", "emoji": "🦁", "optionen": ["Löwe", "Wolf", "Adler", "Katze", "Hund", "Delfin"]},
+    {"frage": "Was würdet ihr tun wenn ihr 1 Mio Euro gewinnt?", "emoji": "💰", "optionen": ["Investieren", "Urlaub", "Haus kaufen", "Schenken", "Alles ausgeben"]},
+    {"frage": "Welche Farbe hat euer Mood heute?", "emoji": "🎨", "optionen": ["Gelb (glücklich)", "Blau (traurig)", "Rot (wütend)", "Grau (neutral)", "Bunt"]},
+    {"frage": "Essen auf Rädern oder 1 Jahr nur Lieferdienst?", "emoji": "🛵", "optionen": ["Selber kochen", "1 Jahr Lieferdienst", "Immer Restaurant", "Instant Nudeln"]},
+    {"frage": "Was steht in eurer Tinder-Bio?", "emoji": "💘", "optionen": ["Nichts", "Ironisch", "Ehrlich", "Memes", "Kein Tinder"]},
+    {"frage": "Wie viele Followi braucht man um glücklich zu sein?", "emoji": "📊", "optionen": ["100", "1.000", "10.000", "100.000", "Followis sind egal"]},
+    {"frage": "Lieblings-Season in Serien?", "emoji": "📺", "optionen": ["Staffel 1", "Finale Staffel", "Alle gleich", "Keine Serien"]},
 ]
 
 def load_fragen_config():
