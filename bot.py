@@ -6349,6 +6349,260 @@ async def ai_command(
     
     await interaction.followup.send("❌ Alle KI-Models sind gerade nicht verfuegbar - bitte spaeter nochmal versuchen!", ephemeral=True)
 
+# =====================================
+# DEV-AGENT: /dev - Bot entwickelt sich selbst (nur Owner)
+# =====================================
+
+DEV_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Liest eine Datei aus dem Bot-Projekt (aktuelles Verzeichnis). bot.py ist ~6800 Zeilen - nutze start/end um nur Teile zu lesen.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Relativer Pfad, z.B. bot.py oder RAILWAY_HANDOVER.txt"},
+                    "start": {"type": "integer", "description": "Startzeile (1-basiert, optional)"},
+                    "end": {"type": "integer", "description": "Endzeile (optional)"}
+                },
+                "required": ["path"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": "Erstellt oder überschreibt eine Datei im Bot-Projekt. Achtung: bot.py komplett neu schreiben ist riskant, nutze gezielte Edits über run_command mit python-Befehlen oder schreibe neue Dateien.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Relativer Pfad, z.B. neue_feature.py"},
+                    "content": {"type": "string", "description": "Voller Datei-Inhalt"}
+                },
+                "required": ["path", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_command",
+            "description": "Führt einen Shell-Befehl im Projektverzeichnis aus. Nützlich für: git status/diff, python -m py_compile bot.py (Syntaxcheck), Text in bot.py einfügen/ersetzen mit python.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Der Shell-Befehl"}
+                },
+                "required": ["command"]
+            }
+        }
+    }
+]
+
+DANGEROUS_CMDS = ["rm -rf /", "shutdown", "reboot", "mkfs.", "dd if=/dev/zero", ":(){", "> /dev/sda", "git push --force", "git reset --hard"]
+
+async def execute_dev_tool(name, args):
+    if name == "read_file":
+        path = args.get("path")
+        if not path:
+            return {"error": "path fehlt"}
+        try:
+            safe = (Path.cwd() / path).resolve()
+        except Exception:
+            safe = Path(path)
+        if not safe.is_file():
+            return {"error": f"Datei nicht gefunden: {path}"}
+        try:
+            lines = safe.read_text(encoding="utf-8", errors="replace").splitlines()
+        except Exception as e:
+            return {"error": f"Lesen fehlgeschlagen: {e}"}
+        start = max(1, int(args.get("start") or 1))
+        end = min(len(lines), int(args.get("end") or len(lines)))
+        return {
+            "path": path,
+            "start": start,
+            "end": end,
+            "total_lines": len(lines),
+            "content": "\n".join(lines[start-1:end])
+        }
+    if name == "write_file":
+        path = args.get("path")
+        content = args.get("content") or ""
+        base = Path.cwd().resolve()
+        target = (base / path).resolve()
+        if target != base and base not in target.parents:
+            return {"error": "Nur Dateien innerhalb des Projekts erlaubt"}
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        return {"ok": True, "path": path, "bytes": len(content)}
+    if name == "run_command":
+        cmd = args.get("command") or ""
+        for bad in DANGEROUS_CMDS:
+            if bad in cmd:
+                return {"error": f"Befehl blockiert: {bad}"}
+        try:
+            proc = await asyncio.create_subprocess_shell(
+                cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(Path.cwd().resolve())
+            )
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=90)
+            return {
+                "exit_code": proc.returncode,
+                "stdout": out.decode("utf-8", errors="replace")[-8000:],
+                "stderr": err.decode("utf-8", errors="replace")[-3000:]
+            }
+        except asyncio.TimeoutError:
+            return {"error": "Timeout nach 90s"}
+        except Exception as e:
+            return {"error": f"{type(e).__name__}: {e}"}
+    return {"error": f"Unbekanntes Tool: {name}"}
+
+async def run_dev_agent(task):
+    api_key = get_mimo_api_key()
+    if not api_key:
+        return None, "❌ MIMO_API_KEY nicht gesetzt!"
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Du bist der Dev-Agent des Discord-Bots GIFS#1509. Das Projekt liegt im aktuellen Verzeichnis "
+                "(bot.py, sehr große Datei ~6800 Zeilen). Verwende die Tools. "
+                "Wenn du eine Datei geändert hast, führe danach IMMER 'python -m py_compile bot.py' aus, "
+                "um die Syntax zu prüfen, und behebe Fehler, bevor du fertig bist. "
+                "Wenn alle gewünschten Änderungen umgesetzt und geprüft sind, antworte in Deutsch mit einer "
+                "kurzen Zusammenfassung der Änderungen. Beginne die Antwort mit 'FERTIG'."
+            )
+        },
+        {"role": "user", "content": task}
+    ]
+    for step in range(1, 21):
+        print(f"[DEV] Schritt {step}")
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    MIMO_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "mimo-v2.5-free",
+                        "messages": messages,
+                        "tools": DEV_TOOLS,
+                        "max_tokens": 8192,
+                        "temperature": 0.3
+                    },
+                    timeout=aiohttp.ClientTimeout(total=120)
+                ) as resp:
+                    if resp.status != 200:
+                        text = await resp.text()
+                        return None, f"❌ Zen-API Fehler {resp.status}: {text[:300]}"
+                    data = await resp.json()
+        except Exception as e:
+            return None, f"❌ Zen-API Exception: {type(e).__name__}: {e}"
+
+        msg = data["choices"][0]["message"]
+        messages.append(msg)
+        tool_calls = msg.get("tool_calls")
+        if not tool_calls:
+            return messages, (msg.get("content") or "Fertig.")
+        for tc in tool_calls:
+            fn = tc["function"]
+            try:
+                args = json.loads(fn.get("arguments") or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            print(f"[DEV] Tool: {fn['name']} args={str(args)[:200]}")
+            result = await execute_dev_tool(fn["name"], args)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc["id"],
+                "name": fn["name"],
+                "content": json.dumps(result, ensure_ascii=False)[:8000]
+            })
+    return messages, "⚠️ Maximale Schrittzahl (20) erreicht."
+
+async def dev_syntax_and_push(summary):
+    log = []
+    proc = await asyncio.create_subprocess_shell(
+        "python -m py_compile bot.py",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=str(Path.cwd().resolve())
+    )
+    out, err = await proc.communicate()
+    if proc.returncode != 0:
+        log.append("❌ SYNTAXFEHLER in bot.py - kein Push!")
+        log.append(err.decode("utf-8", errors="replace")[-1500:])
+        return "\n".join(log), False
+
+    commit_msg = f"dev: {summary}"
+    commit_msg = commit_msg.replace('"', "'")[:80]
+    commands = [
+        "git config user.email devbot@railway.app",
+        "git config user.name 'GIFS DevBot'",
+    ]
+    gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if gh_token:
+        commands.append(f"git remote set-url origin https://x-access-token:{gh_token}@github.com/opsecxd1-gif/fdggfdfg.git")
+    commands.append("git add -A")
+    commands.append(f'git commit -m "{commit_msg}"')
+    commands.append("git push origin main")
+
+    for c in commands:
+        p = await asyncio.create_subprocess_shell(
+            c,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=str(Path.cwd().resolve())
+        )
+        o, e = await p.communicate()
+        line = o.decode("utf-8", errors="replace").strip() or e.decode("utf-8", errors="replace").strip()
+        log.append(f"> {c}\n{line[-1000:]}")
+        if p.returncode != 0 and "git commit" in c and "nothing to commit" in e.decode("utf-8", errors="replace"):
+            log.append("ℹ️ Keine Änderungen zu committen.")
+            return "\n".join(log), True
+        if p.returncode != 0:
+            return "\n".join(log), False
+    return "\n".join(log), True
+
+def is_bot_owner():
+    async def predicate(interaction: discord.Interaction):
+        try:
+            app = await bot.application_info()
+            if interaction.user.id == app.owner.id:
+                return True
+        except Exception as e:
+            print(f"[DEV] Owner-Check Fehler: {e}")
+        await interaction.response.send_message("❌ Nur der Bot-Owner darf /dev verwenden.", ephemeral=True)
+        return False
+    return app_commands.check(predicate)
+
+@bot.tree.command(name="dev", description="Lass den Bot Code für sich selbst entwickeln, committen und deployen (nur Owner)")
+@app_commands.describe(task="Was soll der Bot implementieren oder ändern?")
+@is_bot_owner()
+async def dev_command(interaction: discord.Interaction, task: str):
+    await interaction.response.defer(ephemeral=True)
+    await interaction.followup.send(f"🔧 Dev-Agent startet für:\n{task[:300]}", ephemeral=True)
+
+    messages, result = await run_dev_agent(task)
+    if messages is None:
+        await interaction.followup.send(result, ephemeral=True)
+        return
+
+    await interaction.followup.send(f"🤖 Agent fertig:\n{result[:1800]}", ephemeral=True)
+
+    await interaction.followup.send("🔍 Prüfe Syntax und pushe...", ephemeral=True)
+    push_log, ok = await dev_syntax_and_push(task)
+    if ok:
+        await interaction.followup.send(f"✅ Code gepusht - Railway deployed automatisch.\n```\n{push_log[-2000:]}\n```", ephemeral=True)
+    else:
+        await interaction.followup.send(f"❌ Push übersprungen.\n```\n{push_log[-2000:]}\n```", ephemeral=True)
+
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
 @is_admin_or_owner()
 async def botstatus_command(interaction: discord.Interaction):

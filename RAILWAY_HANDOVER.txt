@@ -1,0 +1,119 @@
+RAILWAY + DISCORD BOT HANDOVER
+================================
+Zuletzt aktualisiert: 2026-08-14
+Zweck: Diese Datei prompten, damit der nächste Agent weiß, wie er
+selbstständig auf Railway zugreifen kann.
+
+========================================
+1. RAILWAY CLI IST INSTALLIERT + EINGELOGGT
+========================================
+- CLI: railway 5.41.0 (npm install -g @railway/cli)
+- Eingeloggt als: opsecxd1@gmail.com (Workspace: "opsecxd1-gif's Projects")
+- KEIN weiterer Login nötig. Befehl zum Testen:
+    railway whoami
+
+========================================
+2. WICHTIGE PROJEKTE (Stand 2026-08-14)
+========================================
+Es gab ZWEI Railway-Projekte mit dem SELBEN Bot (gleicher DISCORD_TOKEN!).
+Das hat die Befehle kaputt gemacht (404 Unknown interaction, /aidebug zeigte
+mal Key da, mal Key fehlt, weil die Instanzen um die Verbindung kämpften).
+
+A) sweet-youthfulness  <-- DAS RICHTIGE PROJEKT (behalten!)
+   - Project ID: 9479e2aa-c288-4a9a-a794-1ec01162a77f
+   - Environment: production (ID: d614ec2e-157e-42c2-8fed-114063dd0c8a)
+   - Service: fdggfdfg (ID: 45d03e52-246f-4322-a0cd-e2a14983eb03)
+   - Hat MIMO_API_KEY gesetzt ✅  -> Discord Bot läuft HIER
+
+B) lucky-amazement  <-- GELÖSCHT am 2026-08-14 (hatte keinen MIMO_API_KEY)
+   - Project ID: 1d5455df-1c2b-473e-8a38-92c748b51d73
+   - Löschbefehl: railway delete --project lucky-amazement --yes --json
+
+REGEL: NIEMALS 2 Projekte mit demselben DISCORD_TOKEN fahren lassen!
+
+========================================
+3. SO KOMMST DU AUFS RICHTIGE PROJEKT
+========================================
+    railway link --project sweet-youthfulness --environment production
+    railway status          # zeigt Service, Deployment, Status
+    railway variables       # zeigt alle Env-Vars (DISCORD_TOKEN, MIMO_API_KEY)
+
+========================================
+4. NÜTZLICHE BEFEHLE
+========================================
+    railway whoami                              # Login prüfen
+    railway link -p <projekt> -e <env>          # Projekt wählen
+    railway status                              # Status + Deployment ID
+    railway deployment list                     # letzte Deployments
+    railway logs --deployment <DEPLOYMENT_ID>   # Logs eines Deployments
+    railway logs                                # Logs des aktuellen Deployments
+    railway variables                           # Env-Vars anzeigen
+    railway redeploy                            # letztes Deployment neu starten
+    railway restart                             # Neustart ohne rebuild
+    railway delete --project <name> --yes --json # Projekt löschen
+    railway open                                # Dashboard im Browser öffnen
+
+========================================
+5. GITHUB -> RAILWAY (Deploy-Loop)
+========================================
+- Repo: https://github.com/opsecxd1-gif/fdggfdfg.git (Branch: main)
+- Railway verbunden mit diesem Repo -> jeder Push auf main deployt automatisch.
+- Arbeitsablauf: Code ändern -> git add/commit/push -> Railway deployed
+  -> Logs prüfen mit: railway logs
+- ACHTUNG: .env ist in .gitignore und wird NICHT nach Railway deployed.
+  Alle Secrets (DISCORD_TOKEN, MIMO_API_KEY) MÜSSEN als Railway-Variable
+  im Service gesetzt sein (railway variables).
+
+========================================
+6. DISCORD BOT: /ai (KI)
+========================================
+- Befehl: /ai <frage> [system]
+- API: https://opencode.ai/zen/v1/chat/completions (OpenAI-kompatibel)
+- Models (Fallback-Reihenfolge):
+    mimo-v2.5-free          (MiMo V2.5)
+    deepseek-v4-flash-free  (DeepSeek V4)
+    nemotron-3-ultra-free   (Nemotron 3 Ultra)
+- API-Key wird gesucht in dieser Reihenfolge (bot.py -> get_mimo_api_key()):
+    1. Env-Var MIMO_API_KEY
+    2. Env-Var OPENCODE_API_KEY
+    3. Env-Var OPENAI_API_KEY
+    4. .env Datei (nur lokal, nicht auf Railway)
+- Debug-Befehl: /aidebug -> zeigt ob/wo der Key gefunden wird (ephemeral)
+- Cooldown: KEIN Cooldown mehr (entfernt am 2026-08-14)
+- Fehlerbild "MIMO_API_KEY nicht gesetzt": Env-Var fehlt im laufenden
+  Railway-Deployment -> railway variables prüfen + redeploy.
+
+========================================
+6b. DISCORD BOT: /dev (Selbst-Entwicklung, nur Owner)
+========================================
+- Befehl: /dev <task>  -> Bot liest/schreibt eigene Dateien, prüft Syntax
+  (python -m py_compile bot.py) und pusht automatisch nach GitHub.
+  Railway deployt dann automatisch.
+- Nur der Bot-Owner (App-Owner via application_info) darf /dev nutzen.
+- Tools des Agents: read_file, write_file, run_command.
+- Blockliste: rm -rf /, shutdown, reboot, mkfs, dd, git push --force, ...
+- WICHTIG: Damit der Push aus dem Railway-Container funktioniert, muss
+  die Env-Var GITHUB_TOKEN (GitHub Personal Access Token mit repo-Rechten)
+  im Railway-Service gesetzt sein! Ohne Token schlägt der Push fehl.
+  Erstellen: GitHub -> Settings -> Developer settings -> Tokens (classic)
+  -> Repo-Rechte "repo" -> als GITHUB_TOKEN in Railway-Variables eintragen.
+- git ist im Railway-Container installiert (nixpacks.toml: aptPkgs git).
+
+========================================
+7. GELÖSTE PROBLEME / FAKTEN (2026-08-14)
+========================================
+- Doppel-Projekt lucky-amazement gelöscht -> keine Verbindungskämpfe mehr.
+- MIMO_API_KEY im Projekt sweet-youthfulness korrekt gesetzt (sk-xdkif...uNb7).
+- /aidebug zeigt auf sweet-youthfulness: MIMO_API_KEY (Env): ✅ gesetzt.
+- Lokale Log-Dateien (botlogs.txt, bot_stderr.log, run_stdout.log) sind
+  Kopien der Railway-Logs; der Bot selbst läuft NUR auf Railway.
+
+========================================
+8. FALLS DER BOT HÄNGT ODER OFFLINE IST
+========================================
+1. railway status                     # ist Service Online?
+2. railway deployment list            # letztes Deployment erfolgreich?
+3. railway logs --deployment <ID>     # Fehler im Log suchen
+4. railway restart                    # Neustart (ohne rebuild)
+5. railway redeploy                   # kompletten Rebuild erzwingen
+6. Git push auslösen, falls Code-Fix nötig ist.
