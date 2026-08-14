@@ -3952,17 +3952,6 @@ async def on_ready():
     except Exception as e:
         print(f"[on_ready] Memes Task Fehler: {e}")
     
-    try:
-        fragen_config = load_fragen_config()
-        for guild_str, settings in fragen_config.items():
-            if settings.get("enabled", False):
-                if not frage_des_tages_task.is_running():
-                    frage_des_tages_task.start()
-                    print("[on_ready] Frage Task gestartet")
-                    break
-    except Exception as e:
-        print(f"[on_ready] Frage Task Fehler: {e}")
-    
     global recovery
     try:
         recovery = RecoveryManager(bot)
@@ -4922,76 +4911,8 @@ async def memesload_command(interaction: discord.Interaction, datei: discord.Att
     )
 
 # =====================================
-# FRAGE DES TAGES TASK & COMMANDS
+# FRAGE SYSTEM (MANUELL - KEIN AUTOMATIK-TASK)
 # =====================================
-
-@tasks.loop(hours=16)
-@crash_resilient_task
-async def frage_des_tages_task():
-    config = load_fragen_config()
-    for guild in bot.guilds:
-        guild_str = str(guild.id)
-        if guild_str not in config:
-            continue
-        
-        settings = config[guild_str]
-        if not settings.get("enabled", False):
-            continue
-        
-        channel_id = settings.get("channel_id")
-        if not channel_id:
-            continue
-        
-        channel = bot.get_channel(channel_id)
-        if not channel:
-            continue
-        
-        fragen = get_all_fragen(guild.id)
-        if not fragen:
-            continue
-        
-        frage_data = random.choice(fragen)
-        
-        emojis = ["1ï¸âƒ£", "2ï¸âƒ£", "3ï¸âƒ£", "4ï¸âƒ£", "5ï¸âƒ£", "6ï¸âƒ£", "7ï¸âƒ£", "8ï¸âƒ£"]
-        options_text = ""
-        for i, option in enumerate(frage_data["optionen"][:8]):
-            options_text += f"{emojis[i]} {option}\n"
-        
-        embed = discord.Embed(
-            title=f"{frage_data.get('emoji', '\u2753')} Frage des Tages",
-            description=f"**{frage_data['frage']}**\n\n{options_text}",
-            color=discord.Color.gold()
-        )
-        embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
-        
-        msg = await channel.send(embed=embed)
-        
-        reaction_emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
-        for i in range(len(frage_data["optionen"][:8])):
-            await msg.add_reaction(reaction_emojis[i])
-        
-        frage_messages = load_frage_messages()
-        frage_messages[str(msg.id)] = {
-            "guild_id": guild_str,
-            "options": frage_data["optionen"][:8]
-        }
-        save_frage_messages(frage_messages)
-        
-        display_mode = settings.get("display_mode", "embed")
-        results_text = build_results_text(str(msg.id), display_mode)
-        results_msg = await channel.send(results_text)
-        
-        config[guild_str]["last_message_id"] = msg.id
-        config[guild_str]["last_channel_id"] = channel.id
-        config[guild_str]["last_results_id"] = results_msg.id
-        save_fragen_config(config)
-        
-        print(f"[Frage] Gesendet in {channel.name} ({guild.name})")
-
-@frage_des_tages_task.before_loop
-async def before_frage_des_tages():
-    await bot.wait_until_ready()
-    await asyncio.sleep(3600)
 
 @bot.tree.command(name="fragesetup", description="Frage des Tages einrichten")
 @is_admin_or_owner()
@@ -5031,30 +4952,6 @@ async def fragesetup_command(
         f"**Anzeige:** {display_names.get(display, display)}\n\n"
         f"Keine Standard-Fragen aktiv - fuege eigene mit `/frageadd` hinzu!"
     )
-
-@bot.tree.command(name="frageinterval", description="Frage des Tages Interval Ã¤ndern")
-@is_admin_or_owner()
-@app_commands.describe(stunden="Interval in Stunden (1-48)")
-async def frageinterval_command(interaction: discord.Interaction, stunden: int):
-    if stunden < 1 or stunden > 48:
-        await interaction.response.send_message("UngÃ¼ltig! Erlaubt: 1-48 Stunden", ephemeral=True)
-        return
-    
-    config = load_fragen_config()
-    guild_str = str(interaction.guild_id)
-    
-    if guild_str not in config:
-        await interaction.response.send_message("Noch nicht eingerichtet! Benutze /fragesetup", ephemeral=True)
-        return
-    
-    config[guild_str]["interval_hours"] = stunden
-    save_fragen_config(config)
-    
-    frage_des_tages_task.cancel()
-    frage_des_tages_task.change_interval(hours=stunden)
-    frage_des_tages_task.start()
-    
-    await interaction.response.send_message(f"**Interval geÃ¤ndert auf alle {stunden} Stunden!**")
 
 @bot.tree.command(name="fragetoggle", description="Frage des Tages ein/ausschalten")
 @is_admin_or_owner()
@@ -5954,7 +5851,6 @@ async def help_command(interaction: discord.Interaction):
         },
         "Frage des Tages": {
             "fragesetup": "Frage des Tages einrichten",
-            "frageinterval": "Intervall aendern",
             "fragetoggle": "An/aus",
             "fragestatus": "Status anzeigen",
             "frageadd": "Eigene Frage hinzufuegen",
@@ -6021,10 +5917,6 @@ async def botstatus_command(interaction: discord.Interaction):
         tasks_status.append(f"Auto-Memes: {'LAEUFT' if auto_memes_task.is_running() else 'STOPP'}")
     except:
         tasks_status.append("Auto-Memes: FEHLER")
-    try:
-        tasks_status.append(f"Frage des Tages: {'LAEUFT' if frage_des_tages_task.is_running() else 'STOPP'}")
-    except:
-        tasks_status.append("Frage des Tages: FEHLER")
     try:
         tasks_status.append(f"AutoSave: {'LAEUFT' if auto_save_data.is_running() else 'STOPP'}")
     except:
@@ -6328,7 +6220,7 @@ async def graceful_shutdown(sig_name):
     try:
         tasks_to_stop = []
         for task_name in ["auto_save_data", "update_live_leaderboard", 
-                          "auto_memes_task", "frage_des_tages_task",
+                          "auto_memes_task",
                           "membercount_refresh", "watchdog_task", "daily_config_backup"]:
             try:
                 task_obj = globals().get(task_name)
