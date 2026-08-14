@@ -6470,7 +6470,10 @@ async def run_dev_agent(task):
             "role": "system",
             "content": (
                 "Du bist der Dev-Agent des Discord-Bots GIFS#1509. Das Projekt liegt im aktuellen Verzeichnis "
-                "(bot.py, sehr große Datei ~6800 Zeilen). Verwende die Tools. "
+                "(bot.py, sehr große Datei ~6800 Zeilen). Verwende die Tools NUR wenn der Nutzer eine Änderung "
+                "am Bot oder an Dateien möchte. "
+                "Wenn der Nutzer nur eine Frage stellt oder Informationen will, antworte direkt wie ein "
+                "hilfreicher Assistent (auf Deutsch, kurz und präzise) OHNE Tools aufzurufen. "
                 "Wenn du eine Datei geändert hast, führe danach IMMER 'python -m py_compile bot.py' aus, "
                 "um die Syntax zu prüfen, und behebe Fehler, bevor du fertig bist. "
                 "Wenn alle gewünschten Änderungen umgesetzt und geprüft sind, antworte in Deutsch mit einer "
@@ -6486,7 +6489,7 @@ async def run_dev_agent(task):
         print(f"[DEV] Schritt {step}")
         ok = False
         for model_id in dev_models:
-            for attempt in range(1, 4):
+            for attempt in range(1, 3):
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
@@ -6506,9 +6509,17 @@ async def run_dev_agent(task):
                         ) as resp:
                             if resp.status == 429 or resp.status == 503:
                                 text = await resp.text()
+                                if "FreeUsageLimitError" in text or "Rate limit" in text:
+                                    return None, ("⛔ **Free-Limit der OpenCode-Zen-API erreicht.** "
+                                                  "Alle Free-Models (MiMo, DeepSeek, Nemotron) sind gerade "
+                                                  "ratelimitiert.\n\n"
+                                                  "Das Quota setzt sich automatisch zurück (meist nach ein paar "
+                                                  "Minuten bis Stunden). Versuche es später nochmal.\n\n"
+                                                  "Tipp: Ohne Free-Limit geht's mit einem bezahlten Key oder "
+                                                  "wenn das Konto erst wieder freigegeben ist.")
                                 last_err = f"Model {model_id}: {text[:200]}"
-                                print(f"[DEV] {last_err} (Versuch {attempt}/3, warte {attempt * 5}s)")
-                                await asyncio.sleep(attempt * 5)
+                                print(f"[DEV] {last_err} (Versuch {attempt}/2, warte {attempt * 3}s)")
+                                await asyncio.sleep(attempt * 3)
                                 continue
                             if resp.status != 200:
                                 text = await resp.text()
@@ -6522,8 +6533,8 @@ async def run_dev_agent(task):
                         break
                 except asyncio.TimeoutError:
                     last_err = f"Model {model_id}: Timeout (120s)"
-                    print(f"[DEV] {last_err} (Versuch {attempt}/3)")
-                    await asyncio.sleep(attempt * 5)
+                    print(f"[DEV] {last_err} (Versuch {attempt}/2)")
+                    await asyncio.sleep(attempt * 3)
                 except Exception as e:
                     last_err = f"Zen-API Exception: {type(e).__name__}: {e}"
                     print(f"[DEV] {last_err}")
