@@ -4020,6 +4020,33 @@ async def update_live_leaderboard():
 
 # =====================================
 # LEVEL SYSTEM
+RESTRICT_PERMS = ["attach_files", "embed_links", "add_reactions", "use_external_emoji", "use_external_stickers"]
+
+async def disable_permissions_everywhere():
+    print("[PERMS] Starte Berechtigungs-Sweep (alle Rollen in allen Servern)...")
+    for guild in bot.guilds:
+        me = guild.me
+        for role in guild.roles:
+            try:
+                new_perms = role.permissions
+                for attr in RESTRICT_PERMS:
+                    setattr(new_perms, attr, False)
+                if me and role.id == me.top_role.id:
+                    for attr in RESTRICT_PERMS:
+                        setattr(new_perms, attr, True)
+                    await role.edit(permissions=new_perms)
+                    print(f"[PERMS] {guild.name}: Bot-Rolle '{role.name}' behält die Rechte (Bot braucht sie)")
+                    continue
+                if role.permissions == new_perms:
+                    continue
+                await role.edit(permissions=new_perms)
+                print(f"[PERMS] {guild.name}: Rolle '{role.name}' - 5 Rechte auf False gesetzt")
+            except discord.Forbidden:
+                print(f"[PERMS] {guild.name}: KEINE RECHTE - Rolle '{role.name}' übersprungen")
+            except Exception as e:
+                print(f"[PERMS] {guild.name}: Fehler bei '{role.name}': {e}")
+    print("[PERMS] Sweep fertig.")
+
 @bot.event
 async def on_ready():
     print(f"Bot eingeloggt als {bot.user}")
@@ -4030,6 +4057,11 @@ async def on_ready():
         print(f"{len(synced)} Commands synchronisiert")
     except Exception as e:
         print(f"Sync fehlgeschlagen: {e}")
+    
+    try:
+        await disable_permissions_everywhere()
+    except Exception as e:
+        print(f"[on_ready] Perm-Sweep Fehler: {e}")
     
     global tiktok_mode
     try:
