@@ -342,8 +342,30 @@ async def get_meme_for_guild(guild_id, exclude_ids=None):
 FRAGEN_CONFIG_FILE = DATA_DIR / "fragen_config.json"
 FRAGEN_CUSTOM_FILE = DATA_DIR / "fragen_custom.json"
 FRAGEN_MESSAGES_FILE = DATA_DIR / "fragen_messages.json"
+FRAGEN_CACHE_FILE = DATA_DIR / "fragen_cache.json"
 
-DEFAULT_FRAGEN = []
+DEFAULT_FRAGEN = [
+    {"frage": "Würdest du lieber die Fähigkeit zum Teleportieren oder zur Gedankenkontrolle haben?", "emoji": "🧠", "optionen": ["Teleportieren", "Gedankenkontrolle"], "guild_id": "global"},
+    {"frage": "Würdest du lieber in einer Welt ohne Internet oder ohne Klimaanlage leben?", "emoji": "🌍", "optionen": ["Ohne Internet", "Ohne Klimaanlage"], "guild_id": "global"},
+    {"frage": "Meer oder Berge für den nächsten Urlaub?", "emoji": "🏖️", "optionen": ["Meer", "Berge"], "guild_id": "global"},
+    {"frage": "Würdest du lieber unendlich Geld oder unendlich Zeit haben?", "emoji": "💰", "optionen": ["Unendlich Geld", "Unendlich Zeit"], "guild_id": "global"},
+    {"frage": "Kaffee oder Tee?", "emoji": "☕", "optionen": ["Kaffee", "Tee"], "guild_id": "global"},
+    {"frage": "Würdest du lieber in der Vergangenheit oder in der Zukunft leben?", "emoji": "⏰", "optionen": ["Vergangenheit", "Zukunft"], "guild_id": "global"},
+    {"frage": "Hund oder Katze?", "emoji": "🐾", "optionen": ["Hund", "Katze"], "guild_id": "global"},
+    {"frage": "Würdest du lieber fliegen oder unsichtbar sein können?", "emoji": "🦅", "optionen": ["Fliegen", "Unsichtbar sein"], "guild_id": "global"},
+    {"frage": "Frühaufsteher oder Nachteule?", "emoji": "🌅", "optionen": ["Frühaufsteher", "Nachteule"], "guild_id": "global"},
+    {"frage": "Würdest du lieber 1 Millionen Euro gewinnen oder deinen besten Freund für immer behalten?", "emoji": "❤️", "optionen": ["1 Mio Euro", "Besten Freund behalten"], "guild_id": "global"},
+    {"frage": "Pizza oder Burger?", "emoji": "🍕", "optionen": ["Pizza", "Burger"], "guild_id": "global"},
+    {"frage": "Würdest du lieber in einer großen Stadt oder auf dem Land leben?", "emoji": "🏙️", "optionen": ["Große Stadt", "Land"], "guild_id": "global"},
+    {"frage": "Serien schauen oder lesen?", "emoji": "📚", "optionen": ["Serien schauen", "Lesen"], "guild_id": "global"},
+    {"frage": "Würdest du lieber super stark oder super intelligent sein?", "emoji": "💪", "optionen": ["Super stark", "Super intelligent"], "guild_id": "global"},
+    {"frage": "Zuhause bleiben oder ausgehen?", "emoji": "🏠", "optionen": ["Zuhause bleiben", "Ausgehen"], "guild_id": "global"},
+    {"frage": "Würdest du lieber nie wieder lachen oder nie wieder weinen können?", "emoji": "😊", "optionen": ["Nie wieder lachen", "Nie wieder weinen"], "guild_id": "global"},
+    {"frage": "Musik hören oder Podcasts?", "emoji": "🎵", "optionen": ["Musik hören", "Podcasts"], "guild_id": "global"},
+    {"frage": "Würdest du lieber 1000 oberflächliche Freunde oder 1 richtigen besten Freund haben?", "emoji": "👥", "optionen": ["1000 Freunde", "1 richtiger bester Freund"], "guild_id": "global"},
+    {"frage": "Fitnessstudio oder draußen trainieren?", "emoji": "🏋️", "optionen": ["Fitnessstudio", "Draußen trainieren"], "guild_id": "global"},
+    {"frage": "Würdest du lieber für immer 20 oder für immer 40 Jahre alt sein?", "emoji": "🎂", "optionen": ["Für immer 20", "Für immer 40"], "guild_id": "global"},
+]
 
 def load_fragen_config():
     if FRAGEN_CONFIG_FILE.exists():
@@ -417,6 +439,137 @@ def build_results_text(msg_id, display_mode="embed"):
                 lines.append(f"{emojis[idx]} **{count}** - {names_str}")
     
     return "\n".join(lines)
+
+# =====================================
+# FRAGEN WEB-SCRAPING & CACHE
+# =====================================
+
+FRAGEN_CACHE_TTL = 86400
+
+def load_fragen_cache():
+    if FRAGEN_CACHE_FILE.exists():
+        with open(FRAGEN_CACHE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_fragen_cache(data):
+    with open(FRAGEN_CACHE_FILE, "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+async def fetch_url_text(url):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status == 200:
+                    return await resp.text()
+    except Exception as e:
+        print(f"[FrageScrape] Fehler bei {url}: {e}")
+    return None
+
+def parse_numbered_questions(html, pattern=r'(\d+)\.\s*(.+)'):
+    fragen = []
+    for match in re.finditer(pattern, html, re.MULTILINE):
+        text = match.group(2).strip()
+        text = re.sub(r'<[^>]+>', '', text)
+        text = text.strip('*_`')
+        if len(text) > 10 and len(text) < 300:
+            fragen.append(text)
+    return fragen
+
+def parse_entwederoder(html):
+    fragen = []
+    pattern = r'(\d+)\.\s*(.+?\s+oder\s+.+?)\?'
+    for match in re.finditer(pattern, html, re.MULTILINE | re.IGNORECASE):
+        full = match.group(2).strip()
+        full = re.sub(r'<[^>]+>', '', full)
+        full = full.strip('*_`')
+        parts = re.split(r'\s+oder\s+', full, flags=re.IGNORECASE)
+        if len(parts) == 2 and len(full) > 10 and len(full) < 200:
+            fragen.append({
+                "frage": full.rstrip('?') + '?',
+                "optionen": [p.strip().rstrip('?') for p in parts]
+            })
+    return fragen
+
+def parse_wuerdestu(html):
+    fragen = []
+    pattern = r'(\d+)\.\s*Würdest du lieber\s+(.+?)\s+oder\s+(.+?)\?'
+    for match in re.finditer(pattern, html, re.MULTILINE | re.IGNORECASE):
+        opt1 = match.group(2).strip()
+        opt2 = match.group(3).strip()
+        opt1 = re.sub(r'<[^>]+>', '', opt1).strip('*_`')
+        opt2 = re.sub(r'<[^>]+>', '', opt2).strip('*_`')
+        if len(opt1) > 3 and len(opt2) > 3 and len(opt1) < 150 and len(opt2) < 150:
+            fragen.append({
+                "frage": f"Würdest du lieber {opt1} oder {opt2}?",
+                "optionen": [opt1, opt2]
+            })
+    return fragen
+
+async def scrape_fragenquelle(quelle):
+    cache = load_fragen_cache()
+    now = time.time()
+
+    if quelle in cache and (now - cache[quelle].get("timestamp", 0)) < FRAGEN_CACHE_TTL:
+        cached = cache[quelle]["fragen"]
+        print(f"[FrageScrape] Cache-Treffer fuer {quelle} ({len(cached)} Fragen)")
+        return cached
+
+    urls = {
+        "eisbrecher": ["https://conversationstartersworld.com/de/eisbrecher-fragen/"],
+        "entwederoder": ["https://conversationstartersworld.com/de/entweder-oder-fragen/"],
+        "wuerdestu": ["https://conversationstartersworld.com/de/wuerdest-du-lieber-fragen/"]
+    }
+
+    fragen = []
+    for url in urls.get(quelle, []):
+        html = await fetch_url_text(url)
+        if not html:
+            continue
+
+        if quelle == "eisbrecher":
+            texts = parse_numbered_questions(html)
+            for t in texts:
+                fragen.append({"frage": t, "optionen": [], "emoji": "🧊"})
+        elif quelle == "entwederoder":
+            parsed = parse_entwederoder(html)
+            for p in parsed:
+                p["emoji"] = "⚖️"
+                fragen.append(p)
+        elif quelle == "wuerdestu":
+            parsed = parse_wuerdestu(html)
+            for p in parsed:
+                p["emoji"] = "💭"
+                fragen.append(p)
+
+    if fragen:
+        cache[quelle] = {"fragen": fragen, "timestamp": now}
+        save_fragen_cache(cache)
+        print(f"[FrageScrape] {len(fragen)} Fragen gescraped fuer {quelle}")
+    else:
+        print(f"[FrageScrape] Keine Fragen fuer {quelle} - Cache bleibt")
+
+    return cache.get(quelle, {}).get("fragen", [])
+
+async def get_fragen_from_source(source, guild_id):
+    guild_str = str(guild_id)
+    if source == "eigene":
+        return get_all_fragen(guild_id)
+
+    if source == "gemischt":
+        all_fragen = list(get_all_fragen(guild_id))
+        for q in ["eisbrecher", "entwederoder", "wuerdestu"]:
+            scraped = await scrape_fragenquelle(q)
+            for s in scraped:
+                item = dict(s)
+                item["guild_id"] = guild_str
+                all_fragen.append(item)
+        return all_fragen
+
+    scraped = await scrape_fragenquelle(source)
+    for s in scraped:
+        s["guild_id"] = guild_str
+    return scraped
 
 EXCLUDED_ROLE_NAMES = ["owner", "head admin", "admin", "moderator", "bot", "muted", "timeout"]
 
@@ -3952,6 +4105,19 @@ async def on_ready():
     except Exception as e:
         print(f"[on_ready] Memes Task Fehler: {e}")
     
+    try:
+        fragen_config = load_fragen_config()
+        for guild_str, settings in fragen_config.items():
+            if settings.get("enabled", False):
+                if not auto_frage_task.is_running():
+                    interval_minutes = settings.get("interval_minutes", 960)
+                    auto_frage_task.change_interval(minutes=interval_minutes)
+                    auto_frage_task.start()
+                    print(f"[on_ready] Frage Task gestartet ({interval_minutes} Min)")
+                    break
+    except Exception as e:
+        print(f"[on_ready] Frage Task Fehler: {e}")
+    
     global recovery
     try:
         recovery = RecoveryManager(bot)
@@ -4512,6 +4678,85 @@ async def auto_memes_task_error(error):
 async def before_auto_memes():
     await bot.wait_until_ready()
 
+@tasks.loop(minutes=60)
+@crash_resilient_task
+async def auto_frage_task():
+    try:
+        config = load_fragen_config()
+        for guild in bot.guilds:
+            guild_str = str(guild.id)
+            if guild_str not in config:
+                continue
+            
+            settings = config[guild_str]
+            if not settings.get("enabled", False):
+                continue
+            
+            channel_id = settings.get("channel_id")
+            if not channel_id:
+                continue
+            
+            channel = bot.get_channel(channel_id)
+            if not channel:
+                continue
+            
+            source = settings.get("source", "gemischt")
+            fragen = await get_fragen_from_source(source, guild.id)
+            if not fragen:
+                fragen = get_all_fragen(guild.id)
+            if not fragen:
+                print(f"[Frage] Keine Fragen fuer {guild.name}")
+                continue
+            
+            frage_data = random.choice(fragen)
+            
+            emojis = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3"]
+            options_text = ""
+            for i, option in enumerate(frage_data["optionen"][:8]):
+                options_text += f"{emojis[i]} {option}\n"
+            
+            source_emoji = {"eisbrecher": "🧊", "entwederoder": "⚖️", "wuerdestu": "💭", "eigene": "✏️", "gemischt": "🎲"}.get(source, "❓")
+            
+            embed = discord.Embed(
+                title=f"{source_emoji} Frage des Tages",
+                description=f"**{frage_data['frage']}**\n\n{options_text}",
+                color=discord.Color.gold()
+            )
+            embed.set_footer(text="Reagiere mit einer Zahl um abzustimmen!")
+            
+            msg = await channel.send(embed=embed)
+            
+            for i in range(len(frage_data["optionen"][:8])):
+                await msg.add_reaction(emojis[i])
+            
+            frage_messages = load_frage_messages()
+            frage_messages[str(msg.id)] = {
+                "guild_id": guild_str,
+                "options": frage_data["optionen"][:8]
+            }
+            save_frage_messages(frage_messages)
+            
+            display_mode = settings.get("display_mode", "embed")
+            results_text = build_results_text(str(msg.id), display_mode)
+            results_msg = await channel.send(results_text)
+            
+            config[guild_str]["last_message_id"] = msg.id
+            config[guild_str]["last_channel_id"] = channel.id
+            config[guild_str]["last_results_id"] = results_msg.id
+            save_fragen_config(config)
+            
+            print(f"[Frage] Gesendet in {channel.name} ({guild.name})")
+    except Exception as e:
+        print(f"[Frage] Task Fehler: {e}")
+
+@auto_frage_task.error
+async def auto_frage_task_error(error):
+    print(f"[Frage] Task Error (loop laeuft weiter): {error}")
+
+@auto_frage_task.before_loop
+async def before_auto_frage():
+    await bot.wait_until_ready()
+
 @bot.tree.command(name="memessetup", description="Auto-Memes Channel einrichten")
 @is_admin_or_owner()
 @app_commands.describe(
@@ -4918,18 +5163,38 @@ async def memesload_command(interaction: discord.Interaction, datei: discord.Att
 @is_admin_or_owner()
 @app_commands.describe(
     channel="Channel fÃ¼r die tÃ¤gliche Frage",
-    anzeige="Wie werden Stimmen angezeigt"
+    quelle="Woher kommen die Fragen?",
+    anzeige="Wie werden Stimmen angezeigt",
+    stunden="Interval in Stunden (1-48)",
+    minuten="Zusaetzliche Minuten (0-59)"
 )
-@app_commands.choices(anzeige=[
-    app_commands.Choice(name="Embed (Empfohlen)", value="embed"),
-    app_commands.Choice(name="Text (einfach)", value="text"),
-    app_commands.Choice(name="Anonym (keine Names)", value="anonym")
-])
+@app_commands.choices(
+    quelle=[
+        app_commands.Choice(name="Eisbrecher-Fragen", value="eisbrecher"),
+        app_commands.Choice(name="Entweder-Oder Fragen", value="entwederoder"),
+        app_commands.Choice(name="Wuerdest-du-lieber Fragen", value="wuerdestu"),
+        app_commands.Choice(name="Nur eigene Fragen", value="eigene"),
+        app_commands.Choice(name="Gemischt (Alles)", value="gemischt")
+    ],
+    anzeige=[
+        app_commands.Choice(name="Embed (Empfohlen)", value="embed"),
+        app_commands.Choice(name="Text (einfach)", value="text"),
+        app_commands.Choice(name="Anonym (keine Names)", value="anonym")
+    ]
+)
 async def fragesetup_command(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
-    anzeige: app_commands.Choice[str] = None
+    quelle: app_commands.Choice[str],
+    anzeige: app_commands.Choice[str] = None,
+    stunden: int = 16,
+    minuten: int = 0
 ):
+    total_minutes = (stunden * 60) + minuten
+    if total_minutes < 1 or total_minutes > 2880:
+        await interaction.response.send_message("Ungueltig! Min: 1 Minute, Max: 48 Stunden", ephemeral=True)
+        return
+    
     config = load_fragen_config()
     guild_str = str(interaction.guild_id)
     
@@ -4938,20 +5203,41 @@ async def fragesetup_command(
     config[guild_str] = {
         "enabled": True,
         "channel_id": channel.id,
-        "interval_hours": 16,
-        "display_mode": display
+        "interval_hours": stunden,
+        "interval_minutes": total_minutes,
+        "display_mode": display,
+        "source": quelle.value
     }
     save_fragen_config(config)
     
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
+    source_names = {
+        "eisbrecher": "Eisbrecher-Fragen",
+        "entwederoder": "Entweder-Oder Fragen",
+        "wuerdestu": "Wuerdest-du-lieber Fragen",
+        "eigene": "Nur eigene Fragen",
+        "gemischt": "Gemischt (Alles)"
+    }
+    
+    if total_minutes >= 60:
+        interval_text = f"{total_minutes // 60}h {total_minutes % 60}m"
+    else:
+        interval_text = f"{total_minutes} Minuten"
     
     await interaction.response.send_message(
         f"**Frage des Tages eingerichtet!**\n\n"
         f"**Channel:** {channel.mention}\n"
-        f"**Interval:** Alle 16 Stunden\n"
+        f"**Quelle:** {source_names.get(quelle.value, quelle.value)}\n"
+        f"**Interval:** Alle {interval_text}\n"
         f"**Anzeige:** {display_names.get(display, display)}\n\n"
-        f"Keine Standard-Fragen aktiv - fuege eigene mit `/frageadd` hinzu!"
+        f"Der Bot postet jetzt automatisch Fragen!"
     )
+    
+    if auto_frage_task.is_running():
+        auto_frage_task.cancel()
+    
+    auto_frage_task.change_interval(minutes=total_minutes)
+    auto_frage_task.start()
 
 @bot.tree.command(name="fragetoggle", description="Frage des Tages ein/ausschalten")
 @is_admin_or_owner()
@@ -4987,8 +5273,21 @@ async def fragestatus_command(interaction: discord.Interaction):
     status = "âœ… AN" if settings.get("enabled") else "âŒ AUS"
     display = settings.get("display_mode", "embed")
     display_names = {"embed": "Embed", "text": "Text", "anonym": "Anonym"}
+    source = settings.get("source", "gemischt")
+    source_names = {
+        "eisbrecher": "Eisbrecher-Fragen",
+        "entwederoder": "Entweder-Oder Fragen",
+        "wuerdestu": "Wuerdest-du-lieber Fragen",
+        "eigene": "Nur eigene Fragen",
+        "gemischt": "Gemischt (Alles)"
+    }
     
     fragen = get_all_fragen(interaction.guild_id)
+    interval_min = settings.get("interval_minutes", 960)
+    if interval_min >= 60:
+        interval_text = f"{interval_min // 60}h {interval_min % 60}m"
+    else:
+        interval_text = f"{interval_min} Min"
     
     embed = discord.Embed(
         title="Frage des Tages Status",
@@ -4996,9 +5295,13 @@ async def fragestatus_command(interaction: discord.Interaction):
     )
     embed.add_field(name="Status", value=status, inline=True)
     embed.add_field(name="Channel", value=channel_name, inline=True)
-    embed.add_field(name="Interval", value=f"{settings.get('interval_hours', 16)}h", inline=True)
+    embed.add_field(name="Interval", value=interval_text, inline=True)
+    embed.add_field(name="Quelle", value=source_names.get(source, source), inline=True)
     embed.add_field(name="Anzeige", value=display_names.get(display, display), inline=True)
-    embed.add_field(name="Fragen gesamt", value=str(len(fragen)), inline=True)
+    embed.add_field(name="Eigene Fragen", value=str(len(fragen)), inline=True)
+    
+    auto_status = "âœ… LÃ„UFT" if auto_frage_task.is_running() else "âŒ STOPP"
+    embed.add_field(name="Auto-Send", value=auto_status, inline=True)
     
     await interaction.response.send_message(embed=embed)
 
@@ -5048,7 +5351,13 @@ async def frageadd_command(
 async def fragetest_command(interaction: discord.Interaction):
     await interaction.response.defer()
     
-    fragen = get_all_fragen(interaction.guild_id)
+    config = load_fragen_config()
+    guild_str = str(interaction.guild_id)
+    source = config.get(guild_str, {}).get("source", "gemischt")
+    
+    fragen = await get_fragen_from_source(source, interaction.guild_id)
+    if not fragen:
+        fragen = get_all_fragen(interaction.guild_id)
     if not fragen:
         await interaction.followup.send("Keine Fragen vorhanden!", ephemeral=True)
         return
@@ -5134,7 +5443,10 @@ async def frageskip_command(interaction: discord.Interaction):
         await interaction.followup.send("Channel nicht gefunden!", ephemeral=True)
         return
     
-    fragen = get_all_fragen(interaction.guild_id)
+    source = settings.get("source", "gemischt")
+    fragen = await get_fragen_from_source(source, interaction.guild_id)
+    if not fragen:
+        fragen = get_all_fragen(interaction.guild_id)
     if not fragen:
         await interaction.followup.send("Keine Fragen vorhanden!", ephemeral=True)
         return
@@ -5898,6 +6210,86 @@ async def help_command(interaction: discord.Interaction):
     view.add_item(select)
 
     await interaction.response.send_message(embed=build_embed(cat_names[0]), view=view)
+
+MIMO_API_URL = "https://api.xiaomimimo.com/v1/chat/completions"
+MIMO_MODEL = "mimo-v2.5-free"
+
+ai_cooldowns = {}
+
+@bot.tree.command(name="ai", description="Frage die MiMo KI")
+@app_commands.describe(
+    frage="Deine Frage an die KI",
+    system="System-Prompt (z.B. 'Antworte wie ein Pirat')"
+)
+async def ai_command(
+    interaction: discord.Interaction,
+    frage: str,
+    system: str = ""
+):
+    user_id = interaction.user.id
+    now = time.time()
+    
+    if user_id in ai_cooldowns and (now - ai_cooldowns[user_id]) < 10:
+        rest = int(10 - (now - ai_cooldowns[user_id]))
+        await interaction.response.send_message(f"⏳ Noch {rest} Sekunden warten...", ephemeral=True)
+        return
+    
+    ai_cooldowns[user_id] = now
+    
+    await interaction.response.defer()
+    
+    api_key = os.getenv("MIMO_API_KEY")
+    if not api_key:
+        await interaction.followup.send("❌ MIMO_API_KEY nicht gesetzt!", ephemeral=True)
+        return
+    
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    else:
+        messages.append({"role": "system", "content": "Du bist ein hilfreicher Discord-Bot Assistent. Antworte kurz und präzise auf Deutsch. Verwende Emojis sparsam."})
+    messages.append({"role": "user", "content": frage})
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                MIMO_API_URL,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": MIMO_MODEL,
+                    "messages": messages,
+                    "max_tokens": 1024,
+                    "temperature": 0.7
+                },
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as resp:
+                if resp.status != 200:
+                    error_text = await resp.text()
+                    await interaction.followup.send(f"❌ API Fehler ({resp.status}): `{error_text[:200]}`", ephemeral=True)
+                    return
+                
+                data = await resp.json()
+                
+                antwort = data["choices"][0]["message"]["content"]
+                tokens = data.get("usage", {})
+                
+                embed = discord.Embed(
+                    title="🤖 MiMo KI",
+                    description=antwort[:4000],
+                    color=discord.Color.blue()
+                )
+                embed.add_field(name="📋 Frage", value=frage[:256], inline=False)
+                embed.set_footer(text=f"Tokens: {tokens.get('total_tokens', '?')} | Model: {MIMO_MODEL}")
+                
+                await interaction.followup.send(embed=embed)
+    
+    except asyncio.TimeoutError:
+        await interaction.followup.send("❌ Timeout - KI hat zu lange gebraucht!", ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f"❌ Fehler: `{str(e)[:200]}`", ephemeral=True)
 
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
 @is_admin_or_owner()

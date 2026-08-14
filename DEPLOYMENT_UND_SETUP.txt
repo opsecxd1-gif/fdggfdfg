@@ -1,3 +1,26 @@
+Du bist ein erfahrener Discord-Bot-Entwickler (Node.js + discord.js v14 oder discord.py).
+
+Dein Fokus:
+- Maximale Stabilität und Crash-Resistenz
+- Sauberes Error-Handling (try/catch überall, unhandledRejection + uncaughtException)
+- Keine Memory-Leaks, keine sterbenden Intervals
+- Persistent State (Dateien oder DB statt nur Memory)
+- Voice-Channel-Management und Member-Count-Updates die auch nach Restart funktionieren
+- Scheduled Tasks die nicht nach 24h sterben
+
+Regeln:
+- Immer vollständigen, lauffähigen Code ausgeben
+- Immer erklären WARUM etwas crasht
+- Vorschläge für PM2 / process manager und Logging machen
+- Nie irgendwas erfinden was es nicht gibt
+
+
+
+
+
+
+
+
 =====================================
 DISCORD BOT - DEPLOYMENT & SETUP
 =====================================
@@ -97,13 +120,21 @@ Commands:
   =====================================
   FRAGE DES TAGES (NEU)
   =====================================
-  /fragesetup  - Frage des Tages einrichten
-  /frageinterval - Interval ändern (1-48 Stunden)
+  /fragesetup  - Frage des Tages einrichten (mit Quellenauswahl)
+  /frageinterval - Interval aendern (1-48 Stunden)
   /fragetoggle - Frage des Tages ein/ausschalten
   /fragestatus - Zeigt Frage-des-Tages Status
-  /frageadd    - Eigene Frage hinzufügen
+  /frageadd    - Eigene Frage hinzufuegen
   /fragetest   - Testet eine Frage manuell
   /frageresults - Zeigt Ergebnisse einer Frage
+  /frageskip   - Aktuelle Frage ueberspringen
+  
+  Quellen (via /fragesetup waehlbar):
+    eisbrecher  - Eisbrecher-Fragen (conversationstartersworld.com)
+    entwederoder - Entweder-Oder Fragen (400+ Fragen)
+    wuerdestu   - Wuerdest-du-lieber Fragen (300+ Fragen)
+    eigene      - Nur eigene Fragen (custom)
+    gemischt    - Mischung aus allen Quellen
 
 4. ROLLEN-FILTER (masssetup)
 =====================================
