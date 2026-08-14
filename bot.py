@@ -5850,6 +5850,7 @@ async def striproles_command(interaction: discord.Interaction):
     updated = []
     skipped = []
 
+    roles_to_edit = []
     for role in interaction.guild.roles:
         if role == interaction.guild.default_role:
             continue
@@ -5870,10 +5871,15 @@ async def striproles_command(interaction: discord.Interaction):
         if old_perms == new_perms:
             skipped.append(f"{role.name} (bereits gesetzt)")
             continue
+        roles_to_edit.append((role, new_perms))
 
+    total = len(roles_to_edit)
+    for i, (role, new_perms) in enumerate(roles_to_edit, 1):
         try:
             await role.edit(permissions=new_perms, reason=f"striproles von {interaction.user}")
             updated.append(role.name)
+            if i < total:
+                await asyncio.sleep(1.0)
         except discord.Forbidden:
             skipped.append(f"{role.name} (keine Berechtigung)")
         except Exception as e:
@@ -5913,6 +5919,7 @@ async def unstriproles_command(interaction: discord.Interaction):
     updated = []
     skipped = []
 
+    roles_to_edit = []
     for role in interaction.guild.roles:
         if role == interaction.guild.default_role:
             continue
@@ -5933,10 +5940,15 @@ async def unstriproles_command(interaction: discord.Interaction):
         if old_perms == new_perms:
             skipped.append(f"{role.name} (bereits gesetzt)")
             continue
+        roles_to_edit.append((role, new_perms))
 
+    total = len(roles_to_edit)
+    for i, (role, new_perms) in enumerate(roles_to_edit, 1):
         try:
             await role.edit(permissions=new_perms, reason=f"unstriproles von {interaction.user}")
             updated.append(role.name)
+            if i < total:
+                await asyncio.sleep(1.0)
         except discord.Forbidden:
             skipped.append(f"{role.name} (keine Berechtigung)")
         except Exception as e:
