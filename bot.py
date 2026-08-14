@@ -39,6 +39,52 @@ tiktok_mode = {}
 TIKTOK_DOWNLOAD_DIR = Path("tiktok_downloads")
 TIKTOK_DOWNLOAD_DIR.mkdir(exist_ok=True)
 
+import traceback
+
+# =====================================
+# CRASH-RESILIENCE: Webhook Error Logger
+# =====================================
+
+ERROR_WEBHOOK_URL = None
+
+async def send_error_webhook(title, error_info, context=""):
+    if not ERROR_WEBHOOK_URL:
+        return
+    try:
+        embed = {
+            "title": f"🔴 {title}",
+            "description": f"```{error_info[:1800]}```",
+            "color": 0xFF0000,
+            "fields": [],
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        if context:
+            embed["fields"].append({"name": "Context", "value": context[:1024], "inline": False})
+        async with aiohttp.ClientSession() as session:
+            await session.post(ERROR_WEBHOOK_URL, json={"embeds": [embed]})
+    except:
+        pass
+
+def crash_resilient_task(task_func):
+    async def wrapper(*args, **kwargs):
+        try:
+            return await task_func(*args, **kwargs)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(f"[TaskCrash] {task_func.__name__} Fehler: {e}")
+            traceback.print_exc()
+            critical_tasks = ["auto_save_data", "watchdog_task", "health_monitor", "daily_config_backup"]
+            if task_func.__name__ in critical_tasks:
+                asyncio.create_task(send_error_webhook(
+                    f"Task Crash: {task_func.__name__}",
+                    f"{type(e).__name__}: {e}\n\n{tb}"
+                ))
+            return None
+    wrapper.__name__ = task_func.__name__
+    return wrapper
+
 # =====================================
 # AUTOMOD SYSTEM
 # =====================================
@@ -6113,63 +6159,6 @@ def handle_signal(sig_name):
     loop = asyncio.get_event_loop()
     if loop.is_running():
         asyncio.ensure_future(graceful_shutdown(sig_name))
-
-# =====================================
-# CRASH-RESILIENCE: Webhook Error Logger
-# =====================================
-
-import aiohttp
-
-# Hier deine Error-Webhook URL eintragen (oder None lassen um zu deaktivieren)
-ERROR_WEBHOOK_URL = None  # z.B. "https://discord.com/api/webhooks/..."
-
-async def send_error_webhook(title, error_info, context=""):
-    """Sendet Error-Embed an Discord Webhook (optional)"""
-    if not ERROR_WEBHOOK_URL:
-        return
-    
-    try:
-        embed = {
-            "title": f"🔴 {title}",
-            "description": f"```{error_info[:1800]}```",
-            "color": 0xFF0000,
-            "fields": [],
-            "timestamp": __import__('datetime').datetime.utcnow().isoformat()
-        }
-        if context:
-            embed["fields"].append({"name": "Context", "value": context[:1024], "inline": False})
-        
-        async with aiohttp.ClientSession() as session:
-            await session.post(ERROR_WEBHOOK_URL, json={"embeds": [embed]})
-    except:
-        pass
-
-# =====================================
-# CRASH-RESILIENCE: Task Error Wrapper
-# =====================================
-
-def crash_resilient_task(task_func):
-    """Wrapper der Tasks vor Absturz schützt"""
-    async def wrapper(*args, **kwargs):
-        try:
-            return await task_func(*args, **kwargs)
-        except asyncio.CancelledError:
-            raise  # CancelledError weiterleiten (wichtig für graceful shutdown)
-        except Exception as e:
-            tb = traceback.format_exc()
-            print(f"[TaskCrash] {task_func.__name__} Fehler: {e}")
-            traceback.print_exc()
-            # Webhook senden bei kritischen Tasks
-            critical_tasks = ["auto_save_data", "watchdog_task", "health_monitor", "daily_config_backup"]
-            if task_func.__name__ in critical_tasks:
-                asyncio.create_task(send_error_webhook(
-                    f"Task Crash: {task_func.__name__}",
-                    f"{type(e).__name__}: {e}\n\n{tb}"
-                ))
-            # Nicht weiterwerfen - Task soll weiterlaufen
-            return None
-    wrapper.__name__ = task_func.__name__
-    return wrapper
 
 # =====================================
 # CRASH-RESILIENCE: Health-Check
