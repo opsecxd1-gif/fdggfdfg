@@ -6267,8 +6267,6 @@ AI_MODELS = [
     {"id": "nemotron-3-ultra-free", "name": "Nemotron 3 Ultra"},
 ]
 
-ai_cooldowns = {}
-
 @bot.tree.command(name="ai", description="Frage die KI (MiMo / DeepSeek / Nemotron)")
 @app_commands.describe(
     frage="Deine Frage an die KI",
@@ -6279,16 +6277,6 @@ async def ai_command(
     frage: str,
     system: str = ""
 ):
-    user_id = interaction.user.id
-    now = time.time()
-    
-    if user_id in ai_cooldowns and (now - ai_cooldowns[user_id]) < 30:
-        rest = int(30 - (now - ai_cooldowns[user_id]))
-        await interaction.response.send_message(f"⏳ Noch {rest} Sekunden warten...", ephemeral=True)
-        return
-    
-    ai_cooldowns[user_id] = now
-    
     await interaction.response.defer()
     
     api_key = get_mimo_api_key()
