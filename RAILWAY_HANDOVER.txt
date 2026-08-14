@@ -92,12 +92,15 @@ REGEL: NIEMALS 2 Projekte mit demselben DISCORD_TOKEN fahren lassen!
 - Nur der Bot-Owner (App-Owner via application_info) darf /dev nutzen.
 - Tools des Agents: read_file, write_file, run_command.
 - Blockliste: rm -rf /, shutdown, reboot, mkfs, dd, git push --force, ...
-- WICHTIG: Damit der Push aus dem Railway-Container funktioniert, muss
-  die Env-Var GITHUB_TOKEN (GitHub Personal Access Token mit repo-Rechten)
-  im Railway-Service gesetzt sein! Ohne Token schlägt der Push fehl.
-  Erstellen: GitHub -> Settings -> Developer settings -> Tokens (classic)
-  -> Repo-Rechte "repo" -> als GITHUB_TOKEN in Railway-Variables eintragen.
-- git ist im Railway-Container installiert (nixpacks.toml: aptPkgs git).
+- Push aus dem Container funktioniert OHNE Token (Railway's Origin hat
+  Schreibrechte, bewiesen durch [AutoSave] Data backup pushed).
+  Falls nötig, zusätzlich Env-Var GITHUB_TOKEN setzen:
+  GitHub -> Settings -> Developer settings -> Tokens (classic) -> "repo".
+- git + ffmpeg sind im Container via railpack.json installiert
+  (deploy.aptPackages: ["...", "git", "ffmpeg"]).
+- WICHTIG: nixpacks.toml wird von Railways neuem Builder (Railpack)
+  IGNORIERT! Pakete über railpack.json oder Env-Vars
+  RAILPACK_DEPLOY_APT_PACKAGES/RAILPACK_BUILD_APT_PACKAGES setzen.
 
 ========================================
 7. GELÖSTE PROBLEME / FAKTEN (2026-08-14)
