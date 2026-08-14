@@ -2086,6 +2086,9 @@ class TicketCreateView(discord.ui.View):
                         ephemeral=True
                     )
                     return
+                else:
+                    ticket_info["status"] = "closed"
+                    ticket_info["closed_at"] = discord.utils.utcnow().isoformat()
 
         ticket_data[guild_str]["counter"] = ticket_data[guild_str].get("counter", 0) + 1
         ticket_number = ticket_data[guild_str]["counter"]
