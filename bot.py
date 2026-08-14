@@ -5784,16 +5784,18 @@ def extract_invite_codes(text):
             codes.add(match.group(1))
     return list(codes)
 
-@bot.tree.command(name="serverlist", description="Laedt eine .txt Datei mit Discord Server Links und sendet gueltige einzeln")
+@bot.tree.command(name="serverlist", description="Sendet Discord Server Links als Text (11 pro Nachricht), loescht kaputte automatisch")
 @is_admin_or_owner()
 @app_commands.describe(
     datei="Textdatei mit Discord Server Links (einer pro Zeile)",
-    delay="Sekunden zwischen jedem Link (Standard: 2)"
+    pro_nachricht="Links pro Nachricht (Standard: 11)",
+    delay="Sekunden zwischen jeder Nachricht (Standard: 0.5)"
 )
 async def serverlist_command(
     interaction: discord.Interaction,
     datei: discord.Attachment,
-    delay: int = 2
+    pro_nachricht: int = 11,
+    delay: float = 0.5
 ):
     await interaction.response.defer(ephemeral=True)
 
@@ -5816,41 +5818,42 @@ async def serverlist_command(
         )
         return
 
+    if pro_nachricht < 1:
+        pro_nachricht = 1
+    if pro_nachricht > 20:
+        pro_nachricht = 20
+
     await interaction.followup.send(
-        f"**{len(codes)} Invite(s) gefunden.** Sende alle, pruefe danach und loesche kaputte...",
+        f"**{len(codes)} Invite(s) gefunden.** Sende je {pro_nachricht} als Text, pruefe danach parallel und loesche kaputte...",
         ephemeral=True
     )
 
-    sent_msgs = []
-    sent = 0
+    batch_size = pro_nachricht
+    batches = [codes[i:i + batch_size] for i in range(0, len(codes), batch_size)]
+
+    sent_batches = []
     failed = 0
-    for code in codes:
-        link = f"https://discord.gg/{code}"
+    for batch in batches:
         try:
-            embed = discord.Embed(
-                title="Discord Server",
-                description=link,
-                color=discord.Color.green()
-            )
-            embed.set_footer(text=f"discord.gg/{code}")
-            msg = await interaction.channel.send(embed=embed)
-            sent_msgs.append((msg, code))
-            sent += 1
+            content_text = "\n".join(f"discord.gg/{code}" for code in batch)
+            msg = await interaction.channel.send(content_text)
+            sent_batches.append((msg, batch))
         except Exception as e:
-            failed += 1
-            print(f"[ServerList] Fehler beim Senden von {code}: {e}")
+            failed += len(batch)
+            print(f"[ServerList] Fehler beim Senden einer Batch: {e}")
 
         await asyncio.sleep(delay)
 
-    if not sent_msgs:
+    if not sent_batches:
         await interaction.followup.send(
             f"**Fehlgeschlagen!** Keine Nachricht konnte gesendet werden ({failed} Fehler).",
             ephemeral=True
         )
         return
 
+    all_sent_codes = [code for _, batch in sent_batches for code in batch]
     await interaction.followup.send(
-        f"**{sent} Links gesendet.** Pruefe jetzt parallel (10 gleichzeitig)...",
+        f"**{len(all_sent_codes)} Links gesendet.** Pruefe jetzt parallel (10 gleichzeitig)...",
         ephemeral=True
     )
 
@@ -5863,19 +5866,30 @@ async def serverlist_command(
     valid = []
     invalid = []
 
-    for i in range(0, len(sent_msgs), 10):
-        batch = sent_msgs[i:i + 10]
-        results = await asyncio.gather(*[check_with_limit(code) for _, code in batch])
+    for i in range(0, len(all_sent_codes), 10):
+        batch_codes = all_sent_codes[i:i + 10]
+        results = await asyncio.gather(*[check_with_limit(c) for c in batch_codes])
 
-        for (msg, code), result in zip(batch, results):
+        for code, result in zip(batch_codes, results):
             if result["valid"]:
                 valid.append(result)
             else:
                 invalid.append(result)
+
+    valid_codes = [v["code"] for v in valid]
+
+    if invalid:
+        for msg, batch in sent_batches:
+            batch_invalid = [c for c in batch if c in [iv["code"] for iv in invalid]]
+            if batch_invalid:
                 try:
                     await msg.delete()
+                    valid_in_batch = [c for c in batch if c in valid_codes]
+                    if valid_in_batch:
+                        content_text = "\n".join(f"discord.gg/{c}" for c in valid_in_batch)
+                        await interaction.channel.send(content_text)
                 except Exception as e:
-                    print(f"[ServerList] Loeschen fehlgeschlagen fuer {code}: {e}")
+                    print(f"[ServerList] Batch-Korrektur fehlgeschlagen: {e}")
 
     result_data = {
         "last_check": datetime.datetime.utcnow().isoformat(),
@@ -5897,7 +5911,7 @@ async def serverlist_command(
 
     report = (
         f"**Ergebnis:**\n"
-        f" Gesendet: **{sent}**\n"
+        f" Gesendet: **{len(all_sent_codes)}**\n"
         f" Gueltig (bleiben): **{len(valid)}**\n"
         f" Ungueltig (geloescht): **{len(invalid)}**\n"
         f" Sendefehler: {failed}"
