@@ -160,9 +160,41 @@ def save_memes_list(guild_id, urls):
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(urls))
 
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
+_reddit_token = None
+
+async def _get_reddit_token():
+    global _reddit_token
+    if _reddit_token:
+        return _reddit_token
+    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        return None
+    try:
+        auth = aiohttp.BasicAuth(REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://www.reddit.com/api/v1/access_token",
+                data={"grant_type": "client_credentials"},
+                auth=auth,
+                headers={"User-Agent": "linux:discord-gif-bot:v1.0 (by /u/discordgifbot)"},
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    _reddit_token = data.get("access_token")
+                    return _reddit_token
+    except Exception as e:
+        print(f"[Memes] Reddit OAuth Fehler: {e}")
+    return None
+
 async def fetch_reddit_memes(subreddit="memes", limit=25):
-    url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit={limit}"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DiscordBot/1.0"}
+    user_agent = "linux:discord-gif-bot:v1.0 (by /u/discordgifbot)"
+    token = await _get_reddit_token()
+    base_url = "https://oauth.reddit.com" if token else "https://www.reddit.com"
+    url = f"{base_url}/r/{subreddit}/hot.json?limit={limit}"
+    headers = {"User-Agent": user_agent}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as resp:
@@ -184,6 +216,8 @@ async def fetch_reddit_memes(subreddit="memes", limit=25):
                         elif "i.redd.it" in post_url:
                             image_urls.append(post_url)
                     return image_urls
+                elif resp.status == 429 or resp.status == 403:
+                    print(f"[Memes] Reddit blockiert ({resp.status}) - Rate-Limit")
     except Exception as e:
         print(f"[Memes] Reddit API Fehler: {e}")
     return []
@@ -2761,7 +2795,7 @@ async def on_member_join(member):
 async def on_member_remove(member):
     await update_member_count_channels()
 
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=30)
 @crash_resilient_task
 async def membercount_refresh():
     await update_member_count_channels()
@@ -4590,6 +4624,11 @@ async def auto_memes_task():
                 max_history = 100
                 
                 meme_url, video_id = await get_meme_for_guild(guild.id)
+                if not meme_url:
+                    print(f"[Memes] Quelle leer - Fallback auf lokale Liste fuer {guild.name}")
+                    liste = load_memes_list(guild.id)
+                    if liste:
+                        meme_url = random.choice(liste)
                 if meme_url:
                     if meme_url in sent_urls:
                         meme_url, video_id = await get_meme_for_guild(guild.id)
@@ -5599,6 +5638,11 @@ async def update_member_count_channels():
             try:
                 await channel.edit(name=new_name)
                 print(f"[MemberCount] {channel.name} -> {new_name}")
+            except discord.HTTPException as e:
+                if e.status == 429:
+                    print(f"[MemberCount] Rate-Limit - Skipped (naechster Zyklus in 30 Min)")
+                else:
+                    print(f"[MemberCount] Fehler: {e}")
             except discord.Forbidden:
                 print(f"[MemberCount] Keine Berechtigung fuer {channel.name}")
             except Exception as e:
