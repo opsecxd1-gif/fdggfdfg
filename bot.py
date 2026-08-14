@@ -5639,6 +5639,162 @@ async def membercountremove_command(interaction: discord.Interaction):
         await interaction.response.send_message("Kein Member-Count Channel eingerichtet.", ephemeral=True)
 
 # =====================================
+# SERVER LIST CHECKER & SENDER
+# =====================================
+
+import re as _re
+
+async def check_invite_valid(invite_code):
+    """Prueft ob ein Discord Invite gueltig ist"""
+    url = f"https://discord.com/api/v10/invites/{invite_code}?with_counts=true"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                guild = data.get("guild", {})
+                return {
+                    "valid": True,
+                    "code": invite_code,
+                    "guild_name": guild.get("name", "Unbekannt"),
+                    "guild_id": guild.get("id"),
+                    "member_count": data.get("approximate_member_count", 0),
+                    "online_count": data.get("approximate_presence_count", 0),
+                    "splash": guild.get("splash"),
+                    "icon": guild.get("icon"),
+                    "description": guild.get("description", ""),
+                    "vanity_url": guild.get("vanity_url_code"),
+                }
+            elif resp.status == 404:
+                return {"valid": False, "code": invite_code, "reason": "Invite不存在或已过期"}
+            elif resp.status == 429:
+                retry_after = (await resp.json()).get("retry_after", 5)
+                await asyncio.sleep(retry_after)
+                return await check_invite_valid(invite_code)
+            else:
+                return {"valid": False, "code": invite_code, "reason": f"HTTP {resp.status}"}
+
+def extract_invite_codes(text):
+    """Extrahiert Discord Invite Codes aus Text"""
+    codes = set()
+    patterns = [
+        r'discord\.gg/([a-zA-Z0-9_-]+)',
+        r'discord\.com/invite/([a-zA-Z0-9_-]+)',
+        r'discordapp\.com/invite/([a-zA-Z0-9_-]+)',
+    ]
+    for pattern in patterns:
+        for match in _re.finditer(pattern, text):
+            codes.add(match.group(1))
+    return list(codes)
+
+@bot.tree.command(name="serverlist", description="Laedt eine .txt Datei mit Discord Server Links und sendet gueltige einzeln")
+@is_admin_or_owner()
+@app_commands.describe(
+    datei="Textdatei mit Discord Server Links (einer pro Zeile)",
+    delay="Sekunden zwischen jedem Link (Standard: 2)"
+)
+async def serverlist_command(
+    interaction: discord.Interaction,
+    datei: discord.Attachment,
+    delay: int = 2
+):
+    await interaction.response.defer(ephemeral=True)
+
+    if not datei.filename.endswith('.txt'):
+        await interaction.followup.send("Nur .txt Dateien erlaubt!", ephemeral=True)
+        return
+
+    content = await datei.read()
+    text = content.decode('utf-8', errors='ignore')
+
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    codes = extract_invite_codes(text)
+
+    if not codes:
+        await interaction.followup.send(
+            f"Keine Discord Invite Links in der Datei gefunden.\n"
+            f"Gelesen: {len(lines)} Zeilen\n"
+            f"Erwartetes Format: discord.gg/xxxx pro Zeile",
+            ephemeral=True
+        )
+        return
+
+    await interaction.followup.send(
+        f"**{len(codes)} Invite(s) gefunden.** Pruefe auf Gueltigkeit...",
+        ephemeral=True
+    )
+
+    valid = []
+    invalid = []
+    errors = []
+
+    for i, code in enumerate(codes):
+        result = await check_invite_valid(code)
+        if result["valid"]:
+            valid.append(result)
+        else:
+            invalid.append(result)
+
+        if (i + 1) % 10 == 0:
+            try:
+                await interaction.edit_original_response(
+                    content=f"**Pruefe... {i+1}/{len(codes)}**\n"
+                            f"Gueltig: {len(valid)} | Ungueltig: {len(invalid)}"
+                )
+            except:
+                pass
+
+        await asyncio.sleep(0.5)
+
+    report = (
+        f"**Ergebnis:**\n"
+        f" Gueltig: **{len(valid)}**\n"
+        f" Ungueltig: **{len(invalid)}**\n"
+        f" Gesamt: {len(codes)}"
+    )
+
+    if invalid:
+        invalid_names = [f"`{r['code']}`" for r in invalid[:15]]
+        report += f"\n\n**Ungueltig:**\n" + ", ".join(invalid_names)
+        if len(invalid) > 15:
+            report += f" +{len(invalid)-15} weitere"
+
+    await interaction.followup.send(report, ephemeral=True)
+
+    if not valid:
+        await interaction.followup.send("Keine gueltigen Links zum Senden.", ephemeral=True)
+        return
+
+    sent = 0
+    failed = 0
+    for entry in valid:
+        link = f"https://discord.gg/{entry['code']}"
+        name = entry.get("guild_name", "Unbekannt")
+        members = entry.get("member_count", 0)
+
+        try:
+            embed = discord.Embed(
+                title=name,
+                description=link,
+                color=discord.Color.green()
+            )
+            if entry.get("description"):
+                embed.add_field(name="Beschreibung", value=entry["description"][:200], inline=False)
+            embed.set_footer(text=f"Members: {members:,} | discord.gg/{entry['code']}")
+
+            await interaction.channel.send(embed=embed)
+            sent += 1
+        except Exception as e:
+            failed += 1
+            print(f"[ServerList] Fehler beim Senden von {entry['code']}: {e}")
+
+        await asyncio.sleep(delay)
+
+    await interaction.followup.send(
+        f"**Fertig!** {sent} Server-Links gesendet, {failed} fehlgeschlagen.",
+        ephemeral=True
+    )
+
+# =====================================
 # BOT STATUS COMMAND
 # =====================================
 
