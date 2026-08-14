@@ -4020,7 +4020,8 @@ async def update_live_leaderboard():
 
 # =====================================
 # LEVEL SYSTEM
-RESTRICT_PERMS = ["attach_files", "embed_links", "add_reactions", "use_external_emoji", "use_external_stickers"]
+RESTRICT_PERM_NAMES = ["add_reactions", "attach_files", "embed_links", "use_external_emojis", "use_external_stickers"]
+RESTRICT_PERM_BITS = [getattr(discord.Permissions, name).flag for name in RESTRICT_PERM_NAMES]
 
 async def disable_permissions_everywhere():
     print("[PERMS] Starte Berechtigungs-Sweep (alle Rollen in allen Servern)...")
@@ -4028,19 +4029,22 @@ async def disable_permissions_everywhere():
         me = guild.me
         for role in guild.roles:
             try:
-                new_perms = role.permissions
-                for attr in RESTRICT_PERMS:
-                    setattr(new_perms, attr, False)
-                if me and role.id == me.top_role.id:
-                    for attr in RESTRICT_PERMS:
-                        setattr(new_perms, attr, True)
-                    await role.edit(permissions=new_perms)
-                    print(f"[PERMS] {guild.name}: Bot-Rolle '{role.name}' behält die Rechte (Bot braucht sie)")
-                    continue
-                if role.permissions == new_perms:
+                value = role.permissions.value
+                is_bot_role = me and role.id == me.top_role.id
+                if is_bot_role:
+                    for bit in RESTRICT_PERM_BITS:
+                        value |= bit
+                else:
+                    for bit in RESTRICT_PERM_BITS:
+                        value &= ~bit
+                new_perms = discord.Permissions(value)
+                if role.permissions.value == value:
                     continue
                 await role.edit(permissions=new_perms)
-                print(f"[PERMS] {guild.name}: Rolle '{role.name}' - 5 Rechte auf False gesetzt")
+                if is_bot_role:
+                    print(f"[PERMS] {guild.name}: Bot-Rolle '{role.name}' behält die Rechte")
+                else:
+                    print(f"[PERMS] {guild.name}: Rolle '{role.name}' - 5 Rechte auf False gesetzt")
             except discord.Forbidden:
                 print(f"[PERMS] {guild.name}: KEINE RECHTE - Rolle '{role.name}' übersprungen")
             except Exception as e:
