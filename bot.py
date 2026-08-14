@@ -5817,7 +5817,40 @@ async def serverlist_command(
         return
 
     await interaction.followup.send(
-        f"**{len(codes)} Invite(s) gefunden.** Pruefe parallel (10 gleichzeitig)...",
+        f"**{len(codes)} Invite(s) gefunden.** Sende alle, pruefe danach und loesche kaputte...",
+        ephemeral=True
+    )
+
+    sent_msgs = []
+    sent = 0
+    failed = 0
+    for code in codes:
+        link = f"https://discord.gg/{code}"
+        try:
+            embed = discord.Embed(
+                title="Discord Server",
+                description=link,
+                color=discord.Color.green()
+            )
+            embed.set_footer(text=f"discord.gg/{code}")
+            msg = await interaction.channel.send(embed=embed)
+            sent_msgs.append((msg, code))
+            sent += 1
+        except Exception as e:
+            failed += 1
+            print(f"[ServerList] Fehler beim Senden von {code}: {e}")
+
+        await asyncio.sleep(delay)
+
+    if not sent_msgs:
+        await interaction.followup.send(
+            f"**Fehlgeschlagen!** Keine Nachricht konnte gesendet werden ({failed} Fehler).",
+            ephemeral=True
+        )
+        return
+
+    await interaction.followup.send(
+        f"**{sent} Links gesendet.** Pruefe jetzt parallel (10 gleichzeitig)...",
         ephemeral=True
     )
 
@@ -5829,25 +5862,20 @@ async def serverlist_command(
 
     valid = []
     invalid = []
-    done = 0
 
-    for i in range(0, len(codes), 10):
-        batch = codes[i:i + 10]
-        results = await asyncio.gather(*[check_with_limit(c) for c in batch])
-        for result in results:
+    for i in range(0, len(sent_msgs), 10):
+        batch = sent_msgs[i:i + 10]
+        results = await asyncio.gather(*[check_with_limit(code) for _, code in batch])
+
+        for (msg, code), result in zip(batch, results):
             if result["valid"]:
                 valid.append(result)
             else:
                 invalid.append(result)
-            done += 1
-
-        try:
-            await interaction.edit_original_response(
-                content=f"**Pruefe... {done}/{len(codes)}**\n"
-                        f"Gueltig: {len(valid)} | Ungueltig: {len(invalid)}"
-            )
-        except:
-            pass
+                try:
+                    await msg.delete()
+                except Exception as e:
+                    print(f"[ServerList] Loeschen fehlgeschlagen fuer {code}: {e}")
 
     result_data = {
         "last_check": datetime.datetime.utcnow().isoformat(),
@@ -5869,55 +5897,16 @@ async def serverlist_command(
 
     report = (
         f"**Ergebnis:**\n"
-        f" Gueltig: **{len(valid)}**\n"
-        f" Ungueltig: **{len(invalid)}**\n"
-        f" Gesamt: {len(codes)}"
+        f" Gesendet: **{sent}**\n"
+        f" Gueltig (bleiben): **{len(valid)}**\n"
+        f" Ungueltig (geloescht): **{len(invalid)}**\n"
+        f" Sendefehler: {failed}"
     )
 
     if saved:
         report += f"\n Gueltige Links gespeichert in `data/serverlist_results.json`"
 
-    if invalid:
-        invalid_names = [f"`{r['code']}`" for r in invalid[:15]]
-        report += f"\n\n**Ungueltig:**\n" + ", ".join(invalid_names)
-        if len(invalid) > 15:
-            report += f" +{len(invalid)-15} weitere"
-
     await interaction.followup.send(report, ephemeral=True)
-
-    if not valid:
-        await interaction.followup.send("Keine gueltigen Links zum Senden.", ephemeral=True)
-        return
-
-    sent = 0
-    failed = 0
-    for entry in valid:
-        link = f"https://discord.gg/{entry['code']}"
-        name = entry.get("guild_name", "Unbekannt")
-        members = entry.get("member_count", 0)
-
-        try:
-            embed = discord.Embed(
-                title=name,
-                description=link,
-                color=discord.Color.green()
-            )
-            if entry.get("description"):
-                embed.add_field(name="Beschreibung", value=entry["description"][:200], inline=False)
-            embed.set_footer(text=f"Members: {members:,} | discord.gg/{entry['code']}")
-
-            await interaction.channel.send(embed=embed)
-            sent += 1
-        except Exception as e:
-            failed += 1
-            print(f"[ServerList] Fehler beim Senden von {entry['code']}: {e}")
-
-        await asyncio.sleep(delay)
-
-    await interaction.followup.send(
-        f"**Fertig!** {sent} Server-Links gesendet, {failed} fehlgeschlagen.",
-        ephemeral=True
-    )
 
 # =====================================
 # ROLLEN RECHTE ENTZIEHEN (GIF/BILDER/STICKER)
