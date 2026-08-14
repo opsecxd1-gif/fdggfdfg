@@ -6109,10 +6109,13 @@ async def systemcheck_command(interaction: discord.Interaction):
     except Exception:
         pass
 
-    # --- 5. Member Count - KEIN fetch_guild (vermeidet Rate-Limit) ---
+    # --- 5. Member Count - NUR prüfen, KEIN channel.edit (vermeidet 429-Sleep) ---
+    # Das Umbenennen macht der membercount_refresh Task alle 30 Min.
+    # Ein channel.edit hier kann bei Rate-Limit den Command MINUTENLANG blockieren.
     try:
         mc_config = load_membercount_config()
         mc_count = 0
+        mc_needs_update = 0
         for guild_str, settings in mc_config.items():
             channel_id = settings.get("channel_id")
             if not channel_id:
@@ -6127,14 +6130,12 @@ async def systemcheck_command(interaction: discord.Interaction):
             prefix = settings.get("prefix", "Members")
             new_name = f"{prefix}: {member_count}"
             if channel.name != new_name:
-                try:
-                    await channel.edit(name=new_name)
-                    fixes.append(f"MemberCount: {channel.name} -> {new_name}")
-                except discord.HTTPException:
-                    pass
+                mc_needs_update += 1
             mc_count += 1
         if mc_count > 0:
             fixes.append(f"MemberCount: {mc_count} Channel(s) geprueft")
+        if mc_needs_update > 0:
+            fixes.append(f"MemberCount: {mc_needs_update} Channel(s) warten auf naechstes 30-Min-Update")
     except Exception as e:
         warnings.append(f"Member Count: {e}")
 
