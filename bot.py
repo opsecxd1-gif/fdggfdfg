@@ -5604,19 +5604,29 @@ async def automod_command(interaction: discord.Interaction, aktion: app_commands
 # =====================================
 
 MEMBERCOUNT_CONFIG_FILE = DATA_DIR / "membercount_config.json"
+MEMBERCOUNT_MIN_RENAME_INTERVAL = 300
+
+_last_membercount_rename = {}
 
 def load_membercount_config():
-    if MEMBERCOUNT_CONFIG_FILE.exists():
-        with open(MEMBERCOUNT_CONFIG_FILE, "r") as f:
-            return json.load(f)
+    try:
+        if MEMBERCOUNT_CONFIG_FILE.exists():
+            with open(MEMBERCOUNT_CONFIG_FILE, "r") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"[MemberCount] Config lesen fehlgeschlagen: {e}")
     return {}
 
 def save_membercount_config(data):
-    with open(MEMBERCOUNT_CONFIG_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    try:
+        with open(MEMBERCOUNT_CONFIG_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"[MemberCount] Config speichern fehlgeschlagen: {e}")
 
-async def update_member_count_channels():
+async def update_member_count_channels(force=False):
     config = load_membercount_config()
+    now = time.time()
     for guild_str, settings in config.items():
         channel_id = settings.get("channel_id")
         if not channel_id:
@@ -5634,19 +5644,26 @@ async def update_member_count_channels():
         member_count = guild.member_count or 0
         prefix = settings.get("prefix", "Members")
         new_name = f"{prefix}: {member_count}"
-        if channel.name != new_name:
-            try:
-                await channel.edit(name=new_name)
-                print(f"[MemberCount] {channel.name} -> {new_name}")
-            except discord.HTTPException as e:
-                if e.status == 429:
-                    print(f"[MemberCount] Rate-Limit - Skipped (naechster Zyklus in 30 Min)")
-                else:
-                    print(f"[MemberCount] Fehler: {e}")
-            except discord.Forbidden:
-                print(f"[MemberCount] Keine Berechtigung fuer {channel.name}")
-            except Exception as e:
-                print(f"[MemberCount] Fehler: {e}")
+        if channel.name == new_name:
+            continue
+        if not force:
+            last = _last_membercount_rename.get(channel_id, 0)
+            if now - last < MEMBERCOUNT_MIN_RENAME_INTERVAL:
+                print(f"[MemberCount] Throttle - letztes Rename vor {int(now - last)}s, Skipped")
+                continue
+        _last_membercount_rename[channel_id] = now
+        try:
+            await channel.edit(name=new_name)
+            print(f"[MemberCount] {channel.name} -> {new_name}")
+        except discord.HTTPException as e:
+            if e.status == 429:
+                print(f"[MemberCount] Rate-Limit (429) - Skipped, naechster Versuch in {MEMBERCOUNT_MIN_RENAME_INTERVAL}s")
+            else:
+                print(f"[MemberCount] HTTP-Fehler: {e}")
+        except discord.Forbidden:
+            print(f"[MemberCount] Keine Berechtigung fuer {channel.name}")
+        except Exception as e:
+            print(f"[MemberCount] Fehler: {e}")
 
 @bot.tree.command(name="membercountsetup", description="Channel fuer Member-Anzahl einrichten (Voice oder Text)")
 @is_admin_or_owner()
@@ -5693,7 +5710,7 @@ async def membercountsetup_command(
 @is_admin_or_owner()
 async def membercount_command(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    await update_member_count_channels()
+    await update_member_count_channels(force=True)
     config = load_membercount_config()
     guild_str = str(interaction.guild_id)
     if guild_str in config:
