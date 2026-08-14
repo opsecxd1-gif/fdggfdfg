@@ -6040,6 +6040,136 @@ async def unstriproles_command(interaction: discord.Interaction):
 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
+@bot.tree.command(name="help", description="Zeigt alle Commands nach Kategorie")
+async def help_command(interaction: discord.Interaction):
+    categories = {
+        "GIF-Sender": {
+            "add": "GIF/Media-Links zur Liste hinzufuegen",
+            "load": "TXT-Datei mit Links hochladen",
+            "start": "Startet das Senden von GIFs pro Nachricht",
+            "cont": "Setzt das Senden dort fort, wo es aufgehoert hat",
+            "stop": "Stoppt das GIF-Senden",
+            "next": "Sendet die naechsten 4 GIFs",
+            "status": "Zeigt den aktuellen Stand",
+            "clear": "Loescht die komplette Liste",
+            "embedvideos": "MP4/MOV als Inline-Video statt Text-Link",
+            "size": "Links pro Nachricht setzen (1-5)",
+            "list": "Zeigt erste/letzte 5 Links",
+            "pos": "Position manuell setzen",
+            "import": "Bis zu 10 TXT-Dateien, pro Datei ein Channel",
+            "import2": "TXT-Dateien direkt in diesen Channel senden",
+        },
+        "TikTok / Filter": {
+            "filtermode": "Erweiterter Media-Filter",
+            "nofiltermode": "Kein Filter - jede Zeile als Link",
+            "tiktokmode": "TikTok Auto-Download Service waehlen",
+            "tiktoktoggle": "TikTok Auto-Download ein/aus",
+            "tiktokstatus": "TikTok Auto-Download Status",
+        },
+        "Server-Verwaltung": {
+            "clearchannels": "Loescht alle Bot-erstellten Channels",
+            "permsync": "Permissions eines Channels mit Kategorie syncen",
+            "hoistall": "Rolle getrennt anzeigen bei allen Rollen",
+            "setavatar": "Bot-Profilbild setzen",
+            "setbanner": "Bot-Bannerbild setzen",
+            "serverlist": "Server-Links aus TXT pruefen und senden",
+        },
+        "Reaction-Roles": {
+            "reactionrole": "Reaction-Roles verwalten (wie Carl-bot)",
+            "reactionsetup": "Embed mit Buttons fuer Reaction-Roles senden",
+            "masssetup": "Reaction-Role Buttons fuer ALLE User-Rollen",
+        },
+        "Ticket-System": {
+            "ticketsetup": "Ticket-System einrichten",
+            "close": "Ticket schliessen",
+            "ticketadd": "User zum Ticket hinzufuegen",
+            "ticketremove": "User aus Ticket entfernen",
+            "transcript": "Ticket-Transkript generieren",
+        },
+        "Voice-Channel": {
+            "voicesetup": "Voice System einrichten (Lobby + Category)",
+            "vc_kick": "User aus deinem VC kicken",
+            "vc_ban": "User aus deinem VC bannen",
+            "vc_permit": "User Zugriff auf deinen Channel geben",
+            "vc_changeowner": "Channel-Besitz uebertragen",
+        },
+        "Level-System": {
+            "level": "Dein Level und XP",
+            "leaderboard": "Leaderboard anzeigen",
+            "setlevelchannel": "Channel fuer Level-Up-Nachrichten",
+            "setleaderboard": "Live-Leaderboard einrichten",
+            "leaderboardrefresh": "Alte Leaderboard-Embeds neu senden",
+            "levelimage": "Bild fuer Levelaufstieg setzen",
+            "noxpchannel": "Kein XP in diesem Channel",
+            "toggleleveling": "Level-System komplett an/aus",
+            "togglelevelimage": "Bilder bei Level-Up an/aus",
+            "resetlevels": "Alle Level-Daten zuruecksetzen",
+            "setlevel": "Level eines Users manuell setzen",
+        },
+        "Auto-Memes": {
+            "memessetup": "Meme-Channel einrichten",
+            "memesinterval": "Intervall aendern",
+            "memestoggle": "Memes an/aus",
+            "memesquelle": "Quelle aendern (reddit/imgur/liste/gemischt/interpol)",
+            "memessubreddit": "Subreddit setzen",
+            "memesskip": "Naechstes Meme manuell senden",
+            "memestest": "Quelle testen",
+            "memesstatus": "Status anzeigen",
+            "memesreset": "Video-History resetten",
+            "memesadd": "Meme zur eigenen Liste hinzufuegen",
+            "memesload": "Memes aus TXT laden",
+        },
+        "Frage des Tages": {
+            "fragesetup": "Frage des Tages einrichten",
+            "frageinterval": "Intervall aendern",
+            "fragetoggle": "An/aus",
+            "fragestatus": "Status anzeigen",
+            "frageadd": "Eigene Frage hinzufuegen",
+            "fragetest": "Frage manuell testen",
+            "frageresults": "Ergebnisse mit Users anzeigen",
+            "frageskip": "Frage ueberspringen",
+        },
+        "Sonstige": {
+            "fixvoice": "Sprechen fuer alle aktivieren (kein Push-to-Talk)",
+            "automod": "Invite-Spam Schutz an/aus",
+            "membercountsetup": "Member-Anzahl Channel einrichten",
+            "membercount": "Member-Anzahl sofort updaten",
+            "membercountremove": "Member-Count Channel entfernen",
+            "striproles": "Entzieht Rollen unter 'Maske' GIF/Bilder/Sticker-Rechte",
+            "unstriproles": "Gibt diese Rechte zurueck",
+            "botstatus": "Status aller Bot-Systeme",
+        },
+    }
+
+    cat_names = list(categories.keys())
+
+    def build_embed(cat):
+        cmds = categories[cat]
+        lines = "\n".join(f"`/{name}` - {desc}" for name, desc in cmds.items())
+        total = sum(len(v) for v in categories.values())
+        embed = discord.Embed(
+            title=f"Hilfe - {cat}",
+            description=lines,
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"{cat} {len(cmds)}/{total} Commands | Kategorie unten auswaehlen")
+        return embed
+
+    select = discord.ui.Select(
+        placeholder="Kategorie waehlen...",
+        options=[discord.SelectOption(label=cat, value=cat, description=f"{len(categories[cat])} Commands") for cat in cat_names]
+    )
+
+    async def on_select(select_interaction: discord.Interaction):
+        await select_interaction.response.edit_message(embed=build_embed(select.values[0]))
+
+    select.callback = on_select
+
+    view = discord.ui.View()
+    view.add_item(select)
+
+    await interaction.response.send_message(embed=build_embed(cat_names[0]), view=view)
+
 @bot.tree.command(name="botstatus", description="Zeigt den Status aller Bot-Systeme")
 @is_admin_or_owner()
 async def botstatus_command(interaction: discord.Interaction):
