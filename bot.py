@@ -5538,7 +5538,11 @@ async def update_member_count_channels():
             fresh_guild = await bot.fetch_guild(guild.id)
             member_count = fresh_guild.member_count
         except Exception:
+            member_count = None
+        if member_count is None:
             member_count = guild.member_count
+        if member_count is None:
+            member_count = len(guild.members) if guild else 0
         prefix = settings.get("prefix", "Members")
         new_name = f"{prefix}: {member_count}"
         if channel.name != new_name:
@@ -5569,6 +5573,8 @@ async def membercountsetup_command(
     save_membercount_config(config)
     
     member_count = interaction.guild.member_count
+    if member_count is None:
+        member_count = len(interaction.guild.members)
     new_name = f"{prefix}: {member_count}"
     try:
         await channel.edit(name=new_name, reason="Member-Count Setup")
