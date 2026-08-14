@@ -5847,6 +5847,8 @@ async def striproles_command(interaction: discord.Interaction):
         return
 
     bot_top_role = interaction.guild.me.top_role
+    print(f"[STRIPROLES] Maske: {maske_role.name} (Pos {maske_role.position}), Bot Top: {bot_top_role.name} (Pos {bot_top_role.position})")
+    print(f"[STRIPROLES] Alle Rollen: {[(r.name, r.position) for r in interaction.guild.roles]}")
 
     updated = []
     skipped = []
@@ -5856,6 +5858,7 @@ async def striproles_command(interaction: discord.Interaction):
         if role == interaction.guild.default_role:
             continue
         if role.position >= maske_role.position:
+            skipped.append(f"{role.name} (über Maske)")
             continue
         if role.position >= bot_top_role.position:
             skipped.append(f"{role.name} (Bot zu niedrig)")
@@ -5874,17 +5877,26 @@ async def striproles_command(interaction: discord.Interaction):
             continue
         roles_to_edit.append((role, new_perms))
 
+    print(f"[STRIPROLES] Zu bearbeiten: {len(roles_to_edit)}, Uebersprungen: {len(skipped)}")
+    await interaction.followup.send(f"Starte... {len(roles_to_edit)} Rollen zu bearbeiten, {len(skipped)} uebersprungen", ephemeral=True)
+
     total = len(roles_to_edit)
     for i, (role, new_perms) in enumerate(roles_to_edit, 1):
         try:
+            print(f"[STRIPROLES] Bearbeite {i}/{total}: {role.name}")
             await role.edit(permissions=new_perms, reason=f"striproles von {interaction.user}")
             updated.append(role.name)
+            print(f"[STRIPROLES] OK: {role.name}")
             if i < total:
                 await asyncio.sleep(1.0)
         except discord.Forbidden:
+            print(f"[STRIPROLES] Forbidden: {role.name}")
             skipped.append(f"{role.name} (keine Berechtigung)")
         except Exception as e:
+            print(f"[STRIPROLES] Error: {role.name} - {e}")
             skipped.append(f"{role.name} ({e})")
+
+    print(f"[STRIPROLES] Fertig! Updated: {len(updated)}, Skipped: {len(skipped)}")
 
     embed = discord.Embed(
         title="Rechte entzogen",
